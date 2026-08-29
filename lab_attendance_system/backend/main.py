@@ -48,6 +48,12 @@ def startup_event():
     database.init_db()
 
 
+@app.get("/health")
+def health_check():
+    """Simple health check endpoint for connectivity testing."""
+    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+
 @app.get("/attendance/logs")
 def get_attendance_logs(
     date: Optional[str] = Query(None, description="Format YYYY-MM-DD"),
@@ -120,7 +126,9 @@ def free_pc_endpoint(payload: FreeRequest):
 def get_unknown_faces() -> List[Dict[str, str]]:
     """
     Scans unknown_faces/ folder recursively, returns list of
-    {image_path, date, timestamp} for all saved images.
+    {image_path, url, date, timestamp, filename} for all saved images.
+    The 'url' field is a path relative to the API root that can be used
+    to fetch the image via the static mount.
     """
     images_list = []
     if not os.path.exists(UNKNOWN_FACES_DIR):
@@ -131,6 +139,8 @@ def get_unknown_faces() -> List[Dict[str, str]]:
             if file.lower().endswith((".jpg", ".jpeg", ".png")):
                 full_path = os.path.join(root, file)
                 rel_path = os.path.relpath(full_path, BASE_DIR)
+                # Build a URL-safe path relative to the UNKNOWN_FACES_DIR mount
+                static_rel = os.path.relpath(full_path, UNKNOWN_FACES_DIR).replace("\\", "/")
                 
                 # Derive date and timestamp
                 parent_dir = os.path.basename(root)
@@ -138,11 +148,12 @@ def get_unknown_faces() -> List[Dict[str, str]]:
                 date_val = parent_dir if len(parent_dir) == 10 and parent_dir.count("-") == 2 else "Unknown"
                 
                 filename_no_ext = os.path.splitext(file)[0]
-                # Format timestamp human-readable if file name is timestamp like 2026-08-29_10-30-00 or 10-30-00
-                timestamp_val = filename_no_ext.replace("_", " ")
+                # Format timestamp human-readable if file name is timestamp like 10-30-00
+                timestamp_val = filename_no_ext.replace("_", " ").replace("-", ":")
 
                 images_list.append({
                     "image_path": rel_path.replace("\\", "/"),
+                    "url": f"/unknown_faces_static/{static_rel}",
                     "date": date_val,
                     "timestamp": timestamp_val,
                     "filename": file

@@ -5,3 +5,4 @@ uvicorn
 streamlit
 requests
 python-multipart
+streamlit-autorefresh
