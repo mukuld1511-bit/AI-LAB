@@ -183,39 +183,53 @@ let currentAction = null;
 let currentPCId = null;
 
 function closePCModal() {
-    document.getElementById("pc-modal").style.display = "none";
-    document.getElementById("modal-student-name").value = "";
+    const modal = document.getElementById("pc-modal");
+    if (modal) modal.style.display = "none";
+    
+    const input = document.getElementById("modal-student-name");
+    if (input) input.value = "";
+
+    const actionBtn = document.getElementById("modal-action-btn");
+    if (actionBtn) actionBtn.disabled = false;
 }
 
-// Handle PC Click
+// Handle PC Click (From 3D Scene or 2D Grid)
 function handlePCClick(pcId, isFree) {
     if (!BASE_URL) return;
     
-    currentPCId = pcId;
+    currentPCId = (pcId || "").toUpperCase().trim();
     const modal = document.getElementById("pc-modal");
     const title = document.getElementById("modal-title");
     const desc = document.getElementById("modal-desc");
     const inputGroup = document.getElementById("modal-input-group");
     const actionBtn = document.getElementById("modal-action-btn");
     
+    if (!modal || !actionBtn) return;
+
     modal.style.display = "flex";
+    actionBtn.disabled = false;
     
     if (isFree) {
         currentAction = "occupy";
-        title.innerText = `Assign ${pcId}`;
-        desc.innerText = `Enter the name of the student using ${pcId}`;
+        title.innerText = `Assign ${currentPCId}`;
+        desc.innerText = `Enter the name of the student using ${currentPCId}`;
         inputGroup.style.display = "block";
         actionBtn.innerText = "Assign PC";
         actionBtn.className = "btn btn-primary";
-        document.getElementById("modal-student-name").focus();
+        actionBtn.style.background = ""; // Reset custom styles
+        
+        setTimeout(() => {
+            const input = document.getElementById("modal-student-name");
+            if (input) input.focus();
+        }, 50);
     } else {
         currentAction = "free";
-        title.innerText = `Free ${pcId}`;
-        desc.innerText = `Are you sure you want to mark ${pcId} as available?`;
+        title.innerText = `Free ${currentPCId}`;
+        desc.innerText = `Are you sure you want to mark ${currentPCId} as available?`;
         inputGroup.style.display = "none";
         actionBtn.innerText = "Mark Free";
         actionBtn.className = "btn btn-primary";
-        actionBtn.style.background = "var(--error)";
+        actionBtn.style.background = "#dc2626";
     }
 }
 
@@ -228,7 +242,8 @@ document.getElementById("modal-action-btn")?.addEventListener("click", async () 
     
     try {
         if (currentAction === "occupy") {
-            const name = document.getElementById("modal-student-name").value.trim();
+            const nameInput = document.getElementById("modal-student-name");
+            const name = (nameInput ? nameInput.value : "").trim();
             if (!name) {
                 alert("Please enter a name.");
                 actionBtn.disabled = false;
@@ -239,19 +254,25 @@ document.getElementById("modal-action-btn")?.addEventListener("click", async () 
                 method: "POST",
                 body: JSON.stringify({ pc_id: currentPCId, name: name })
             });
+            if (typeof showToast === "function") {
+                showToast(`💻 ${currentPCId} Assigned to ${name}`);
+            }
         } else if (currentAction === "free") {
             await apiFetch("/pc/free", {
                 method: "POST",
                 body: JSON.stringify({ pc_id: currentPCId })
             });
+            if (typeof showToast === "function") {
+                showToast(`🟢 ${currentPCId} Marked Available`);
+            }
         }
         
         closePCModal();
-        loadPCStatus();
+        await loadPCStatus();
     } catch(e) {
         alert("Error: " + e.message);
         actionBtn.disabled = false;
-        actionBtn.innerText = "Retry";
+        actionBtn.innerText = currentAction === "free" ? "Mark Free" : "Assign PC";
     }
 });
 

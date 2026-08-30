@@ -55,7 +55,7 @@ let switchPanelRef = { lightBtnMat: null, acBtnMat: null, panelHitBox: null };
 
 // Parametric Lemniscate (Infinity Symbol ∞)
 class InfinityCurve extends THREE.Curve {
-    constructor(scale = 3.8, height = 4.4) {
+    constructor(scale = 4.4, height = 4.5) {
         super();
         this.scale = scale;
         this.height = height;
@@ -84,7 +84,7 @@ function init3DLabScene() {
     // 1. Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b0d13); // Cinematic dark backdrop
-    scene.fog = new THREE.FogExp2(0x0b0d13, 0.012);
+    scene.fog = new THREE.FogExp2(0x0b0d13, 0.010);
 
     // 2. Camera (Isometric View)
     const aspect = container.clientWidth / container.clientHeight;
@@ -112,21 +112,21 @@ function init3DLabScene() {
         controls.dampingFactor = 0.05;
         controls.maxPolarAngle = Math.PI / 2.05; // Stay above floor
         controls.minDistance = 6;
-        controls.maxDistance = 38;
+        controls.maxDistance = 45;
         controls.target.set(0, 1.2, 0);
     }
 
     // 5. Rich Warm Lighting Setup
     setupWarmLighting();
 
-    // 6. Build Room Architecture (Black floor, 30% cream walls, glass walls, 4 pillars, single glass gate)
+    // 6. Build Room Architecture (Scaled up room, black floor, 30% cream middle walls, glass walls, 4 pillars)
     buildRoomArchitecture();
 
     // 7. Infinity Overhead Light Fixture (∞)
     buildInfinityChandelier();
 
-    // 8. Build Roof-Mounted Centralized AC Units (Above Lights) & Smart Switchboard
-    buildCentralizedRoofACAndSwitchPanel();
+    // 8. Build Single Centralized Ceiling AC (Above Lights in Exact Center) & Pillar Switchboard
+    buildSingleCenterCeilingACAndSwitchPanel();
 
     // 9. Build Workstations (Connected slabs + PC-7 + PC-8)
     buildAllLabWorkstations();
@@ -154,7 +154,7 @@ function init3DLabScene() {
 }
 
 function setDefaultCameraPosition() {
-    camera.position.set(13.5, 14.5, 15.5);
+    camera.position.set(15.5, 16.5, 17.5);
     camera.lookAt(0, 1.2, 0);
 }
 
@@ -170,13 +170,13 @@ function setupWarmLighting() {
     scene.add(hemiLightRef);
 
     keyLightRef = new THREE.DirectionalLight(0xffc87a, 1.25); // Golden directional sun
-    keyLightRef.position.set(10, 16, 9);
+    keyLightRef.position.set(12, 18, 10);
     keyLightRef.castShadow = true;
     keyLightRef.shadow.mapSize.width = 2048;
     keyLightRef.shadow.mapSize.height = 2048;
     keyLightRef.shadow.camera.near = 0.5;
-    keyLightRef.shadow.camera.far = 40;
-    const d = 10;
+    keyLightRef.shadow.camera.far = 45;
+    const d = 12;
     keyLightRef.shadow.camera.left = -d;
     keyLightRef.shadow.camera.right = d;
     keyLightRef.shadow.camera.top = d;
@@ -184,20 +184,20 @@ function setupWarmLighting() {
     keyLightRef.shadow.bias = -0.0004;
     scene.add(keyLightRef);
 
-    fillLightRef = new THREE.PointLight(0xff9d26, 1.1, 20, 1.2); // Warm center amber radiance
-    fillLightRef.position.set(0, 3.2, 0);
+    fillLightRef = new THREE.PointLight(0xff9d26, 1.1, 24, 1.2); // Warm center amber radiance
+    fillLightRef.position.set(0, 3.4, 0);
     scene.add(fillLightRef);
 }
 
 /**
- * Builds Roof-Mounted Centralized AC Cassette Units (Above Infinity Chandelier) & Pillar Switch Panel
+ * Builds Single Centralized Ceiling AC Unit (In the Exact Center, Above Lights at Y = 5.0m) & Switchboard
  */
-function buildCentralizedRoofACAndSwitchPanel() {
-    const roomW = 14;
-    const roomD = 14;
-    const pillarW = 0.65;
-    const pillarCenterX = roomW / 2 - pillarW / 2; // 6.675
-    const pillarCenterZ = roomD / 2 - pillarW / 2; // 6.675
+function buildSingleCenterCeilingACAndSwitchPanel() {
+    const roomW = 16.0;
+    const roomD = 16.0;
+    const pillarW = 0.70;
+    const pillarCenterX = roomW / 2 - pillarW / 2; // 7.65
+    const pillarCenterZ = roomD / 2 - pillarW / 2; // 7.65
 
     // 1. Smart Switch Panel on Left Corner Pillar (Near PC-8, facing +X into room)
     const panelW = 0.45;
@@ -266,63 +266,59 @@ function buildCentralizedRoofACAndSwitchPanel() {
         acHitBox: acHitBox
     };
 
-    // 2. Roof-Mounted Centralized 4-Way Cassette AC Units (Positioned above lighting at Y = 4.85m)
+    // 2. Single Grand Centralized 4-Way Ceiling Cassette AC (Exact Center at X=0, Z=0, Y=5.0m)
     acCassetteMats = [];
-    const roofACH = 4.85;
+    const roofACH = 5.0;
 
-    function createCeilingCassetteAC(posX, posZ) {
-        const cassetteGroup = new THREE.Group();
-        cassetteGroup.position.set(posX, roofACH, posZ);
+    const cassetteGroup = new THREE.Group();
+    cassetteGroup.position.set(0, roofACH, 0); // Exact Center
 
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3, metalness: 0.1 });
-        const grilleMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3, metalness: 0.1 });
+    const grilleMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 });
 
-        // Outer Cassette Panel Frame
-        const casing = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 1.6), bodyMat);
-        cassetteGroup.add(casing);
+    // Grand Outer Cassette Panel Frame (2.2m x 2.2m)
+    const casing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.14, 2.2), bodyMat);
+    cassetteGroup.add(casing);
 
-        // Center Intake Grille
-        const intake = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.03, 0.9), grilleMat);
-        intake.position.set(0, -0.06, 0);
-        cassetteGroup.add(intake);
+    // Center Intake Grille (1.2m x 1.2m)
+    const intake = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.03, 1.2), grilleMat);
+    intake.position.set(0, -0.07, 0);
+    cassetteGroup.add(intake);
 
-        // 4-Way Directional Airflow Vents
-        const ventGeo = new THREE.BoxGeometry(1.3, 0.02, 0.14);
-        const v1 = new THREE.Mesh(ventGeo, grilleMat); v1.position.set(0, -0.06, 0.62); cassetteGroup.add(v1);
-        const v2 = new THREE.Mesh(ventGeo, grilleMat); v2.position.set(0, -0.06, -0.62); cassetteGroup.add(v2);
-        const v3 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 1.3), grilleMat); v3.position.set(0.62, -0.06, 0); cassetteGroup.add(v3);
-        const v4 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 1.3), grilleMat); v4.position.set(-0.62, -0.06, 0); cassetteGroup.add(v4);
+    // 4-Way Directional Airflow Vents (Front, Back, Left, Right)
+    const ventGeoFB = new THREE.BoxGeometry(1.8, 0.02, 0.16);
+    const v1 = new THREE.Mesh(ventGeoFB, grilleMat); v1.position.set(0, -0.07, 0.86); cassetteGroup.add(v1);
+    const v2 = new THREE.Mesh(ventGeoFB, grilleMat); v2.position.set(0, -0.07, -0.86); cassetteGroup.add(v2);
 
-        // Glowing Blue Status LED Ring on the Cassette Frame
-        const ledRingMat = new THREE.MeshStandardMaterial({
-            color: 0x38bdf8,
-            emissive: 0x38bdf8,
-            emissiveIntensity: 1.6,
-            roughness: 0.1
-        });
-        const ledRing = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.02, 0.95), ledRingMat);
-        ledRing.position.set(0, -0.055, 0);
-        cassetteGroup.add(ledRing);
-        acCassetteMats.push(ledRingMat);
+    const ventGeoLR = new THREE.BoxGeometry(0.16, 0.02, 1.8);
+    const v3 = new THREE.Mesh(ventGeoLR, grilleMat); v3.position.set(0.86, -0.07, 0); cassetteGroup.add(v3);
+    const v4 = new THREE.Mesh(ventGeoLR, grilleMat); v4.position.set(-0.86, -0.07, 0); cassetteGroup.add(v4);
 
-        scene.add(cassetteGroup);
-    }
+    // Glowing Blue Status LED Ring on the Central Cassette Frame
+    const ledRingMat = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        emissive: 0x38bdf8,
+        emissiveIntensity: 1.6,
+        roughness: 0.1
+    });
+    const ledRing = new THREE.Mesh(new THREE.BoxGeometry(1.26, 0.02, 1.26), ledRingMat);
+    ledRing.position.set(0, -0.065, 0);
+    cassetteGroup.add(ledRing);
+    acCassetteMats.push(ledRingMat);
 
-    // Two Commercial Ceiling Cassette AC Units above the left and right zones
-    createCeilingCassetteAC(-3.2, 0.0);
-    createCeilingCassetteAC(3.2, 0.0);
+    scene.add(cassetteGroup);
 }
 
 /**
- * Builds Black Floor, 4 Dark Grey Pillars, 30% Cream Walls, Glass Walls, and Single Glass Gate
+ * Builds Scaled-Up Black Floor, 4 Dark Grey Pillars, 30% Cream Walls, Glass Walls, and Single Glass Gate
  */
 function buildRoomArchitecture() {
-    const roomW = 14;
-    const roomD = 14;
-    const pillarW = 0.65;
-    const pillarH = 4.6;
+    const roomW = 16.0;
+    const roomD = 16.0;
+    const pillarW = 0.70;
+    const pillarH = 4.8;
 
-    // 1. Black Floor Base
+    // 1. Black Floor Base (16.0m x 16.0m)
     const floorGeo = new THREE.PlaneGeometry(roomW, roomD);
     const floorMat = new THREE.MeshStandardMaterial({
         color: PALETTE.floor,
@@ -335,7 +331,7 @@ function buildRoomArchitecture() {
     scene.add(floor);
 
     // Subtle dark grid
-    const grid = new THREE.GridHelper(roomW, 14, PALETTE.floorGrid, PALETTE.floorGrid);
+    const grid = new THREE.GridHelper(roomW, 16, PALETTE.floorGrid, PALETTE.floorGrid);
     grid.position.y = 0.005;
     scene.add(grid);
 
@@ -347,11 +343,14 @@ function buildRoomArchitecture() {
         metalness: 0.25
     });
 
+    const pillarCenterX = roomW / 2 - pillarW / 2; // 7.65
+    const pillarCenterZ = roomD / 2 - pillarW / 2; // 7.65
+
     const pillarPositions = [
-        [-roomW / 2 + pillarW / 2, pillarH / 2, -roomD / 2 + pillarW / 2], // Top-Left (Near PC-8)
-        [roomW / 2 - pillarW / 2, pillarH / 2, -roomD / 2 + pillarW / 2],  // Top-Right
-        [-roomW / 2 + pillarW / 2, pillarH / 2, roomD / 2 - pillarW / 2],  // Bottom-Left
-        [roomW / 2 - pillarW / 2, pillarH / 2, roomD / 2 - pillarW / 2]   // Bottom-Right
+        [-pillarCenterX, pillarH / 2, -pillarCenterZ], // Top-Left (Near PC-8)
+        [pillarCenterX, pillarH / 2, -pillarCenterZ],  // Top-Right
+        [-pillarCenterX, pillarH / 2, pillarCenterZ],  // Bottom-Left
+        [pillarCenterX, pillarH / 2, pillarCenterZ]   // Bottom-Right
     ];
 
     pillarPositions.forEach(pos => {
@@ -363,13 +362,11 @@ function buildRoomArchitecture() {
     });
 
     // 3. Wall Architecture (Seamlessly sealed room connecting directly into all 4 corner pillars)
-    const wallH = 4.0; // Full architectural height
-    const pillarCenterX = roomW / 2 - pillarW / 2; // 6.675
-    const pillarCenterZ = roomD / 2 - pillarW / 2; // 6.675
-    const totalWallLen = roomD - pillarW; // 13.35m (Center of back pillar to center of front pillar)
+    const wallH = 4.2; // Full architectural height
+    const totalWallLen = roomD - pillarW; // 15.3m (Center of back pillar to center of front pillar)
 
-    const creamLen = 4.0;                             // 30% Cream Center Section (~4.0m)
-    const glassSideLen = (totalWallLen - creamLen) / 2; // 35% Glass Side Sections (~4.675m each)
+    const creamLen = 4.8;                               // 30% Cream Center Section (~4.8m)
+    const glassSideLen = (totalWallLen - creamLen) / 2; // 35% Glass Side Sections (~5.25m each)
 
     const creamWallMat = new THREE.MeshStandardMaterial({
         color: PALETTE.creamWall, // Architectural cream wall
@@ -421,15 +418,15 @@ function buildRoomArchitecture() {
     createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zFrontGlass, glassMat);
 
     // ── Front Wall: Seals seamlessly to both front corner pillars with gate opening in between ──
-    const gateLeftX = -4.3;
+    const gateLeftX = -4.6;
     const gateRightX = -1.8;
 
     // Left glass section (from Left Pillar to Gate Left Post)
-    const leftFrontSpan = gateLeftX - (-pillarCenterX); // ~2.375m
+    const leftFrontSpan = gateLeftX - (-pillarCenterX); // ~3.05m
     createWallSegment(leftFrontSpan, wallH, 0.12, -pillarCenterX + leftFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat);
 
     // Right glass section (from Gate Right Post to Right Pillar)
-    const rightFrontSpan = pillarCenterX - gateRightX; // ~8.475m
+    const rightFrontSpan = pillarCenterX - gateRightX; // ~9.45m
     createWallSegment(rightFrontSpan, wallH, 0.12, gateRightX + rightFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat);
 
     // 4. Physical 3D Entrance Gate with Interactive Openable Single Glass Door & Red Signboard
@@ -453,7 +450,7 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
 
     const gateSpan = xRight - xLeft;
     const doorW = gateSpan - 0.1;
-    const doorH = gateHeight - 0.3;
+    const doorH = gateHeight - 0.4;
 
     // 1. Left & Right Door Frame Jambs
     const postGeo = new THREE.BoxGeometry(0.14, gateHeight, 0.14);
@@ -504,7 +501,7 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
 
     // 4. Red Board with White Plate Signboard (On Right Side of Gate)
     const signBoardGroup = new THREE.Group();
-    signBoardGroup.position.set(xRight + 0.8, 1.85, zPos + 0.08);
+    signBoardGroup.position.set(xRight + 0.9, 1.95, zPos + 0.08);
 
     // Red Board Backing
     const redBoardMat = new THREE.MeshStandardMaterial({
@@ -512,7 +509,7 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
         roughness: 0.3,
         metalness: 0.1
     });
-    const redBoardMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 0.05), redBoardMat);
+    const redBoardMesh = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.85, 0.05), redBoardMat);
     redBoardMesh.castShadow = true;
     signBoardGroup.add(redBoardMesh);
 
@@ -523,7 +520,7 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
         roughness: 0.2,
         metalness: 0.05
     });
-    const whitePlateMesh = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.64, 0.02), whitePlateMat);
+    const whitePlateMesh = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.68, 0.02), whitePlateMat);
     whitePlateMesh.position.set(0, 0, 0.035);
     signBoardGroup.add(whitePlateMesh);
 
@@ -583,14 +580,14 @@ function createAILabPlateTexture() {
  * Overhead Warm Modular Tube in Shape of Infinity (∞) — Raised High
  */
 function buildInfinityChandelier() {
-    const infinityCurve = new InfinityCurve(3.8, 4.4); // Raised to 4.4m
+    const infinityCurve = new InfinityCurve(4.4, 4.5); // Scaled for larger room
     const tubeGeo = new THREE.TubeGeometry(infinityCurve, 160, 0.08, 16, true);
     
     // Glowing warm LED material
     const tubeMat = new THREE.MeshStandardMaterial({
         color: PALETTE.infinityGlow,
         emissive: PALETTE.infinityGlow,
-        emissiveIntensity: 2.0,
+        emissiveIntensity: 2.2,
         roughness: 0.1
     });
     infinityTubeMatRef = tubeMat;
@@ -603,10 +600,10 @@ function buildInfinityChandelier() {
     const cordGeo = new THREE.CylinderGeometry(0.012, 0.012, 1.4);
 
     const cordPoints = [
-        [-2.4, 5.1, 0],
-        [2.4, 5.1, 0],
-        [0, 5.1, 1.5],
-        [0, 5.1, -1.5]
+        [-2.8, 5.2, 0],
+        [2.8, 5.2, 0],
+        [0, 5.2, 1.8],
+        [0, 5.2, -1.8]
     ];
 
     cordPoints.forEach(pos => {
@@ -616,29 +613,29 @@ function buildInfinityChandelier() {
     });
 
     // Warm Spotlights under the raised infinity loops
-    spotLeftRef = new THREE.PointLight(PALETTE.infinityGlow, 1.3, 14, 1.4);
-    spotLeftRef.position.set(-2.0, 4.1, 0);
+    spotLeftRef = new THREE.PointLight(PALETTE.infinityGlow, 1.8, 16, 1.4);
+    spotLeftRef.position.set(-2.4, 4.2, 0);
     scene.add(spotLeftRef);
 
-    spotRightRef = new THREE.PointLight(PALETTE.infinityGlow, 1.3, 14, 1.4);
-    spotRightRef.position.set(2.0, 4.1, 0);
+    spotRightRef = new THREE.PointLight(PALETTE.infinityGlow, 1.8, 16, 1.4);
+    spotRightRef.position.set(2.4, 4.2, 0);
     scene.add(spotRightRef);
 }
 
 /**
- * Builds Workstations:
+ * Builds Workstations in Scaled Up Room:
  * - Continuous connected wooden slabs on Left (PC-1, PC-2, PC-3) and Right (PC-4, PC-5, PC-6)
  * - PC-7 at front wall near entrance
  * - PC-8 rotated and moved forward into the room
  */
 function buildAllLabWorkstations() {
-    const slabW = 1.15;
-    const slabL = 7.8;
+    const slabW = 1.25;
+    const slabL = 9.2;
     const slabH = 0.08;
     const tablePosY = 1.0;
 
     const woodMat = new THREE.MeshStandardMaterial({
-        color: PALETTE.woodSlab, // Creamish yellow wood
+        color: PALETTE.woodSlab, // Warm Scandinavian blonde cream wood
         roughness: 0.45,
         metalness: 0.08
     });
@@ -653,7 +650,7 @@ function buildAllLabWorkstations() {
         scene.add(slab);
 
         // Heavy metal support leg frames under slab
-        const legZOffsets = [-slabL / 2 + 0.2, 0, slabL / 2 - 0.2];
+        const legZOffsets = [-slabL / 2 + 0.3, 0, slabL / 2 - 0.3];
         legZOffsets.forEach(lz => {
             const frameGeo = new THREE.BoxGeometry(slabW - 0.1, tablePosY, 0.06);
             const legFrame = new THREE.Mesh(frameGeo, metalLegMat);
@@ -664,26 +661,26 @@ function buildAllLabWorkstations() {
     }
 
     // 1. Left Continuous Wooden Slab (Holds PC-1, PC-2, PC-3)
-    createConnectedBench(-5.3, -1.0);
+    createConnectedBench(-6.0, -1.0);
 
     // 2. Right Continuous Wooden Slab (Holds PC-4, PC-5, PC-6)
-    createConnectedBench(5.3, -1.0);
+    createConnectedBench(6.0, -1.0);
 
     // 3. Mount Left Monitors & Accessories on Left Slab
-    mountMonitorStation("PC-1", -5.3, 1.8, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-2", -5.3, -1.0, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-3", -5.3, -3.8, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-1", -6.0, 2.4, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-2", -6.0, -1.0, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-3", -6.0, -4.4, Math.PI / 2, tablePosY + slabH / 2);
 
     // 4. Mount Right Monitors & Accessories on Right Slab
-    mountMonitorStation("PC-4", 5.3, 1.8, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-5", 5.3, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-6", 5.3, -3.8, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-4", 6.0, 2.4, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-5", 6.0, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 6.0, -4.4, -Math.PI / 2, tablePosY + slabH / 2);
 
-    // 5. PC-7 Table on Front Entrance Wall (X = 1.8, Z = 4.8, rotated Math.PI)
-    createStandaloneTable("PC-7", 1.8, 4.8, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
+    // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.6, rotated Math.PI)
+    createStandaloneTable("PC-7", 2.4, 5.6, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
 
-    // 6. PC-8: Moved forward inside room & rotated (Z = -3.8, X = 0.0, rotated Math.PI)
-    createStandaloneTable("PC-8", 0.0, -3.8, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
+    // 6. PC-8: Moved forward inside room & rotated (X = 0.0, Z = -4.5, rotated Math.PI)
+    createStandaloneTable("PC-8", 0.0, -4.5, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
 }
 
 /**
@@ -1133,6 +1130,31 @@ function showToast(message) {
     }, 2800);
 }
 
+// WASD & Arrow Key Movement State
+const keysPressed = {
+    w: false, a: false, s: false, d: false,
+    q: false, e: false,
+    arrowup: false, arrowdown: false, arrowleft: false, arrowright: false
+};
+
+window.addEventListener("keydown", (e) => {
+    // Ignore keys if typing in an input or textarea
+    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+    if (activeTag === "input" || activeTag === "textarea") return;
+
+    const k = e.key.toLowerCase();
+    if (keysPressed.hasOwnProperty(k)) {
+        keysPressed[k] = true;
+    }
+});
+
+window.addEventListener("keyup", (e) => {
+    const k = e.key.toLowerCase();
+    if (keysPressed.hasOwnProperty(k)) {
+        keysPressed[k] = false;
+    }
+});
+
 function onWindowResize() {
     const container = document.getElementById("canvas-3d-container");
     if (!container || !renderer || !camera) return;
@@ -1145,23 +1167,55 @@ function onWindowResize() {
 }
 
 /**
- * Render Loop with smooth door swing animation, breathing monitors & infinity pulse
+ * Render Loop with WASD Walking Controls, smooth door animation & breathing monitors
  */
 let clock = new THREE.Clock();
 
 function animate() {
     animationFrameId = requestAnimationFrame(animate);
 
+    const delta = Math.min(clock.getDelta(), 0.1);
     const time = clock.getElapsedTime();
+
+    // 1. Smooth WASD / Arrow Key Camera Walking
+    const isMoving = keysPressed.w || keysPressed.s || keysPressed.a || keysPressed.d ||
+                     keysPressed.arrowup || keysPressed.arrowdown || keysPressed.arrowleft || keysPressed.arrowright ||
+                     keysPressed.q || keysPressed.e;
+
+    if (isMoving && camera && controls) {
+        const moveSpeed = 10.0 * delta; // Walk velocity in meters/sec
+
+        // Camera Forward Vector (XZ plane)
+        const forward = new THREE.Vector3();
+        camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+
+        // Camera Right Vector (XZ plane)
+        const right = new THREE.Vector3();
+        right.crossVectors(forward, camera.up).normalize();
+
+        const moveDelta = new THREE.Vector3();
+
+        if (keysPressed.w || keysPressed.arrowup) moveDelta.addScaledVector(forward, moveSpeed);
+        if (keysPressed.s || keysPressed.arrowdown) moveDelta.addScaledVector(forward, -moveSpeed);
+        if (keysPressed.a || keysPressed.arrowleft) moveDelta.addScaledVector(right, -moveSpeed);
+        if (keysPressed.d || keysPressed.arrowright) moveDelta.addScaledVector(right, moveSpeed);
+        if (keysPressed.e) moveDelta.y += moveSpeed * 0.8; // Fly Up
+        if (keysPressed.q) moveDelta.y -= moveSpeed * 0.8; // Fly Down
+
+        camera.position.add(moveDelta);
+        controls.target.add(moveDelta);
+    }
 
     if (controls) controls.update();
 
-    // 1. Smooth Door Swing Interpolation
+    // 2. Smooth Door Swing Interpolation
     if (doorPivotRef) {
         doorPivotRef.rotation.y += (targetDoorAngle - doorPivotRef.rotation.y) * 0.12;
     }
 
-    // 2. Subtle gentle pulse for occupied screens and floating badges
+    // 3. Subtle gentle pulse for occupied screens and floating badges
     Object.values(pcWorkstations).forEach(item => {
         if (item.status === "occupied") {
             item.screenMat.emissiveIntensity = 0.85 + Math.sin(time * 3.5) * 0.2;

@@ -76,13 +76,13 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
 
 
 def occupy_pc(pc_id: str, name: str) -> bool:
-    """Marks a PC as occupied by a given name with current timestamp."""
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    """Marks a PC as occupied by a user."""
     conn = get_db_connection()
     cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute(
-        "UPDATE pc_status SET status = 'occupied', occupied_by = ?, since_time = ? WHERE pc_id = ?",
-        (name, now_str, pc_id)
+        "UPDATE pc_status SET status = 'occupied', occupied_by = ?, since_time = ? WHERE UPPER(pc_id) = UPPER(?)",
+        (name, now_str, pc_id.strip())
     )
     conn.commit()
     affected = cursor.rowcount > 0
@@ -95,8 +95,8 @@ def free_pc(pc_id: str) -> bool:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE pc_status SET status = 'free', occupied_by = NULL, since_time = NULL WHERE pc_id = ?",
-        (pc_id,)
+        "UPDATE pc_status SET status = 'free', occupied_by = NULL, since_time = NULL WHERE UPPER(pc_id) = UPPER(?)",
+        (pc_id.strip(),)
     )
     conn.commit()
     affected = cursor.rowcount > 0
@@ -120,19 +120,12 @@ def get_attendance_logs(date: Optional[str] = None, name: Optional[str] = None) 
         query += " AND name LIKE ?"
         params.append(f"%{name}%")
 
-    query += " ORDER BY id DESC"
+    query += " ORDER BY in_time DESC"
 
     cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
     conn.close()
-    
-    # Convert sqlite3.Row to list of dicts with boolean conversion for is_known
-    results = []
-    for r in rows:
-        d = dict(r)
-        d["is_known"] = bool(d["is_known"])
-        results.append(d)
-    return results
+    return [dict(row) for row in rows]
 
 
 def get_latest_log_today(name: str, today_date: str) -> Optional[Dict[str, Any]]:
@@ -191,35 +184,6 @@ def get_unknown_counter(today_date: str) -> int:
     row = cursor.fetchone()
     conn.close()
     return (row["cnt"] if row else 0) + 1
-
-
-def occupy_pc(pc_id: str, name: str) -> bool:
-    """Marks a PC as occupied by a user."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute(
-        "UPDATE pc_status SET status = 'OCCUPIED', occupied_by = ?, since_time = ? WHERE pc_id = ?",
-        (name, now_str, pc_id)
-    )
-    conn.commit()
-    affected = cursor.rowcount > 0
-    conn.close()
-    return affected
-
-
-def free_pc(pc_id: str) -> bool:
-    """Marks a PC as free."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE pc_status SET status = 'FREE', occupied_by = NULL, since_time = NULL WHERE pc_id = ?",
-        (pc_id,)
-    )
-    conn.commit()
-    affected = cursor.rowcount > 0
-    conn.close()
-    return affected
 
 
 # Auto-initialize on import/first run
