@@ -446,9 +446,17 @@ function buildRoomArchitecture() {
     const creamLen = 4.8;                               // 30% Cream Center Section (~4.8m)
     const glassSideLen = (totalWallLen - creamLen) / 2; // 35% Glass Side Sections (~5.25m each)
 
+    // Wood Grain Texture for Wall Sections
+    const textureLoader = new THREE.TextureLoader();
+    const woodWallTex = textureLoader.load("wood_texture.jpg");
+    woodWallTex.wrapS = THREE.RepeatWrapping;
+    woodWallTex.wrapT = THREE.RepeatWrapping;
+    woodWallTex.repeat.set(1.2, 1.2);
+
     const creamWallMat = new THREE.MeshStandardMaterial({
-        color: PALETTE.creamWall, // Architectural cream wall
-        roughness: 0.65,
+        map: woodWallTex,
+        color: 0xffffff, // True natural blonde wood grain texture
+        roughness: 0.45,
         metalness: 0.05
     });
     const glassMat = new THREE.MeshStandardMaterial({
@@ -720,10 +728,18 @@ function buildAllLabWorkstations() {
     const slabH = 0.08;
     const tablePosY = 1.0;
 
+    // Wood Grain Texture for Tables & Workstation Slabs
+    const textureLoader = new THREE.TextureLoader();
+    const woodTableTex = textureLoader.load("wood_texture.jpg");
+    woodTableTex.wrapS = THREE.RepeatWrapping;
+    woodTableTex.wrapT = THREE.RepeatWrapping;
+    woodTableTex.repeat.set(1.5, 4.0);
+
     const woodMat = new THREE.MeshStandardMaterial({
-        color: PALETTE.woodSlab, // Warm Scandinavian blonde cream wood
-        roughness: 0.45,
-        metalness: 0.08
+        map: woodTableTex,
+        color: 0xffffff, // Natural blonde ash wood texture
+        roughness: 0.4,
+        metalness: 0.05
     });
     const metalLegMat = new THREE.MeshStandardMaterial({ color: PALETTE.metalFrame, roughness: 0.35 });
 
