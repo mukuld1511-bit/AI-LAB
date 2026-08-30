@@ -140,6 +140,7 @@ async function apiFetch(endpoint, options = {}) {
     // Now hitting same origin
     const resp = await fetch(endpoint, {
         ...options,
+        cache: "no-store", // Force browser to fetch fresh data every time
         headers: { ...defaultHeaders, ...(options.headers || {}) }
     });
     if (!resp.ok) {
@@ -195,7 +196,7 @@ function showFallbackPCs() {
 
 function renderPCGrid(pcs) {
     const grid = document.getElementById("pc-grid");
-    const freeCount = pcs.filter(p => p.status === "free").length;
+    const freeCount = pcs.filter(p => p.status.toLowerCase() === "free").length;
     const occCount = pcs.length - freeCount;
 
     document.getElementById("total-pcs").textContent = pcs.length;
@@ -204,20 +205,20 @@ function renderPCGrid(pcs) {
 
     let html = "";
     pcs.forEach(pc => {
-        const isFree = pc.status === "free";
+        const isFree = pc.status.toLowerCase() === "free";
         const cardClass = isFree ? "pc-card pc-card-free" : "pc-card pc-card-occupied";
-        const badgeClass = isFree ? "status-badge badge-free" : "status-badge badge-occupied-red";
+        const badgeClass = isFree ? "status-badge badge-free" : "status-badge badge-occupied";
         const badgeText = isFree ? "AVAILABLE" : "OCCUPIED";
         const meta = isFree
             ? "Ready for use"
-            : `<strong>${pc.occupied_by || "User"}</strong><br><small>Since: ${pc.since_time || "N/A"}</small>`;
+            : `<strong>${pc.occupied_by || "User"}</strong><br><small>Since: ${pc.start_time || pc.since_time || "N/A"}</small>`;
         const freeBtn = isFree
             ? ""
-            : `<button class="btn-free-pc" onclick="freePC('${pc.pc_id}')">Mark Free</button>`;
+            : `<button class="btn-free-pc" onclick="freePC('${pc.pc_id || pc.id}')">Mark Free</button>`;
 
         html += `
             <div class="${cardClass}">
-                <div class="pc-title">${pc.pc_id}</div>
+                <div class="pc-title">${pc.pc_id || pc.id}</div>
                 <span class="${badgeClass}">${badgeText}</span>
                 <div class="pc-meta">${meta}</div>
                 ${freeBtn}
@@ -228,9 +229,9 @@ function renderPCGrid(pcs) {
 
     // Update dropdown
     const select = document.getElementById("pc-select");
-    const freePCs = pcs.filter(p => p.status === "free");
+    const freePCs = pcs.filter(p => p.status.toLowerCase() === "free");
     if (freePCs.length > 0) {
-        select.innerHTML = freePCs.map(p => `<option value="${p.pc_id}">${p.pc_id}</option>`).join("");
+        select.innerHTML = freePCs.map(p => `<option value="${p.pc_id || p.id}">${p.pc_id || p.id}</option>`).join("");
         document.getElementById("claim-section").style.display = "block";
     } else {
         select.innerHTML = '<option value="">All PCs occupied</option>';

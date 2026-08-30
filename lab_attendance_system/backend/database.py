@@ -193,5 +193,34 @@ def get_unknown_counter(today_date: str) -> int:
     return (row["cnt"] if row else 0) + 1
 
 
+def occupy_pc(pc_id: str, name: str) -> bool:
+    """Marks a PC as occupied by a user."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(
+        "UPDATE pc_status SET status = 'OCCUPIED', occupied_by = ?, since_time = ? WHERE pc_id = ?",
+        (name, now_str, pc_id)
+    )
+    conn.commit()
+    affected = cursor.rowcount > 0
+    conn.close()
+    return affected
+
+
+def free_pc(pc_id: str) -> bool:
+    """Marks a PC as free."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE pc_status SET status = 'FREE', occupied_by = NULL, since_time = NULL WHERE pc_id = ?",
+        (pc_id,)
+    )
+    conn.commit()
+    affected = cursor.rowcount > 0
+    conn.close()
+    return affected
+
+
 # Auto-initialize on import/first run
 init_db()

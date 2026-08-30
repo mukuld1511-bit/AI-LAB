@@ -5,7 +5,7 @@ import time
 
 def main():
     print("=" * 65)
-    print("    🚀 STARTING UNIFIED AI/ML LAB ATTENDANCE SYSTEM 🚀")
+    print("    STARTING UNIFIED AI/ML LAB ATTENDANCE SYSTEM    ")
     print("=" * 65)
 
     root_dir = os.path.dirname(os.path.abspath(__file__))

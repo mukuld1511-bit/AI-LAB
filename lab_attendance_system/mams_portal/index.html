@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mam's Lab Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="top-header">
+        <div class="header-left">
+            <h1>🔬 AI/ML Lab - Faculty Portal</h1>
+            <div class="header-sub">Remote Lab Monitoring</div>
+        </div>
+        <div class="header-right" id="connection-ui" style="display: none;">
+            <input type="text" id="ngrok-url" class="form-input" placeholder="Enter Ngrok URL (e.g. https://abc.ngrok.app)" style="min-width: 250px;">
+            <button id="connect-btn" class="btn btn-primary">Connect</button>
+        </div>
+        <div class="header-right">
+            <span id="connection-status" class="badge badge-disconnected">Checking Connection...</span>
+        </div>
+    </header>
+
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="pc-status">🖥️ PC Status</button>
+        <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
+        <button class="tab-btn" data-tab="registered-faces">👥 Registered Users</button>
+    </nav>
+
+    <!-- TAB: PC STATUS -->
+    <main id="tab-pc-status" class="tab-content active">
+        <div class="page-title">
+            <h2>🖥️ Live PC Availability</h2>
+        </div>
+        <div class="metrics-row">
+            <div class="metric-card metric-green">
+                <div class="metric-value" id="stat-free">0</div>
+                <div class="metric-label">AVAILABLE PCs</div>
+            </div>
+            <div class="metric-card metric-red">
+                <div class="metric-value" id="stat-occupied">0</div>
+                <div class="metric-label">OCCUPIED PCs</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="stat-total">0</div>
+                <div class="metric-label">TOTAL PCs</div>
+            </div>
+        </div>
+        <div id="pc-grid" class="pc-grid">
+            <!-- Rendered by JS -->
+        </div>
+    </main>
+
+    <!-- TAB: ATTENDANCE -->
+    <main id="tab-attendance" class="tab-content">
+        <div class="page-title">
+            <h2>📋 Lab Attendance Logs</h2>
+        </div>
+        <div class="filter-bar">
+            <input type="date" id="filter-date" class="form-input">
+            <input type="text" id="filter-name" class="form-input" placeholder="Search name...">
+            <button id="apply-filter-btn" class="btn btn-primary">🔍 Search</button>
+        </div>
+        <div id="attendance-table-wrap" style="margin-top: 20px;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Known User</th>
+                        <th>In Time</th>
+                        <th>Out Time</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="attendance-tbody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- TAB: REGISTERED FACES -->
+    <main id="tab-registered-faces" class="tab-content">
+        <div class="page-title">
+            <h2>👥 Registered Users</h2>
+            <p>Students currently enrolled in the system</p>
+        </div>
+        <div id="registered-grid" class="registered-grid">
+            <!-- Rendered by JS -->
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

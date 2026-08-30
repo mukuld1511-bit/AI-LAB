@@ -7,10 +7,12 @@ import cv2
 import numpy as np
 import face_recognition
 import pickle
+import csv
+import io
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -21,6 +23,7 @@ import camera
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNKNOWN_FACES_DIR = os.path.join(BASE_DIR, "unknown_faces")
 os.makedirs(UNKNOWN_FACES_DIR, exist_ok=True)
+STATIC_DIR = os.path.join(BASE_DIR, "backend", "static")
 
 
 @asynccontextmanager
@@ -172,6 +175,8 @@ def get_unknown_faces() -> List[Dict[str, str]]:
                     "filename": file
                 })
 
+    return images_list
+
 @app.post("/api/scan_entry")
 def scan_entry():
     """Opens camera, scans face, and logs IN."""
@@ -255,14 +260,34 @@ def enroll_face(payload: EnrollRequest):
         
         rgb_frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+        
         if len(face_locations) == 0:
             raise HTTPException(status_code=400, detail="No face detected in the photo.")
+        
+        if len(face_locations) > 1:
+            raise HTTPException(status_code=400, detail="Multiple faces detected. Please ensure only one person is in the frame.")
         
         encodings = face_recognition.face_encodings(rgb_frame, face_locations)
         if len(encodings) == 0:
             raise HTTPException(status_code=400, detail="Could not extract face encoding.")
             
         new_encoding = encodings[0]
+        
+        # Save cropped avatar image
+        top, right, bottom, left = face_locations[0]
+        h, w, _ = img.shape
+        pad = 30
+        pad_top = max(0, top - pad)
+        pad_bottom = min(h, bottom + pad)
+        pad_left = max(0, left - pad)
+        pad_right = min(w, right + pad)
+        face_crop = img[pad_top:pad_bottom, pad_left:pad_right]
+        
+        avatars_dir = os.path.join(STATIC_DIR, "avatars")
+        os.makedirs(avatars_dir, exist_ok=True)
+        safe_name = "".join([c for c in payload.name if c.isalpha() or c.isdigit() or c==' ']).rstrip()
+        avatar_filename = f"{safe_name.replace(' ', '_')}.jpg"
+        cv2.imwrite(os.path.join(avatars_dir, avatar_filename), face_crop)
         
         # Save to known_encodings.pkl
         encodings_file = os.path.join(BASE_DIR, "face_recognition_module", "known_encodings.pkl")
@@ -279,16 +304,57 @@ def enroll_face(payload: EnrollRequest):
             pickle.dump(known_data, f)
             
         return {"status": "success", "message": f"Successfully registered '{payload.name}'"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/db/download")
 def download_db():
-    """Download the SQLite database."""
-    db_path = os.path.join(BASE_DIR, "backend", "lab_attendance.db")
-    if not os.path.exists(db_path):
-        raise HTTPException(status_code=404, detail="Database not found.")
-    return FileResponse(path=db_path, filename="lab_attendance.db")
+    """Download the SQLite database as CSV."""
+    conn = database.get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM attendance_logs ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No logs found.")
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write styled header
+    writer.writerow([
+        "Log ID", 
+        "Student Name", 
+        "User Type", 
+        "Entry Time", 
+        "Exit Time", 
+        "Date",
+        "Image Path"
+    ])
+    
+    # Write data
+    for row in rows:
+        user_type = "Registered User" if row["is_known"] else "Unknown Face"
+        writer.writerow([
+            row["id"],
+            row["name"],
+            user_type,
+            row["in_time"] or "N/A",
+            row["out_time"] or "Still in Lab",
+            row["date"],
+            row["image_path"] or "None"
+        ])
+        
+    csv_data = output.getvalue()
+    
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=attendance_logs_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
 
 @app.post("/db/clear")
 def clear_db():
