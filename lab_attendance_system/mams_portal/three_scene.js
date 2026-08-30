@@ -1252,46 +1252,49 @@ function animate() {
     const delta = Math.min(clock.getDelta(), 0.1);
     const time = clock.getElapsedTime();
 
-    // 1. WASD Translation (Walk forward/back, strafe left/right)
+    // 1. WASD / Arrow Key Orbit & Zoom Centered on Room Center (0, 1.2, 0)
     if (camera && controls) {
-        const moveSpeed = 11.0 * delta; // Walk velocity in meters/sec
-        const rotSpeed = 1.8 * delta;   // Orbit rotation speed in rad/sec
+        const moveSpeed = 12.0 * delta; // Dolly/Zoom velocity
+        const rotSpeed = 1.8 * delta;   // Orbit rotation speed around center axis
+        const roomCenter = new THREE.Vector3(0, 1.2, 0);
 
-        // Camera Forward Vector (XZ plane)
-        const forward = new THREE.Vector3();
-        camera.getWorldDirection(forward);
-        forward.y = 0;
-        forward.normalize();
-
-        // Camera Right Vector (XZ plane)
-        const right = new THREE.Vector3();
-        right.crossVectors(forward, camera.up).normalize();
-
-        const moveDelta = new THREE.Vector3();
-
-        if (keysPressed.w || keysPressed.arrowup) moveDelta.addScaledVector(forward, moveSpeed);
-        if (keysPressed.s || keysPressed.arrowdown) moveDelta.addScaledVector(forward, -moveSpeed);
-        if (keysPressed.a) moveDelta.addScaledVector(right, -moveSpeed);
-        if (keysPressed.d) moveDelta.addScaledVector(right, moveSpeed);
-        if (keysPressed.r) moveDelta.y += moveSpeed * 0.8; // Fly Up
-        if (keysPressed.f) moveDelta.y -= moveSpeed * 0.8; // Fly Down
-
-        if (moveDelta.lengthSq() > 0) {
-            camera.position.add(moveDelta);
-            controls.target.add(moveDelta);
-        }
-
-        // 2. Smooth Keyboard View Rotation (Q/E or Left/Right Arrow Keys Orbit Around Target)
-        if (keysPressed.q || keysPressed.arrowleft) {
-            const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+        // A/D or Q/E or Left/Right Arrow: Smooth 360° Orbit Around Middle of Room
+        if (keysPressed.a || keysPressed.q || keysPressed.arrowleft) {
+            const offset = new THREE.Vector3().subVectors(camera.position, roomCenter);
             offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotSpeed);
-            camera.position.addVectors(controls.target, offset);
+            camera.position.addVectors(roomCenter, offset);
         }
-        if (keysPressed.e || keysPressed.arrowright) {
-            const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+        if (keysPressed.d || keysPressed.e || keysPressed.arrowright) {
+            const offset = new THREE.Vector3().subVectors(camera.position, roomCenter);
             offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), -rotSpeed);
-            camera.position.addVectors(controls.target, offset);
+            camera.position.addVectors(roomCenter, offset);
         }
+
+        // W / Up Arrow: Dolly In Toward Center
+        if (keysPressed.w || keysPressed.arrowup) {
+            const dir = new THREE.Vector3().subVectors(roomCenter, camera.position);
+            const dist = dir.length();
+            if (dist > controls.minDistance + 0.5) {
+                dir.normalize();
+                camera.position.addScaledVector(dir, moveSpeed);
+            }
+        }
+
+        // S / Down Arrow: Dolly Out From Center
+        if (keysPressed.s || keysPressed.arrowdown) {
+            const dir = new THREE.Vector3().subVectors(camera.position, roomCenter);
+            const dist = dir.length();
+            if (dist < controls.maxDistance - 1.0) {
+                dir.normalize();
+                camera.position.addScaledVector(dir, moveSpeed);
+            }
+        }
+
+        // R / F: Elevate / Lower Camera Height
+        if (keysPressed.r) camera.position.y = Math.min(30.0, camera.position.y + moveSpeed * 0.7);
+        if (keysPressed.f) camera.position.y = Math.max(1.5, camera.position.y - moveSpeed * 0.7);
+
+        controls.target.copy(roomCenter);
     }
 
     if (controls) controls.update();
