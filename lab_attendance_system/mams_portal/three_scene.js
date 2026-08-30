@@ -461,14 +461,16 @@ function buildRoomArchitecture() {
     });
     const glassMat = new THREE.MeshStandardMaterial({
         color: PALETTE.glassWall,
-        roughness: 0.1,
-        metalness: 0.2,
+        roughness: 0.05,
+        metalness: 0.15,
         transparent: true,
-        opacity: 0.35
+        opacity: 0.45,
+        depthWrite: false, // Ensures all transparent glass panes render without clipping background/tables
+        side: THREE.DoubleSide
     });
     const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.wallFrame, roughness: 0.4 });
 
-    function createWallSegment(w, h, d, x, y, z, material) {
+    function createWallSegment(w, h, d, x, y, z, material, isGlass = false) {
         const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
         wall.position.set(x, y, z);
         wall.castShadow = true;
@@ -486,24 +488,36 @@ function buildRoomArchitecture() {
         const baseTrim = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.06, d + 0.02), frameMat);
         baseTrim.position.set(x, 0.03, z);
         scene.add(baseTrim);
+
+        // Architectural Vertical Glazing Mullions for Glass Panes
+        if (isGlass) {
+            const mullionW = w > d ? 0.04 : d + 0.03;
+            const mullionD = w > d ? d + 0.03 : 0.04;
+            const mullionGeo = new THREE.BoxGeometry(mullionW, h, mullionD);
+
+            // Center vertical divider
+            const centerMullion = new THREE.Mesh(mullionGeo, frameMat);
+            centerMullion.position.set(x, y, z);
+            scene.add(centerMullion);
+        }
     }
 
     // ── Back Wall: Completely spans from Left Pillar Corner to Right Pillar Corner ──
-    createWallSegment(totalWallLen, wallH, 0.12, 0, wallH / 2, -pillarCenterZ, glassMat);
+    createWallSegment(totalWallLen, wallH, 0.12, 0, wallH / 2, -pillarCenterZ, glassMat, true);
 
     // ── Left Wall: [Glass 35%] === [Solid Cream 30% (Middle)] === [Glass 35%] ──
     const zBackGlass = -pillarCenterZ + glassSideLen / 2;
     const zFrontGlass = pillarCenterZ - glassSideLen / 2;
     const zMiddleCream = 0.0;
 
-    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zBackGlass, glassMat);
-    createWallSegment(0.14, wallH, creamLen, -pillarCenterX, wallH / 2, zMiddleCream, creamWallMat);
-    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zFrontGlass, glassMat);
+    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zBackGlass, glassMat, true);
+    createWallSegment(0.14, wallH, creamLen, -pillarCenterX, wallH / 2, zMiddleCream, creamWallMat, false);
+    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zFrontGlass, glassMat, true);
 
     // ── Right Wall: [Glass 35%] === [Solid Cream 30% (Middle)] === [Glass 35%] ──
-    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zBackGlass, glassMat);
-    createWallSegment(0.14, wallH, creamLen, pillarCenterX, wallH / 2, zMiddleCream, creamWallMat);
-    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zFrontGlass, glassMat);
+    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zBackGlass, glassMat, true);
+    createWallSegment(0.14, wallH, creamLen, pillarCenterX, wallH / 2, zMiddleCream, creamWallMat, false);
+    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zFrontGlass, glassMat, true);
 
     // ── Wall-Mounted AI LAB Poster on Right Side Wall (Facing Into Lab) ──
     buildRightWallAIPoster(pillarCenterX, zMiddleCream);
@@ -514,11 +528,11 @@ function buildRoomArchitecture() {
 
     // Left glass section (from Left Pillar to Gate Left Post)
     const leftFrontSpan = gateLeftX - (-pillarCenterX); // ~3.05m
-    createWallSegment(leftFrontSpan, wallH, 0.12, -pillarCenterX + leftFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat);
+    createWallSegment(leftFrontSpan, wallH, 0.12, -pillarCenterX + leftFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat, true);
 
     // Right glass section (from Gate Right Post to Right Pillar)
     const rightFrontSpan = pillarCenterX - gateRightX; // ~9.45m
-    createWallSegment(rightFrontSpan, wallH, 0.12, gateRightX + rightFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat);
+    createWallSegment(rightFrontSpan, wallH, 0.12, gateRightX + rightFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat, true);
 
     // 4. Physical 3D Entrance Gate with Interactive Openable Single Glass Door & Red Signboard
     build3DLabGate(gateLeftX, gateRightX, pillarCenterZ, wallH);
