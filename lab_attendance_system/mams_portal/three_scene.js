@@ -1017,13 +1017,8 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 
     // Glowing High-DPI Display Screen with PC Label rendered directly on Monitor Glass
     const screenTexture = createScreenDisplayTexture(pcId, true, "");
-    const screenMat = new THREE.MeshStandardMaterial({
-        map: screenTexture,
-        emissive: 0x052e16,
-        emissiveMap: screenTexture,
-        emissiveIntensity: 0.85,
-        roughness: 0.25,
-        metalness: 0.05
+    const screenMat = new THREE.MeshBasicMaterial({
+        map: screenTexture
     });
     const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(screenW - 0.08, screenH - 0.08), screenMat);
     screenMesh.position.set(0, surfaceY + 0.55, -0.32 + screenD / 2 + 0.002);
@@ -1082,10 +1077,10 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 
     group.add(chairGroup);
 
-    // 3D Floating Badge Sprite (Positioned just above the top monitor bezel)
+    // 3D Floating Badge Sprite (Cleanly floating right above monitor with ample vertical padding)
     const sprite = createStatusSprite(pcId, "AVAILABLE", true);
-    sprite.position.set(0, surfaceY + 1.25, -0.30);
-    sprite.scale.set(2.2, 0.88, 1);
+    sprite.position.set(0, surfaceY + 1.40, 0);
+    sprite.scale.set(2.4, 1.2, 1);
     group.add(sprite);
 
     // Click Hitbox for Raycaster (Scaled to match larger station)
@@ -1100,6 +1095,7 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 
     pcWorkstations[pcId] = {
         group: group,
+        surfaceY: surfaceY,
         screenMesh: screenMesh,
         screenMat: screenMat,
         screenTexture: screenTexture,
@@ -1134,19 +1130,19 @@ function drawScreenDisplayCanvas(ctx, pcId, isFree, occupiedBy) {
     // 1. Sleek Modern OS Desktop / Wallpaper Gradient
     const bgGrad = ctx.createLinearGradient(0, 0, 1024, 600);
     if (isFree) {
-        bgGrad.addColorStop(0.0, "#022c22"); // Deep emerald dark slate
-        bgGrad.addColorStop(0.5, "#064e3b");
+        bgGrad.addColorStop(0.0, "#064e3b"); // Deep rich emerald slate
+        bgGrad.addColorStop(0.5, "#047857");
         bgGrad.addColorStop(1.0, "#0f172a");
     } else {
-        bgGrad.addColorStop(0.0, "#450a0a"); // Deep crimson dark slate
-        bgGrad.addColorStop(0.5, "#7f1d1d");
+        bgGrad.addColorStop(0.0, "#7f1d1d"); // Deep rich crimson slate
+        bgGrad.addColorStop(0.5, "#991b1b");
         bgGrad.addColorStop(1.0, "#0f172a");
     }
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, 1024, 600);
 
     // 2. Cyber Grid in Background
-    ctx.strokeStyle = isFree ? "rgba(52, 211, 153, 0.15)" : "rgba(248, 113, 113, 0.15)";
+    ctx.strokeStyle = isFree ? "rgba(110, 231, 183, 0.2)" : "rgba(252, 165, 165, 0.2)";
     ctx.lineWidth = 1.5;
     for (let x = 0; x < 1024; x += 64) {
         ctx.beginPath();
@@ -1175,105 +1171,109 @@ function drawScreenDisplayCanvas(ctx, pcId, isFree, occupiedBy) {
     ctx.fillText("📶 ONLINE  •  10 Gbps LAN", 988, 36);
 
     // 4. Central Large PC ID Box
-    const boxW = 600;
-    const boxH = 280;
+    const boxW = 640;
+    const boxH = 300;
     const boxX = (1024 - boxW) / 2;
-    const boxY = 120;
+    const boxY = 110;
 
-    ctx.fillStyle = "rgba(15, 23, 42, 0.90)";
+    ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
     roundRect(ctx, boxX, boxY, boxW, boxH, 24);
     ctx.fill();
 
-    ctx.strokeStyle = isFree ? "#10b981" : "#ef4444";
+    ctx.strokeStyle = isFree ? "#34d399" : "#f87171";
     ctx.lineWidth = 5;
     roundRect(ctx, boxX, boxY, boxW, boxH, 24);
     ctx.stroke();
 
     // Large Bold PC Label ON MONITOR
     ctx.fillStyle = "#ffffff";
-    ctx.font = "900 96px 'Inter', sans-serif";
+    ctx.font = "900 100px 'Inter', sans-serif";
     ctx.textAlign = "center";
-    ctx.shadowColor = isFree ? "rgba(16, 185, 129, 0.9)" : "rgba(239, 68, 68, 0.9)";
-    ctx.shadowBlur = 20;
-    ctx.fillText(pcId, 512, boxY + 115);
+    ctx.shadowColor = isFree ? "rgba(52, 211, 153, 0.9)" : "rgba(248, 113, 113, 0.9)";
+    ctx.shadowBlur = 24;
+    ctx.fillText(pcId, 512, boxY + 120);
     ctx.shadowBlur = 0;
 
     // Status Pill inside box
-    const pillW = 460;
-    const pillH = 58;
+    const pillW = 500;
+    const pillH = 64;
     const pillX = (1024 - pillW) / 2;
-    const pillY = boxY + 185;
+    const pillY = boxY + 200;
 
     ctx.fillStyle = isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)";
-    roundRect(ctx, pillX, pillY, pillW, pillH, 29);
+    roundRect(ctx, pillX, pillY, pillW, pillH, 32);
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = "900 24px 'Inter', sans-serif";
-    const statusText = isFree ? "● AVAILABLE TO USE" : `● IN USE: ${occupiedBy || "OCCUPIED"}`;
-    ctx.fillText(statusText.toUpperCase(), 512, pillY + 36);
+    ctx.font = "900 26px 'Inter', sans-serif";
+    const statusText = isFree ? "🟢 AVAILABLE TO USE" : `🔴 IN USE: ${occupiedBy || "OCCUPIED"}`;
+    ctx.fillText(statusText.toUpperCase(), 512, pillY + 40);
 
     // 5. Bottom Instructions
-    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.90)";
     ctx.font = "600 22px 'Inter', sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(isFree ? "👉 Click this workstation to occupy" : "👉 Click this workstation to free / view details", 512, 470);
+    ctx.fillText(isFree ? "👉 Tap / Click workstation to occupy" : "👉 Tap / Click workstation to free / view", 512, 480);
 
-    ctx.fillStyle = "#64748b";
+    ctx.fillStyle = "#94a3b8";
     ctx.font = "500 18px 'Inter', sans-serif";
-    ctx.fillText("AI LAB Management Portal • Two-Way Live Synced", 512, 520);
+    ctx.fillText("AI LAB Management Portal • Two-Way Synced", 512, 525);
 }
 
 /**
- * Generates high-DPI canvas texture for 3D floating sprite badge
+ * Generates high-DPI canvas texture for 3D floating sprite badge with ample padding
  */
 function createStatusSprite(pcId, statusText, isFree) {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
-    canvas.height = 200;
+    canvas.height = 256;
     const ctx = canvas.getContext("2d");
 
     drawSpriteCanvas(ctx, pcId, statusText, isFree);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const spriteMat = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false
+    });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.userData = { canvas: canvas, ctx: ctx, texture: texture };
     return sprite;
 }
 
 function drawSpriteCanvas(ctx, pcId, statusText, isFree) {
-    ctx.clearRect(0, 0, 512, 200);
+    ctx.clearRect(0, 0, 512, 256);
 
-    // Card background pill
-    const radius = 24;
-    const bgColor = isFree ? "rgba(16, 185, 129, 0.92)" : "rgba(239, 68, 68, 0.95)";
-    ctx.fillStyle = "rgba(15, 20, 28, 0.92)";
-    roundRect(ctx, 16, 16, 480, 168, radius);
+    // Card background pill with full border padding
+    const radius = 28;
+    const bgColor = isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)";
+    ctx.fillStyle = "rgba(15, 23, 42, 0.94)";
+    roundRect(ctx, 14, 14, 484, 228, radius);
     ctx.fill();
 
     ctx.strokeStyle = isFree ? "#10b981" : "#ef4444";
     ctx.lineWidth = 6;
-    roundRect(ctx, 16, 16, 480, 168, radius);
+    roundRect(ctx, 14, 14, 484, 228, radius);
     ctx.stroke();
 
     // PC Name (Top)
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 54px 'Inter', sans-serif";
+    ctx.font = "bold 56px 'Inter', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`💻 ${pcId}`, 256, 70);
+    ctx.fillText(`💻 ${pcId}`, 256, 80);
 
     // Status Pill (Bottom)
     ctx.fillStyle = bgColor;
-    roundRect(ctx, 40, 112, 432, 54, 18);
+    roundRect(ctx, 36, 136, 440, 76, 24);
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 30px 'Inter', sans-serif";
+    ctx.font = "bold 32px 'Inter', sans-serif";
     const label = isFree ? "🟢 AVAILABLE" : `🔴 ${statusText}`;
-    ctx.fillText(label, 256, 140);
+    ctx.fillText(label, 256, 174);
 }
 
 function createTextBadge(text, textColor, bgColor) {
@@ -1335,7 +1335,6 @@ function updatePCStatusIn3D(pcs) {
             const { ctx } = item.screenTexture.userData;
             drawScreenDisplayCanvas(ctx, pc.pc_id, isFree, pc.occupied_by);
             item.screenTexture.needsUpdate = true;
-            item.screenMat.emissive.setHex(isFree ? 0x052e16 : 0x450a0a);
         }
 
         // 2. Update Floating Sprite Canvas Texture
@@ -1637,13 +1636,11 @@ function animate() {
         doorPivotRef.rotation.y += (targetDoorAngle - doorPivotRef.rotation.y) * 0.12;
     }
 
-    // 3. Subtle gentle pulse for occupied screens and floating badges
+    // 3. Subtle gentle pulse for floating badges
     Object.values(pcWorkstations).forEach(item => {
-        if (item.status === "occupied") {
-            item.screenMat.emissiveIntensity = 0.85 + Math.sin(time * 3.5) * 0.2;
-        }
         if (item.sprite) {
-            item.sprite.position.y = 1.0 + 1.25 + Math.sin(time * 2 + (item.group.position.x || 0)) * 0.03;
+            const baseBadgeY = (item.surfaceY || 1.1) + 1.40;
+            item.sprite.position.y = baseBadgeY + Math.sin(time * 2 + (item.group.position.x || 0)) * 0.02;
         }
     });
 
