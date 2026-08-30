@@ -120,12 +120,12 @@ function init3DLabScene() {
 
     // 1. Scene with Crisp Light-Coloured Skybox
     scene = new THREE.Scene();
-    scene.background = createLightSkyboxTexture();
-    scene.fog = new THREE.FogExp2(0xf1f5f9, 0.008);
+    scene.background = new THREE.Color(0xdce7f2); // Soft daylight studio sky
+    scene.fog = new THREE.FogExp2(0xdce7f2, 0.008);
 
     // 2. Camera (Isometric View)
     const aspect = container.clientWidth / container.clientHeight;
-    camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 100);
+    camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 120);
     setDefaultCameraPosition();
 
     // 3. Renderer
