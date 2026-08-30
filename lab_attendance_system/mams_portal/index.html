@@ -33,12 +33,17 @@
 
     <!-- TAB: PC STATUS (3D DIGITAL TWIN) -->
     <main id="tab-pc-status" class="tab-content active">
-        <div class="page-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="page-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
             <div>
                 <h2>🖥️ Live 3D AI LAB</h2>
                 <p>Interactive 3D spatial layout • Tap any workstation to manage</p>
             </div>
-            <button id="reset-cam-btn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 14px;">🎯 Reset View</button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button id="rotate-90-btn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">🔄 Rotate 90°</button>
+                <button id="gate-view-btn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">🚪 Gate View</button>
+                <button id="top-view-btn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">🔝 Top View</button>
+                <button id="reset-cam-btn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">🎯 Reset</button>
+            </div>
         </div>
         
         <div class="metrics-row">
@@ -60,8 +65,9 @@
         <div id="canvas-3d-container" class="canvas-3d-wrapper">
             <canvas id="lab-3d-canvas"></canvas>
             <div class="canvas-3d-controls-hint">
-                <span>⌨️ WASD / Arrows to Walk</span> • 
-                <span>🖱️ Drag to Rotate</span> • 
+                <span>⌨️ WASD to Walk</span> • 
+                <span>🔄 Q / E to Rotate View</span> • 
+                <span>🖱️ Drag to Orbit</span> • 
                 <span>🚪 Tap Gate</span> • 
                 <span>⚡ Tap Switch</span> • 
                 <span>👆 Tap PC</span>
@@ -146,7 +152,7 @@
         </div>
     </div>
 
-    <script src="three_scene.js?v=13"></script>
-    <script src="script.js?v=25"></script>
+    <script src="three_scene.js?v=14"></script>
+    <script src="script.js?v=26"></script>
 </body>
 </html>

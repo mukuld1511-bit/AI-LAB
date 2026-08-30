@@ -109,10 +109,16 @@ function init3DLabScene() {
     if (typeof THREE.OrbitControls !== "undefined") {
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
+        controls.dampingFactor = 0.08;
+        controls.enableRotate = true;
+        controls.rotateSpeed = 0.9;
+        controls.enableZoom = true;
+        controls.zoomSpeed = 1.0;
+        controls.enablePan = true;
+        controls.panSpeed = 0.8;
         controls.maxPolarAngle = Math.PI / 2.05; // Stay above floor
-        controls.minDistance = 6;
-        controls.maxDistance = 45;
+        controls.minDistance = 3;
+        controls.maxDistance = 50;
         controls.target.set(0, 1.2, 0);
     }
 
@@ -141,21 +147,52 @@ function init3DLabScene() {
     canvas.addEventListener("touchstart", onTouchStart, { passive: false });
     window.addEventListener("resize", onWindowResize);
 
-    const resetBtn = document.getElementById("reset-cam-btn");
-    if (resetBtn) {
-        resetBtn.addEventListener("click", () => {
-            setDefaultCameraPosition();
-            if (controls) controls.target.set(0, 1.2, 0);
-        });
-    }
+    // View Angle Buttons
+    document.getElementById("reset-cam-btn")?.addEventListener("click", () => {
+        setDefaultCameraPosition();
+        if (controls) controls.target.set(0, 1.2, 0);
+        showToast("🎯 Reset Isometric View");
+    });
+
+    document.getElementById("rotate-90-btn")?.addEventListener("click", () => {
+        rotateViewByAngle(Math.PI / 2);
+    });
+
+    document.getElementById("gate-view-btn")?.addEventListener("click", () => {
+        setCameraView(-3.0, 3.2, 11.5, -3.0, 1.2, 0);
+        showToast("🚪 Entrance Gate View");
+    });
+
+    document.getElementById("top-view-btn")?.addEventListener("click", () => {
+        setCameraView(0.1, 24.0, 0.1, 0, 1.2, 0);
+        showToast("🔝 Top-Down Floorplan View");
+    });
 
     // Start Render Loop
     animate();
 }
 
 function setDefaultCameraPosition() {
-    camera.position.set(15.5, 16.5, 17.5);
-    camera.lookAt(0, 1.2, 0);
+    setCameraView(15.5, 16.5, 17.5, 0, 1.2, 0);
+}
+
+function setCameraView(px, py, pz, tx, ty, tz) {
+    camera.position.set(px, py, pz);
+    if (controls) {
+        controls.target.set(tx, ty, tz);
+        controls.update();
+    } else {
+        camera.lookAt(tx, ty, tz);
+    }
+}
+
+function rotateViewByAngle(rad) {
+    if (!controls) return;
+    const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), rad);
+    camera.position.addVectors(controls.target, offset);
+    controls.update();
+    showToast("🔄 Rotated View 90°");
 }
 
 /**
@@ -1130,10 +1167,10 @@ function showToast(message) {
     }, 2800);
 }
 
-// WASD & Arrow Key Movement State
+// WASD & Arrow Key Movement + View Rotation State
 const keysPressed = {
     w: false, a: false, s: false, d: false,
-    q: false, e: false,
+    q: false, e: false, r: false, f: false,
     arrowup: false, arrowdown: false, arrowleft: false, arrowright: false
 };
 
@@ -1167,7 +1204,7 @@ function onWindowResize() {
 }
 
 /**
- * Render Loop with WASD Walking Controls, smooth door animation & breathing monitors
+ * Render Loop with WASD Walking, Q/E View Rotation, smooth door animation & breathing monitors
  */
 let clock = new THREE.Clock();
 
@@ -1177,13 +1214,10 @@ function animate() {
     const delta = Math.min(clock.getDelta(), 0.1);
     const time = clock.getElapsedTime();
 
-    // 1. Smooth WASD / Arrow Key Camera Walking
-    const isMoving = keysPressed.w || keysPressed.s || keysPressed.a || keysPressed.d ||
-                     keysPressed.arrowup || keysPressed.arrowdown || keysPressed.arrowleft || keysPressed.arrowright ||
-                     keysPressed.q || keysPressed.e;
-
-    if (isMoving && camera && controls) {
-        const moveSpeed = 10.0 * delta; // Walk velocity in meters/sec
+    // 1. WASD Translation (Walk forward/back, strafe left/right)
+    if (camera && controls) {
+        const moveSpeed = 11.0 * delta; // Walk velocity in meters/sec
+        const rotSpeed = 1.8 * delta;   // Orbit rotation speed in rad/sec
 
         // Camera Forward Vector (XZ plane)
         const forward = new THREE.Vector3();
@@ -1199,13 +1233,27 @@ function animate() {
 
         if (keysPressed.w || keysPressed.arrowup) moveDelta.addScaledVector(forward, moveSpeed);
         if (keysPressed.s || keysPressed.arrowdown) moveDelta.addScaledVector(forward, -moveSpeed);
-        if (keysPressed.a || keysPressed.arrowleft) moveDelta.addScaledVector(right, -moveSpeed);
-        if (keysPressed.d || keysPressed.arrowright) moveDelta.addScaledVector(right, moveSpeed);
-        if (keysPressed.e) moveDelta.y += moveSpeed * 0.8; // Fly Up
-        if (keysPressed.q) moveDelta.y -= moveSpeed * 0.8; // Fly Down
+        if (keysPressed.a) moveDelta.addScaledVector(right, -moveSpeed);
+        if (keysPressed.d) moveDelta.addScaledVector(right, moveSpeed);
+        if (keysPressed.r) moveDelta.y += moveSpeed * 0.8; // Fly Up
+        if (keysPressed.f) moveDelta.y -= moveSpeed * 0.8; // Fly Down
 
-        camera.position.add(moveDelta);
-        controls.target.add(moveDelta);
+        if (moveDelta.lengthSq() > 0) {
+            camera.position.add(moveDelta);
+            controls.target.add(moveDelta);
+        }
+
+        // 2. Smooth Keyboard View Rotation (Q/E or Left/Right Arrow Keys Orbit Around Target)
+        if (keysPressed.q || keysPressed.arrowleft) {
+            const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+            offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotSpeed);
+            camera.position.addVectors(controls.target, offset);
+        }
+        if (keysPressed.e || keysPressed.arrowright) {
+            const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+            offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), -rotSpeed);
+            camera.position.addVectors(controls.target, offset);
+        }
     }
 
     if (controls) controls.update();
