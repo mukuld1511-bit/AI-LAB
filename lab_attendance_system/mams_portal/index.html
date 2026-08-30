@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mam's Lab Portal</title>
-    <link rel="stylesheet" href="style.css?v=3">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>AI LAB</title>
+    <link rel="stylesheet" href="style.css?v=4">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
     <header class="top-header">
         <div class="header-left">
-            <h1>🔬 AI/ML Lab - Faculty Portal</h1>
-            <div class="header-sub">Remote Lab Monitoring • 3D Digital Twin</div>
+            <h1>🔬 AI LAB</h1>
+            <div class="header-sub">Remote Monitoring • 3D Digital Twin</div>
         </div>
         <div class="header-right" id="connection-ui" style="display: none;">
             <input type="text" id="ngrok-url" class="form-input" placeholder="Enter Ngrok URL (e.g. https://abc.ngrok.app)" style="min-width: 250px;">
@@ -25,7 +25,7 @@
     </header>
 
     <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="pc-status">🖥️ 3D Lab Map</button>
+        <button class="tab-btn active" data-tab="pc-status">🖥️ 3D AI LAB</button>
         <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
         <button class="tab-btn" data-tab="registered-faces">👥 Registered Users</button>
         <button class="tab-btn" data-tab="unknown-faces">⚠️ Unknown Faces</button>
@@ -35,7 +35,7 @@
     <main id="tab-pc-status" class="tab-content active">
         <div class="page-title" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <h2>🖥️ Live 3D AI Lab Room</h2>
+                <h2>🖥️ Live 3D AI LAB</h2>
                 <p>Interactive 3D spatial layout • Tap any workstation to manage</p>
             </div>
             <button id="reset-cam-btn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 14px;">🎯 Reset View</button>
@@ -70,7 +70,7 @@
     <!-- TAB: ATTENDANCE -->
     <main id="tab-attendance" class="tab-content">
         <div class="page-title">
-            <h2>📋 Lab Attendance Logs</h2>
+            <h2>📋 AI LAB Attendance Logs</h2>
         </div>
         <div class="filter-bar">
             <input type="date" id="filter-date" class="form-input">
@@ -135,7 +135,7 @@
         </div>
     </div>
 
-    <script src="three_scene.js?v=5"></script>
-    <script src="script.js?v=15"></script>
+    <script src="three_scene.js?v=6"></script>
+    <script src="script.js?v=16"></script>
 </body>
 </html>

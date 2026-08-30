@@ -229,8 +229,17 @@ function buildRoomArchitecture() {
         scene.add(pillar);
     });
 
-    // 3. Full-Height Glass Walls with Dark Metal Framing
+    // 3. Wall Architecture (Left & Right walls have 30% Cream Section + 70% Glass Wall)
     const wallH = 3.6;
+    const totalWallLen = roomD - pillarW * 2; // ~12.7m
+    const creamLen = totalWallLen * 0.30;     // 30% cream section (~3.8m)
+    const glassLen = totalWallLen * 0.70;     // 70% glass section (~8.9m)
+
+    const creamWallMat = new THREE.MeshStandardMaterial({
+        color: 0xecd7b0, // Architectural cream wall
+        roughness: 0.65,
+        metalness: 0.05
+    });
     const glassMat = new THREE.MeshStandardMaterial({
         color: PALETTE.glassWall,
         roughness: 0.1,
@@ -240,8 +249,8 @@ function buildRoomArchitecture() {
     });
     const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.wallFrame, roughness: 0.4 });
 
-    function createGlassWall(w, h, d, x, y, z) {
-        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), glassMat);
+    function createWallSegment(w, h, d, x, y, z, material) {
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
         wall.position.set(x, y, z);
         wall.castShadow = true;
         wall.receiveShadow = true;
@@ -253,27 +262,27 @@ function buildRoomArchitecture() {
         scene.add(topFrame);
     }
 
-    // Back Glass Wall (Full Height)
-    createGlassWall(roomW - pillarW * 2, wallH, 0.12, 0, wallH / 2, -roomD / 2 + 0.06);
+    // Back Glass Wall (Full Width)
+    createWallSegment(roomW - pillarW * 2, wallH, 0.12, 0, wallH / 2, -roomD / 2 + 0.06, glassMat);
 
-    // Left Glass Wall (Full Height)
-    createGlassWall(0.12, wallH, roomD - pillarW * 2, -roomW / 2 + 0.06, wallH / 2, 0);
+    // Left Wall: 30% Cream section (back portion) + 70% Glass section (front portion)
+    createWallSegment(0.14, wallH, creamLen, -roomW / 2 + 0.07, wallH / 2, -roomD / 2 + pillarW + creamLen / 2, creamWallMat);
+    createWallSegment(0.12, wallH, glassLen, -roomW / 2 + 0.06, wallH / 2, roomD / 2 - pillarW - glassLen / 2, glassMat);
 
-    // Right Glass Wall (Full Height)
-    createGlassWall(0.12, wallH, roomD - pillarW * 2, roomW / 2 - 0.06, wallH / 2, 0);
+    // Right Wall: 30% Cream section (back portion) + 70% Glass section (front portion)
+    createWallSegment(0.14, wallH, creamLen, roomW / 2 - 0.07, wallH / 2, -roomD / 2 + pillarW + creamLen / 2, creamWallMat);
+    createWallSegment(0.12, wallH, glassLen, roomW / 2 - 0.06, wallH / 2, roomD / 2 - pillarW - glassLen / 2, glassMat);
 
-    // Front Wall with Entrance Opening (Near Left side of front wall)
-    // Left section of front wall (0.8m)
-    createGlassWall(1.8, wallH, 0.12, -roomW / 2 + 1.55, wallH / 2, roomD / 2 - 0.06);
-    // Right section of front wall (Leaves entrance opening from X = -4.3 to X = -1.8)
-    createGlassWall(7.5, wallH, 0.12, 2.65, wallH / 2, roomD / 2 - 0.06);
+    // Front Wall with Entrance Opening
+    createWallSegment(1.8, wallH, 0.12, -roomW / 2 + 1.55, wallH / 2, roomD / 2 - 0.06, glassMat);
+    createWallSegment(7.5, wallH, 0.12, 2.65, wallH / 2, roomD / 2 - 0.06, glassMat);
 
-    // 4. Physical 3D Entrance Gate Architecture
+    // 4. Physical 3D Entrance Gate with Single Glass Door & Red Signboard
     build3DLabGate(-4.3, -1.8, roomD / 2 - 0.06, wallH);
 }
 
 /**
- * Builds 3D Physical Entrance Gate (Jambs, Lintel, Double Swinging Glass Doors, Handles & Scanner)
+ * Builds Single Glass Gate + Red Board with White Plate Sign on Right Side of Gate
  */
 function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     const gateGroup = new THREE.Group();
@@ -282,15 +291,16 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     const doorGlassMat = new THREE.MeshStandardMaterial({
         color: 0x93c5fd,
         roughness: 0.1,
-        metalness: 0.1,
+        metalness: 0.15,
         transparent: true,
         opacity: 0.55
     });
 
-    const doorW = (xRight - xLeft) / 2 - 0.04;
-    const doorH = gateHeight - 0.2;
+    const gateSpan = xRight - xLeft;
+    const doorW = gateSpan - 0.1;
+    const doorH = gateHeight - 0.3;
 
-    // 1. Left & Right Door Posts (Jambs)
+    // 1. Left & Right Door Frame Jambs
     const postGeo = new THREE.BoxGeometry(0.14, gateHeight, 0.14);
     const leftPost = new THREE.Mesh(postGeo, frameMat);
     leftPost.position.set(xLeft, gateHeight / 2, zPos);
@@ -303,76 +313,107 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     gateGroup.add(rightPost);
 
     // 2. Overhead Lintel Beam
-    const lintelW = xRight - xLeft + 0.14;
+    const lintelW = gateSpan + 0.14;
     const lintel = new THREE.Mesh(new THREE.BoxGeometry(lintelW, 0.18, 0.16), frameMat);
     lintel.position.set((xLeft + xRight) / 2, gateHeight - 0.09, zPos);
     lintel.castShadow = true;
     gateGroup.add(lintel);
 
-    // 3. Left Swinging Glass Door Leaf (Ajar / Open inwards)
-    const leftDoorPivot = new THREE.Group();
-    leftDoorPivot.position.set(xLeft + 0.05, 0, zPos);
-    leftDoorPivot.rotation.y = Math.PI / 4.5; // Swung 40 deg inwards
+    // 3. Single Glass Gate (Pivoted on Left Jamb, Swung Open Inwards)
+    const doorPivot = new THREE.Group();
+    doorPivot.position.set(xLeft + 0.06, 0, zPos);
+    doorPivot.rotation.y = Math.PI / 4.2; // Single door swung 42 deg open inwards
 
-    // Door glass panel
-    const doorLeafGeo = new THREE.BoxGeometry(doorW, doorH, 0.035);
-    const leftDoorMesh = new THREE.Mesh(doorLeafGeo, doorGlassMat);
-    leftDoorMesh.position.set(doorW / 2, doorH / 2, 0);
-    leftDoorMesh.castShadow = true;
-    leftDoorPivot.add(leftDoorMesh);
+    // Door glass pane
+    const doorLeafGeo = new THREE.BoxGeometry(doorW, doorH, 0.04);
+    const singleDoorMesh = new THREE.Mesh(doorLeafGeo, doorGlassMat);
+    singleDoorMesh.position.set(doorW / 2, doorH / 2 + 0.05, 0);
+    singleDoorMesh.castShadow = true;
+    doorPivot.add(singleDoorMesh);
 
-    // Door frame border (Dark trim around glass)
-    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(doorW + 0.02, doorH + 0.02, 0.04), frameMat);
-    doorFrame.position.set(doorW / 2, doorH / 2, 0);
-    // leftDoorPivot.add(doorFrame);
+    // Stainless steel vertical door handle bar
+    const handleGeo = new THREE.CylinderGeometry(0.016, 0.016, 1.1);
+    const doorHandle = new THREE.Mesh(handleGeo, handleMat);
+    doorHandle.position.set(doorW - 0.15, doorH / 2 + 0.05, 0.045);
+    doorPivot.add(doorHandle);
 
-    // Handle bar
-    const handleGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.9);
-    const leftHandle = new THREE.Mesh(handleGeo, handleMat);
-    leftHandle.position.set(doorW - 0.1, doorH / 2, 0.04);
-    leftDoorPivot.add(leftHandle);
+    gateGroup.add(doorPivot);
 
-    gateGroup.add(leftDoorPivot);
+    // 4. Red Board with White Plate Signboard (On Right Side of Gate)
+    const signBoardGroup = new THREE.Group();
+    signBoardGroup.position.set(xRight + 0.8, 1.85, zPos + 0.08);
 
-    // 4. Right Swinging Glass Door Leaf (Ajar / Open inwards)
-    const rightDoorPivot = new THREE.Group();
-    rightDoorPivot.position.set(xRight - 0.05, 0, zPos);
-    rightDoorPivot.rotation.y = -Math.PI / 4.5; // Swung -40 deg inwards
+    // Red Board Backing
+    const redBoardMat = new THREE.MeshStandardMaterial({
+        color: 0xdc2626, // Vivid Red Board
+        roughness: 0.3,
+        metalness: 0.1
+    });
+    const redBoardMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 0.05), redBoardMat);
+    redBoardMesh.castShadow = true;
+    signBoardGroup.add(redBoardMesh);
 
-    const rightDoorMesh = new THREE.Mesh(doorLeafGeo, doorGlassMat);
-    rightDoorMesh.position.set(-doorW / 2, doorH / 2, 0);
-    rightDoorMesh.castShadow = true;
-    rightDoorPivot.add(rightDoorMesh);
+    // White Plate Inset with "AI LAB" Name
+    const whitePlateTexture = createAILabPlateTexture();
+    const whitePlateMat = new THREE.MeshStandardMaterial({
+        map: whitePlateTexture,
+        roughness: 0.2,
+        metalness: 0.05
+    });
+    const whitePlateMesh = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.64, 0.02), whitePlateMat);
+    whitePlateMesh.position.set(0, 0, 0.035);
+    signBoardGroup.add(whitePlateMesh);
 
-    const rightHandle = new THREE.Mesh(handleGeo, handleMat);
-    rightHandle.position.set(-doorW + 0.1, doorH / 2, 0.04);
-    rightDoorPivot.add(rightHandle);
-
-    gateGroup.add(rightDoorPivot);
+    gateGroup.add(signBoardGroup);
 
     // 5. Access Scanner Pedestal on entrance side
     const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.3 });
     const scannerPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.1, 0.2), pedestalMat);
-    scannerPedestal.position.set(xRight + 0.35, 0.55, zPos + 0.6);
+    scannerPedestal.position.set(xRight + 0.25, 0.55, zPos + 0.65);
     scannerPedestal.castShadow = true;
     gateGroup.add(scannerPedestal);
 
-    // Glowing Blue RFID/NFC Reader on top of pedestal
     const scannerBezel = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.16), new THREE.MeshStandardMaterial({
         color: 0x3b82f6,
         emissive: 0x3b82f6,
         emissiveIntensity: 1.2
     }));
-    scannerBezel.position.set(xRight + 0.35, 1.12, zPos + 0.6);
+    scannerBezel.position.set(xRight + 0.25, 1.12, zPos + 0.65);
     gateGroup.add(scannerBezel);
 
-    // 6. 3D Gate Overhead Illuminated Sign
-    const gateSign = createTextBadge("🚪 AI/ML LAB GATE", "#bfdbfe", "#1e3a8a");
-    gateSign.position.set((xLeft + xRight) / 2, gateHeight + 0.55, zPos);
-    gateSign.scale.set(2.2, 0.75, 1);
-    gateGroup.add(gateSign);
-
     scene.add(gateGroup);
+}
+
+/**
+ * Creates high-DPI White Plate texture with strictly "AI LAB" bold red text
+ */
+function createAILabPlateTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+
+    // Pure White plate background
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, 8, 8, 496, 240, 16);
+    ctx.fill();
+
+    // Red inner border
+    ctx.strokeStyle = "#dc2626";
+    ctx.lineWidth = 8;
+    roundRect(ctx, 16, 16, 480, 224, 12);
+    ctx.stroke();
+
+    // Bold strictly "AI LAB" text
+    ctx.fillStyle = "#dc2626";
+    ctx.font = "900 84px 'Inter', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("AI LAB", 256, 128);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    return texture;
 }
 
 /**
