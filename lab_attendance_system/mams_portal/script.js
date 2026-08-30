@@ -120,23 +120,28 @@ function initTabs() {
     document.getElementById('refresh-unknown-btn')?.addEventListener('click', loadUnknownFaces);
 }
 
-// PC Status (Updates Counters + 3D Scene + 2D Grid)
+// PC Status (Strictly 8 PCs: PC-1 to PC-8)
 async function loadPCStatus() {
     if (!BASE_URL) return;
     try {
-        const pcs = await apiFetch("/pc/status");
+        const rawPcs = await apiFetch("/pc/status");
+        
+        // Filter strictly to the 8 PCs (PC-1 to PC-8)
+        const allowedPCIds = ["PC-1", "PC-2", "PC-3", "PC-4", "PC-5", "PC-6", "PC-7", "PC-8"];
+        const pcs = rawPcs.filter(p => allowedPCIds.includes(p.pc_id.toUpperCase()));
+        
         const freePCs = pcs.filter(p => p.status.toLowerCase() === "free");
         
         document.getElementById("stat-free").innerText = freePCs.length;
         document.getElementById("stat-occupied").innerText = pcs.length - freePCs.length;
-        document.getElementById("stat-total").innerText = pcs.length;
+        document.getElementById("stat-total").innerText = pcs.length; // 8
 
         // 1. Update the 3D Three.js Digital Twin Lab Scene
         if (typeof updatePCStatusIn3D === "function") {
             updatePCStatusIn3D(pcs);
         }
 
-        // 2. Render the 2D Workstation Grid (Synchronized with 3D Canvas)
+        // 2. Render the 2D Workstation Grid (8 PCs in 4x2 Layout)
         const grid = document.getElementById("pc-grid");
         if (grid) {
             grid.innerHTML = pcs.map(pc => {

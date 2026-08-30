@@ -30,13 +30,13 @@ const PALETTE = {
     pillar: 0x1e2430,         // Dark grey pillars
     glassWall: 0x64748b,      // Tempered architectural glass
     wallFrame: 0x334155,      // Wall trim metal
-    woodSlab: 0xe5c583,       // Creamish yellow wood
-    creamWall: 0xecd7b0,      // Solid cream wall section
+    woodSlab: 0xf5e1b8,       // Rich warm creamish wood
+    creamWall: 0xf0e2ca,      // Architectural cream wall section
     metalFrame: 0x1e222b,     // Dark metal table frame/legs
     monitorBezel: 0x0a0c10,   // Matte black monitor
     keyboard: 0x1e2430,       // Dark keyboard
     chairSeat: 0x252a36,      // Dark ergonomic chair
-    infinityGlow: 0xffb84d,   // Warm golden-amber LED
+    infinityGlow: 0xffa028,   // Rich warm golden-amber LED
     screenFree: 0x10b981,     // Emerald green glow
     screenOccupied: 0xef4444  // Crimson red glow
 };
@@ -50,7 +50,7 @@ let doorHitBoxRef = null;
 let isLightOn = true;
 let isACOn = true;
 let ambientLightRef, hemiLightRef, keyLightRef, fillLightRef, spotLeftRef, spotRightRef, infinityTubeMatRef;
-let acDisplayMatRef = null;
+let acCassetteMats = [];
 let switchPanelRef = { lightBtnMat: null, acBtnMat: null, panelHitBox: null };
 
 // Parametric Lemniscate (Infinity Symbol ∞)
@@ -103,7 +103,7 @@ function init3DLabScene() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = 1.3;
 
     // 4. OrbitControls
     if (typeof THREE.OrbitControls !== "undefined") {
@@ -116,7 +116,7 @@ function init3DLabScene() {
         controls.target.set(0, 1.2, 0);
     }
 
-    // 5. Warm Lighting Setup
+    // 5. Rich Warm Lighting Setup
     setupWarmLighting();
 
     // 6. Build Room Architecture (Black floor, 30% cream walls, glass walls, 4 pillars, single glass gate)
@@ -125,8 +125,8 @@ function init3DLabScene() {
     // 7. Infinity Overhead Light Fixture (∞)
     buildInfinityChandelier();
 
-    // 8. Build AC Unit on Back Wall & Smart Control Panel on Left Corner Pillar
-    buildACAndSwitchPanel();
+    // 8. Build Roof-Mounted Centralized AC Units (Above Lights) & Smart Switchboard
+    buildCentralizedRoofACAndSwitchPanel();
 
     // 9. Build Workstations (Connected slabs + PC-7 + PC-8)
     buildAllLabWorkstations();
@@ -159,17 +159,17 @@ function setDefaultCameraPosition() {
 }
 
 /**
- * Cozy Warm Lighting Setup
+ * Rich Warm Lighting Setup (Golden Sunlight, Amber Chandelier, Cozy Atmosphere)
  */
 function setupWarmLighting() {
-    ambientLightRef = new THREE.AmbientLight(0xffecd2, 0.65);
+    ambientLightRef = new THREE.AmbientLight(0xffedd5, 0.85); // High warm ambient
     scene.add(ambientLightRef);
 
-    hemiLightRef = new THREE.HemisphereLight(0xfff5eb, 0x1e2029, 0.55);
+    hemiLightRef = new THREE.HemisphereLight(0xfff3e0, 0x241d17, 0.7);
     hemiLightRef.position.set(0, 20, 0);
     scene.add(hemiLightRef);
 
-    keyLightRef = new THREE.DirectionalLight(0xffd8a8, 0.9);
+    keyLightRef = new THREE.DirectionalLight(0xffc87a, 1.25); // Golden directional sun
     keyLightRef.position.set(10, 16, 9);
     keyLightRef.castShadow = true;
     keyLightRef.shadow.mapSize.width = 2048;
@@ -184,26 +184,26 @@ function setupWarmLighting() {
     keyLightRef.shadow.bias = -0.0004;
     scene.add(keyLightRef);
 
-    fillLightRef = new THREE.PointLight(0xffb84d, 0.8, 18, 1.2);
+    fillLightRef = new THREE.PointLight(0xff9d26, 1.1, 20, 1.2); // Warm center amber radiance
     fillLightRef.position.set(0, 3.2, 0);
     scene.add(fillLightRef);
 }
 
 /**
- * Builds AC Unit on Back Wall & Smart Control Panel on Left Corner Pillar
+ * Builds Roof-Mounted Centralized AC Cassette Units (Above Infinity Chandelier) & Pillar Switch Panel
  */
-function buildACAndSwitchPanel() {
+function buildCentralizedRoofACAndSwitchPanel() {
     const roomW = 14;
     const roomD = 14;
     const pillarW = 0.65;
+    const pillarCenterX = roomW / 2 - pillarW / 2; // 6.675
+    const pillarCenterZ = roomD / 2 - pillarW / 2; // 6.675
 
     // 1. Smart Switch Panel on Left Corner Pillar (Near PC-8, facing +X into room)
     const panelW = 0.45;
     const panelH = 0.8;
     const panelGroup = new THREE.Group();
-    const pillarPosX = -roomW / 2 + pillarW / 2; // -6.475
-    const pillarPosZ = -roomD / 2 + pillarW / 2; // -6.475
-    panelGroup.position.set(pillarPosX + pillarW / 2 + 0.03, 1.65, pillarPosZ + 0.1);
+    panelGroup.position.set(-pillarCenterX + pillarW / 2 + 0.03, 1.65, -pillarCenterZ + 0.1);
     panelGroup.rotation.y = Math.PI / 2; // Face towards right (+X into the room)
 
     // Dark glass panel backing
@@ -217,9 +217,9 @@ function buildACAndSwitchPanel() {
 
     // Light Button (Top)
     const lightBtnMat = new THREE.MeshStandardMaterial({
-        color: 0xffb84d,
-        emissive: 0xffb84d,
-        emissiveIntensity: 1.2,
+        color: 0xffa028,
+        emissive: 0xffa028,
+        emissiveIntensity: 1.4,
         roughness: 0.2
     });
     const lightBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 16), lightBtnMat);
@@ -231,7 +231,7 @@ function buildACAndSwitchPanel() {
     const acBtnMat = new THREE.MeshStandardMaterial({
         color: 0x38bdf8,
         emissive: 0x38bdf8,
-        emissiveIntensity: 1.2,
+        emissiveIntensity: 1.4,
         roughness: 0.2
     });
     const acBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 16), acBtnMat);
@@ -266,33 +266,51 @@ function buildACAndSwitchPanel() {
         acHitBox: acHitBox
     };
 
-    // 2. Indoor Split AC Unit on Back Wall (Above PC-8)
-    const acGroup = new THREE.Group();
-    acGroup.position.set(-3.0, 3.2, -roomD / 2 + 0.25);
+    // 2. Roof-Mounted Centralized 4-Way Cassette AC Units (Positioned above lighting at Y = 4.85m)
+    acCassetteMats = [];
+    const roofACH = 4.85;
 
-    const acMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
-    const acBody = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.48, 0.32), acMat);
-    acBody.castShadow = true;
-    acGroup.add(acBody);
+    function createCeilingCassetteAC(posX, posZ) {
+        const cassetteGroup = new THREE.Group();
+        cassetteGroup.position.set(posX, roofACH, posZ);
 
-    // AC Louver Vent
-    const ventMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
-    const vent = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.06, 0.02), ventMat);
-    vent.position.set(0, -0.16, 0.16);
-    acGroup.add(vent);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3, metalness: 0.1 });
+        const grilleMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 });
 
-    // Digital Temperature LED Display (24°C)
-    const acDisplayMat = new THREE.MeshStandardMaterial({
-        color: 0x38bdf8,
-        emissive: 0x38bdf8,
-        emissiveIntensity: 1.5
-    });
-    const acDisplay = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.09), acDisplayMat);
-    acDisplay.position.set(0.52, 0.06, 0.165);
-    acGroup.add(acDisplay);
-    acDisplayMatRef = acDisplayMat;
+        // Outer Cassette Panel Frame
+        const casing = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 1.6), bodyMat);
+        cassetteGroup.add(casing);
 
-    scene.add(acGroup);
+        // Center Intake Grille
+        const intake = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.03, 0.9), grilleMat);
+        intake.position.set(0, -0.06, 0);
+        cassetteGroup.add(intake);
+
+        // 4-Way Directional Airflow Vents
+        const ventGeo = new THREE.BoxGeometry(1.3, 0.02, 0.14);
+        const v1 = new THREE.Mesh(ventGeo, grilleMat); v1.position.set(0, -0.06, 0.62); cassetteGroup.add(v1);
+        const v2 = new THREE.Mesh(ventGeo, grilleMat); v2.position.set(0, -0.06, -0.62); cassetteGroup.add(v2);
+        const v3 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 1.3), grilleMat); v3.position.set(0.62, -0.06, 0); cassetteGroup.add(v3);
+        const v4 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 1.3), grilleMat); v4.position.set(-0.62, -0.06, 0); cassetteGroup.add(v4);
+
+        // Glowing Blue Status LED Ring on the Cassette Frame
+        const ledRingMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            emissive: 0x38bdf8,
+            emissiveIntensity: 1.6,
+            roughness: 0.1
+        });
+        const ledRing = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.02, 0.95), ledRingMat);
+        ledRing.position.set(0, -0.055, 0);
+        cassetteGroup.add(ledRing);
+        acCassetteMats.push(ledRingMat);
+
+        scene.add(cassetteGroup);
+    }
+
+    // Two Commercial Ceiling Cassette AC Units above the left and right zones
+    createCeilingCassetteAC(-3.2, 0.0);
+    createCeilingCassetteAC(3.2, 0.0);
 }
 
 /**
@@ -1056,15 +1074,15 @@ function toggleLabLights() {
     isLightOn = !isLightOn;
 
     if (isLightOn) {
-        ambientLightRef.intensity = 0.65;
-        hemiLightRef.intensity = 0.55;
-        keyLightRef.intensity = 0.9;
-        fillLightRef.intensity = 0.8;
-        if (spotLeftRef) spotLeftRef.intensity = 1.3;
-        if (spotRightRef) spotRightRef.intensity = 1.3;
-        if (infinityTubeMatRef) infinityTubeMatRef.emissiveIntensity = 2.0;
-        if (switchPanelRef.lightBtnMat) switchPanelRef.lightBtnMat.emissiveIntensity = 1.2;
-        showToast("💡 AI LAB Lights: ON");
+        ambientLightRef.intensity = 0.85;
+        hemiLightRef.intensity = 0.7;
+        keyLightRef.intensity = 1.25;
+        fillLightRef.intensity = 1.1;
+        if (spotLeftRef) spotLeftRef.intensity = 1.8;
+        if (spotRightRef) spotRightRef.intensity = 1.8;
+        if (infinityTubeMatRef) infinityTubeMatRef.emissiveIntensity = 2.4;
+        if (switchPanelRef.lightBtnMat) switchPanelRef.lightBtnMat.emissiveIntensity = 1.4;
+        showToast("💡 AI LAB Lights: ON (Warm Golden Ambiance)");
     } else {
         ambientLightRef.intensity = 0.08;
         hemiLightRef.intensity = 0.08;
@@ -1082,19 +1100,19 @@ function toggleLabAC() {
     isACOn = !isACOn;
 
     if (isACOn) {
-        if (acDisplayMatRef) {
-            acDisplayMatRef.emissive.setHex(0x38bdf8);
-            acDisplayMatRef.emissiveIntensity = 1.5;
-        }
-        if (switchPanelRef.acBtnMat) switchPanelRef.acBtnMat.emissiveIntensity = 1.2;
-        showToast("❄️ AI LAB AC: ON (Cooling at 24°C)");
+        acCassetteMats.forEach(mat => {
+            mat.emissive.setHex(0x38bdf8);
+            mat.emissiveIntensity = 1.6;
+        });
+        if (switchPanelRef.acBtnMat) switchPanelRef.acBtnMat.emissiveIntensity = 1.4;
+        showToast("❄️ Roof Centralized AC: ON (Active Climate 24°C)");
     } else {
-        if (acDisplayMatRef) {
-            acDisplayMatRef.emissive.setHex(0x475569);
-            acDisplayMatRef.emissiveIntensity = 0.15;
-        }
+        acCassetteMats.forEach(mat => {
+            mat.emissive.setHex(0x475569);
+            mat.emissiveIntensity = 0.1;
+        });
         if (switchPanelRef.acBtnMat) switchPanelRef.acBtnMat.emissiveIntensity = 0.1;
-        showToast("⏸️ AI LAB AC: STANDBY / OFF");
+        showToast("⏸️ Roof Centralized AC: STANDBY / OFF");
     }
 }
 
