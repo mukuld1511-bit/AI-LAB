@@ -344,11 +344,14 @@ function buildRoomArchitecture() {
         scene.add(pillar);
     });
 
-    // 3. Wall Architecture (Left & Right walls: 35% Glass + 30% Cream in Middle + 35% Glass)
-    const wallH = 3.6;
-    const totalWallLen = roomD - pillarW * 2; // ~12.7m
-    const creamLen = totalWallLen * 0.30;     // 30% cream center section (~3.8m)
-    const glassSideLen = totalWallLen * 0.35; // 35% glass side sections (~4.45m each)
+    // 3. Wall Architecture (Seamlessly sealed room connecting directly into all 4 corner pillars)
+    const wallH = 4.0; // Full architectural height
+    const pillarCenterX = roomW / 2 - pillarW / 2; // 6.675
+    const pillarCenterZ = roomD / 2 - pillarW / 2; // 6.675
+    const totalWallLen = roomD - pillarW; // 13.35m (Center of back pillar to center of front pillar)
+
+    const creamLen = 4.0;                             // 30% Cream Center Section (~4.0m)
+    const glassSideLen = (totalWallLen - creamLen) / 2; // 35% Glass Side Sections (~4.675m each)
 
     const creamWallMat = new THREE.MeshStandardMaterial({
         color: PALETTE.creamWall, // Architectural cream wall
@@ -375,31 +378,44 @@ function buildRoomArchitecture() {
         const topFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.08, d + 0.02), frameMat);
         topFrame.position.set(x, y + h / 2 + 0.04, z);
         scene.add(topFrame);
+
+        // Bottom Baseboard Trim
+        const baseTrim = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.06, d + 0.02), frameMat);
+        baseTrim.position.set(x, 0.03, z);
+        scene.add(baseTrim);
     }
 
-    // Back Glass Wall (Full Width)
-    createWallSegment(roomW - pillarW * 2, wallH, 0.12, 0, wallH / 2, -roomD / 2 + 0.06, glassMat);
+    // ── Back Wall: Completely spans from Left Pillar Corner to Right Pillar Corner ──
+    createWallSegment(totalWallLen, wallH, 0.12, 0, wallH / 2, -pillarCenterZ, glassMat);
 
-    // Left Wall: [35% Glass (Back)] === [30% Solid Cream (Middle)] === [35% Glass (Front)]
-    const zBackGlass = -totalWallLen / 2 + glassSideLen / 2;
-    const zFrontGlass = totalWallLen / 2 - glassSideLen / 2;
+    // ── Left Wall: [Glass 35%] === [Solid Cream 30% (Middle)] === [Glass 35%] ──
+    const zBackGlass = -pillarCenterZ + glassSideLen / 2;
+    const zFrontGlass = pillarCenterZ - glassSideLen / 2;
     const zMiddleCream = 0.0;
 
-    createWallSegment(0.12, wallH, glassSideLen, -roomW / 2 + 0.06, wallH / 2, zBackGlass, glassMat);
-    createWallSegment(0.14, wallH, creamLen, -roomW / 2 + 0.07, wallH / 2, zMiddleCream, creamWallMat);
-    createWallSegment(0.12, wallH, glassSideLen, -roomW / 2 + 0.06, wallH / 2, zFrontGlass, glassMat);
+    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zBackGlass, glassMat);
+    createWallSegment(0.14, wallH, creamLen, -pillarCenterX, wallH / 2, zMiddleCream, creamWallMat);
+    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zFrontGlass, glassMat);
 
-    // Right Wall: [35% Glass (Back)] === [30% Solid Cream (Middle)] === [35% Glass (Front)]
-    createWallSegment(0.12, wallH, glassSideLen, roomW / 2 - 0.06, wallH / 2, zBackGlass, glassMat);
-    createWallSegment(0.14, wallH, creamLen, roomW / 2 - 0.07, wallH / 2, zMiddleCream, creamWallMat);
-    createWallSegment(0.12, wallH, glassSideLen, roomW / 2 - 0.06, wallH / 2, zFrontGlass, glassMat);
+    // ── Right Wall: [Glass 35%] === [Solid Cream 30% (Middle)] === [Glass 35%] ──
+    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zBackGlass, glassMat);
+    createWallSegment(0.14, wallH, creamLen, pillarCenterX, wallH / 2, zMiddleCream, creamWallMat);
+    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zFrontGlass, glassMat);
 
-    // Front Wall with Entrance Opening
-    createWallSegment(1.8, wallH, 0.12, -roomW / 2 + 1.55, wallH / 2, roomD / 2 - 0.06, glassMat);
-    createWallSegment(7.5, wallH, 0.12, 2.65, wallH / 2, roomD / 2 - 0.06, glassMat);
+    // ── Front Wall: Seals seamlessly to both front corner pillars with gate opening in between ──
+    const gateLeftX = -4.3;
+    const gateRightX = -1.8;
+
+    // Left glass section (from Left Pillar to Gate Left Post)
+    const leftFrontSpan = gateLeftX - (-pillarCenterX); // ~2.375m
+    createWallSegment(leftFrontSpan, wallH, 0.12, -pillarCenterX + leftFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat);
+
+    // Right glass section (from Gate Right Post to Right Pillar)
+    const rightFrontSpan = pillarCenterX - gateRightX; // ~8.475m
+    createWallSegment(rightFrontSpan, wallH, 0.12, gateRightX + rightFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat);
 
     // 4. Physical 3D Entrance Gate with Interactive Openable Single Glass Door & Red Signboard
-    build3DLabGate(-4.3, -1.8, roomD / 2 - 0.06, wallH);
+    build3DLabGate(gateLeftX, gateRightX, pillarCenterZ, wallH);
 }
 
 /**
