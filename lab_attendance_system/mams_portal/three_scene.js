@@ -459,24 +459,16 @@ function buildRoomArchitecture() {
         roughness: 0.45,
         metalness: 0.05
     });
-
-    // High-visibility architectural tempered glass material
     const glassMat = new THREE.MeshStandardMaterial({
-        color: 0x38bdf8, // Distinct cyan-slate architectural glass tint
-        roughness: 0.08,
-        metalness: 0.35,
+        color: PALETTE.glassWall,
+        roughness: 0.1,
+        metalness: 0.2,
         transparent: true,
-        opacity: 0.55
+        opacity: 0.35
     });
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.35, metalness: 0.6 });
-    const frostedMat = new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
-        roughness: 0.5,
-        transparent: true,
-        opacity: 0.65
-    });
+    const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.wallFrame, roughness: 0.4 });
 
-    function createWallSegment(w, h, d, x, y, z, material, isGlass = false) {
+    function createWallSegment(w, h, d, x, y, z, material) {
         const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
         wall.position.set(x, y, z);
         wall.castShadow = true;
@@ -494,54 +486,24 @@ function buildRoomArchitecture() {
         const baseTrim = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.06, d + 0.02), frameMat);
         baseTrim.position.set(x, 0.03, z);
         scene.add(baseTrim);
-
-        // If Glass Wall, add Architectural Vertical Mullions & Horizontal Decals
-        if (isGlass) {
-            // Horizontal Mid-Rail Transom
-            const midRail = new THREE.Mesh(new THREE.BoxGeometry(w + 0.01, 0.05, d + 0.02), frameMat);
-            midRail.position.set(x, 2.2, z);
-            scene.add(midRail);
-
-            // Frosted Safety Stripe at eye level
-            const frostedBand = new THREE.Mesh(new THREE.BoxGeometry(w, 0.14, d + 0.005), frostedMat);
-            frostedBand.position.set(x, 1.4, z);
-            scene.add(frostedBand);
-
-            // Vertical Aluminum Mullions
-            const isXAligned = w > d;
-            const span = isXAligned ? w : d;
-            const numMullions = Math.max(1, Math.floor(span / 1.7));
-            for (let i = 1; i <= numMullions; i++) {
-                const offset = -span / 2 + (i * span) / (numMullions + 1);
-                const mullionGeo = isXAligned ? new THREE.BoxGeometry(0.06, h, d + 0.03) : new THREE.BoxGeometry(w + 0.03, h, 0.06);
-                const mullion = new THREE.Mesh(mullionGeo, frameMat);
-                if (isXAligned) {
-                    mullion.position.set(x + offset, y, z);
-                } else {
-                    mullion.position.set(x, y, z + offset);
-                }
-                mullion.castShadow = true;
-                scene.add(mullion);
-            }
-        }
     }
 
     // ── Back Wall: Completely spans from Left Pillar Corner to Right Pillar Corner ──
-    createWallSegment(totalWallLen, wallH, 0.12, 0, wallH / 2, -pillarCenterZ, glassMat, true);
+    createWallSegment(totalWallLen, wallH, 0.12, 0, wallH / 2, -pillarCenterZ, glassMat);
 
     // ── Left Wall: [Glass 35%] === [Solid Cream 30% (Middle)] === [Glass 35%] ──
     const zBackGlass = -pillarCenterZ + glassSideLen / 2;
     const zFrontGlass = pillarCenterZ - glassSideLen / 2;
     const zMiddleCream = 0.0;
 
-    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zBackGlass, glassMat, true);
-    createWallSegment(0.14, wallH, creamLen, -pillarCenterX, wallH / 2, zMiddleCream, creamWallMat, false);
-    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zFrontGlass, glassMat, true);
+    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zBackGlass, glassMat);
+    createWallSegment(0.14, wallH, creamLen, -pillarCenterX, wallH / 2, zMiddleCream, creamWallMat);
+    createWallSegment(0.12, wallH, glassSideLen, -pillarCenterX, wallH / 2, zFrontGlass, glassMat);
 
     // ── Right Wall: [Glass 35%] === [Solid Cream 30% (Middle)] === [Glass 35%] ──
-    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zBackGlass, glassMat, true);
-    createWallSegment(0.14, wallH, creamLen, pillarCenterX, wallH / 2, zMiddleCream, creamWallMat, false);
-    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zFrontGlass, glassMat, true);
+    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zBackGlass, glassMat);
+    createWallSegment(0.14, wallH, creamLen, pillarCenterX, wallH / 2, zMiddleCream, creamWallMat);
+    createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zFrontGlass, glassMat);
 
     // ── Wall-Mounted AI LAB Poster on Right Side Wall (Facing Into Lab) ──
     buildRightWallAIPoster(pillarCenterX, zMiddleCream);
@@ -552,11 +514,11 @@ function buildRoomArchitecture() {
 
     // Left glass section (from Left Pillar to Gate Left Post)
     const leftFrontSpan = gateLeftX - (-pillarCenterX); // ~3.05m
-    createWallSegment(leftFrontSpan, wallH, 0.12, -pillarCenterX + leftFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat, true);
+    createWallSegment(leftFrontSpan, wallH, 0.12, -pillarCenterX + leftFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat);
 
     // Right glass section (from Gate Right Post to Right Pillar)
     const rightFrontSpan = pillarCenterX - gateRightX; // ~9.45m
-    createWallSegment(rightFrontSpan, wallH, 0.12, gateRightX + rightFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat, true);
+    createWallSegment(rightFrontSpan, wallH, 0.12, gateRightX + rightFrontSpan / 2, wallH / 2, pillarCenterZ, glassMat);
 
     // 4. Physical 3D Entrance Gate with Interactive Openable Single Glass Door & Red Signboard
     build3DLabGate(gateLeftX, gateRightX, pillarCenterZ, wallH);
