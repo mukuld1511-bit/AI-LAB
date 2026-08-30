@@ -344,11 +344,11 @@ function buildRoomArchitecture() {
         scene.add(pillar);
     });
 
-    // 3. Wall Architecture (Left & Right walls have 30% Cream Section + 70% Glass Wall)
+    // 3. Wall Architecture (Left & Right walls: 35% Glass + 30% Cream in Middle + 35% Glass)
     const wallH = 3.6;
     const totalWallLen = roomD - pillarW * 2; // ~12.7m
-    const creamLen = totalWallLen * 0.30;     // 30% cream section (~3.8m)
-    const glassLen = totalWallLen * 0.70;     // 70% glass section (~8.9m)
+    const creamLen = totalWallLen * 0.30;     // 30% cream center section (~3.8m)
+    const glassSideLen = totalWallLen * 0.35; // 35% glass side sections (~4.45m each)
 
     const creamWallMat = new THREE.MeshStandardMaterial({
         color: PALETTE.creamWall, // Architectural cream wall
@@ -380,13 +380,19 @@ function buildRoomArchitecture() {
     // Back Glass Wall (Full Width)
     createWallSegment(roomW - pillarW * 2, wallH, 0.12, 0, wallH / 2, -roomD / 2 + 0.06, glassMat);
 
-    // Left Wall: 30% Cream section (back portion) + 70% Glass section (front portion)
-    createWallSegment(0.14, wallH, creamLen, -roomW / 2 + 0.07, wallH / 2, -roomD / 2 + pillarW + creamLen / 2, creamWallMat);
-    createWallSegment(0.12, wallH, glassLen, -roomW / 2 + 0.06, wallH / 2, roomD / 2 - pillarW - glassLen / 2, glassMat);
+    // Left Wall: [35% Glass (Back)] === [30% Solid Cream (Middle)] === [35% Glass (Front)]
+    const zBackGlass = -totalWallLen / 2 + glassSideLen / 2;
+    const zFrontGlass = totalWallLen / 2 - glassSideLen / 2;
+    const zMiddleCream = 0.0;
 
-    // Right Wall: 30% Cream section (back portion) + 70% Glass section (front portion)
-    createWallSegment(0.14, wallH, creamLen, roomW / 2 - 0.07, wallH / 2, -roomD / 2 + pillarW + creamLen / 2, creamWallMat);
-    createWallSegment(0.12, wallH, glassLen, roomW / 2 - 0.06, wallH / 2, roomD / 2 - pillarW - glassLen / 2, glassMat);
+    createWallSegment(0.12, wallH, glassSideLen, -roomW / 2 + 0.06, wallH / 2, zBackGlass, glassMat);
+    createWallSegment(0.14, wallH, creamLen, -roomW / 2 + 0.07, wallH / 2, zMiddleCream, creamWallMat);
+    createWallSegment(0.12, wallH, glassSideLen, -roomW / 2 + 0.06, wallH / 2, zFrontGlass, glassMat);
+
+    // Right Wall: [35% Glass (Back)] === [30% Solid Cream (Middle)] === [35% Glass (Front)]
+    createWallSegment(0.12, wallH, glassSideLen, roomW / 2 - 0.06, wallH / 2, zBackGlass, glassMat);
+    createWallSegment(0.14, wallH, creamLen, roomW / 2 - 0.07, wallH / 2, zMiddleCream, creamWallMat);
+    createWallSegment(0.12, wallH, glassSideLen, roomW / 2 - 0.06, wallH / 2, zFrontGlass, glassMat);
 
     // Front Wall with Entrance Opening
     createWallSegment(1.8, wallH, 0.12, -roomW / 2 + 1.55, wallH / 2, roomD / 2 - 0.06, glassMat);
@@ -957,12 +963,26 @@ function onMouseMove(event) {
 
 function highlightPC(pcId, isHovered) {
     const item = pcWorkstations[pcId];
-    if (!item) return;
+    if (item) {
+        if (isHovered) {
+            item.screenMat.emissiveIntensity = 1.4;
+        } else {
+            item.screenMat.emissiveIntensity = item.status === "free" ? 0.75 : 0.95;
+        }
+    }
 
-    if (isHovered) {
-        item.screenMat.emissiveIntensity = 1.4;
-    } else {
-        item.screenMat.emissiveIntensity = item.status === "free" ? 0.75 : 0.95;
+    // Two-Way Sync: Highlight 2D Grid Card
+    const card = document.getElementById(`grid-pc-${pcId}`);
+    if (card) {
+        if (isHovered) {
+            card.style.transform = "translateY(-6px) scale(1.02)";
+            card.style.borderColor = "#3b82f6";
+            card.style.boxShadow = "0 14px 25px -4px rgba(59, 130, 246, 0.25)";
+        } else {
+            card.style.transform = "";
+            card.style.borderColor = "";
+            card.style.boxShadow = "";
+        }
     }
 }
 

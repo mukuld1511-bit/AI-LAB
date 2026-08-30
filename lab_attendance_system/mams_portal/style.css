@@ -285,11 +285,81 @@ body {
     }
 }
 
+/* ── 2D PC Grid & Workstation Cards ── */
+.pc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 35px;
+}
+
+@media (max-width: 1024px) {
+    .pc-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .pc-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+    .pc-grid { grid-template-columns: 1fr; }
+}
+
+.pc-card {
+    border-radius: var(--radius-xl);
+    padding: 18px 14px;
+    text-align: center;
+    background: var(--surface);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+    min-height: 180px;
+    cursor: pointer;
+    border: 2px solid #e2e8f0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.pc-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.pc-card-free {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.pc-card-free:hover {
+    border-color: #059669;
+    box-shadow: 0 12px 20px -3px rgba(16, 185, 129, 0.2);
+}
+
+.pc-card-occupied {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.pc-card-occupied:hover {
+    border-color: #dc2626;
+    box-shadow: 0 12px 20px -3px rgba(239, 68, 68, 0.2);
+}
+
+.pc-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--on-background);
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
+}
+
 .status-badge {
     display: inline-block;
     font-weight: 700;
-    font-size: 9px;
-    padding: 2px 6px;
+    font-size: 10px;
+    padding: 3px 8px;
     border-radius: var(--radius-full);
     color: #ffffff;
 }
@@ -303,10 +373,10 @@ body {
 }
 
 .pc-meta {
-    font-size: 13px;
+    font-size: 12px;
     color: #4b5563;
-    margin-top: 8px;
-    line-height: 1.5;
+    margin-top: 6px;
+    line-height: 1.4;
 }
 
 .btn-free-pc {

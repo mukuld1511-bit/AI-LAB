@@ -120,7 +120,7 @@ function initTabs() {
     document.getElementById('refresh-unknown-btn')?.addEventListener('click', loadUnknownFaces);
 }
 
-// PC Status (Updates Counters + 3D Scene)
+// PC Status (Updates Counters + 3D Scene + 2D Grid)
 async function loadPCStatus() {
     if (!BASE_URL) return;
     try {
@@ -131,9 +131,42 @@ async function loadPCStatus() {
         document.getElementById("stat-occupied").innerText = pcs.length - freePCs.length;
         document.getElementById("stat-total").innerText = pcs.length;
 
-        // Update the 3D Three.js Lab scene!
+        // 1. Update the 3D Three.js Digital Twin Lab Scene
         if (typeof updatePCStatusIn3D === "function") {
             updatePCStatusIn3D(pcs);
+        }
+
+        // 2. Render the 2D Workstation Grid (Synchronized with 3D Canvas)
+        const grid = document.getElementById("pc-grid");
+        if (grid) {
+            grid.innerHTML = pcs.map(pc => {
+                const isFree = pc.status.toLowerCase() === "free";
+                const cardClass = isFree ? "pc-card-free" : "pc-card-occupied";
+                const badgeClass = isFree ? "badge-free" : "badge-occupied";
+                const badgeText = isFree ? "🟢 AVAILABLE" : "🔴 IN USE";
+                
+                return `
+                    <div class="pc-card ${cardClass}" 
+                         id="grid-pc-${pc.pc_id}"
+                         onclick="handlePCClick('${pc.pc_id}', ${isFree})"
+                         onmouseenter="if (typeof highlightPC === 'function') highlightPC('${pc.pc_id}', true)"
+                         onmouseleave="if (typeof highlightPC === 'function') highlightPC('${pc.pc_id}', false)">
+                        <div class="status-badge ${badgeClass}" style="position: absolute; top: 10px; right: 10px;">${badgeText}</div>
+                        <div style="font-size: 32px; margin-bottom: 6px; margin-top: 10px;">💻</div>
+                        <div class="pc-title">${pc.pc_id}</div>
+                        ${!isFree && pc.occupied_by ? `
+                            <div class="pc-meta">
+                                <strong>👤 ${pc.occupied_by}</strong><br>
+                                <span style="font-size: 11px; color: #6b7280;">Since: ${pc.since_time ? pc.since_time.split(" ")[1] : "N/A"}</span>
+                            </div>
+                        ` : `
+                            <div class="pc-meta" style="color: #059669; font-weight: 500; font-size: 12px; margin-top: 8px;">
+                                Ready for Assignment
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join("");
         }
     } catch(e) {
         console.error("PC load failed", e);
