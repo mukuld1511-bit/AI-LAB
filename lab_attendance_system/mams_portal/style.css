@@ -209,97 +209,55 @@ body {
 .metric-green .metric-value { color: #16a34a; }
 .metric-red .metric-value { color: #dc2626; }
 
-/* ── Spatial Floorplan Layout ── */
-.lab-floorplan {
+/* ── 3D Canvas Digital Twin Viewport ── */
+.canvas-3d-wrapper {
     position: relative;
     width: 100%;
-    max-width: 800px;
-    height: 600px;
-    margin: 0 auto 40px;
-    background: #f8fafc;
-    border: 2px dashed #cbd5e1;
+    height: 580px;
+    max-height: 75vh;
+    margin: 0 auto 30px;
+    background: radial-gradient(circle at center, #ffffff 0%, #f1f5f9 100%);
+    border: 1px solid #cbd5e1;
     border-radius: var(--radius-xl);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
     overflow: hidden;
 }
 
-/* Room Walls */
-.lab-wall {
+#lab-3d-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    outline: none;
+    touch-action: none;
+}
+
+.canvas-3d-controls-hint {
     position: absolute;
-    background: #475569;
-}
-.wall-top { top: 0; left: 0; right: 0; height: 10px; }
-.wall-left { top: 0; left: 0; bottom: 0; width: 10px; }
-.wall-right { top: 0; right: 0; bottom: 0; width: 10px; }
-.wall-bottom-left { bottom: 0; left: 0; width: 40%; height: 10px; }
-.wall-bottom-right { bottom: 0; right: 0; width: 40%; height: 10px; }
-
-/* Gate */
-.lab-gate {
-    position: absolute;
-    bottom: 0;
-    left: 40%;
-    width: 20%;
-    height: 10px;
-    background: #3b82f6;
-    color: #fff;
-    font-size: 10px;
-    text-align: center;
-    line-height: 10px;
-    font-weight: 700;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Floor PCs base */
-.floor-pc {
-    position: absolute;
-    width: 120px;
-    height: 100px;
-    background: var(--surface);
-    border: 2px solid #e2e8f0;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: transform 0.2s;
-    z-index: 10;
-}
-.floor-pc:hover {
-    transform: scale(1.05);
-}
-
-/* PC Positions */
-/* Left side: x=40px, distributed vertically */
-.pos-l1 { top: 60px; left: 40px; }
-.pos-l2 { top: 220px; left: 40px; }
-.pos-l3 { top: 380px; left: 40px; }
-
-/* Right side: x=calc(100% - 160px), distributed vertically */
-.pos-r1 { top: 60px; right: 40px; }
-.pos-r2 { top: 220px; right: 40px; }
-.pos-r3 { top: 380px; right: 40px; }
-
-/* Gate area: PC-7 at gate, PC-8 opposite gate */
-.pos-gate1 { bottom: 30px; left: calc(50% - 60px); }
-.pos-gate2 { top: 30px; left: calc(50% - 60px); }
-
-/* PC Status Classes */
-.pc-card-free {
-    border-color: var(--success);
-    background: var(--success-bg);
-}
-.pc-card-occupied {
-    border-color: var(--error);
-    background: var(--error-bg);
-}
-
-.floor-pc .pc-title {
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--on-background);
-    margin-bottom: 4px;
-    letter-spacing: -0.02em;
+@media (max-width: 768px) {
+    .canvas-3d-wrapper {
+        height: 480px;
+    }
+    .canvas-3d-controls-hint {
+        font-size: 10px;
+        padding: 4px 10px;
+        bottom: 8px;
+    }
 }
 
 .status-badge {

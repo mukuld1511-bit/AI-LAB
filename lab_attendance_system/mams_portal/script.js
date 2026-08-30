@@ -9,6 +9,11 @@ if (!BASE_URL || BASE_URL === "https://upright-lion.ngrok.app") {
 document.addEventListener("DOMContentLoaded", () => {
     // UI Init
     initTabs();
+
+    // Init 3D Lab Scene
+    if (typeof init3DLabScene === "function") {
+        init3DLabScene();
+    }
     
     // Ngrok Connection
     const urlInput = document.getElementById("ngrok-url");
@@ -30,14 +35,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.getElementById("apply-filter-btn").addEventListener("click", loadAttendance);
+
+    // Auto-poll PC status every 8 seconds for live 3D mirror
+    setInterval(() => {
+        if (BASE_URL) loadPCStatus();
+    }, 8000);
 });
 
 // API Helper
-async function apiFetch(endpoint) {
+async function apiFetch(endpoint, options = {}) {
     if (!BASE_URL) throw new Error("Not connected");
     const response = await fetch(`${BASE_URL}${endpoint}`, {
+        ...options,
         headers: {
-            "ngrok-skip-browser-warning": "true"
+            "ngrok-skip-browser-warning": "true",
+            "Content-Type": "application/json",
+            ...(options.headers || {})
         },
         cache: "no-store" // Force browser to fetch fresh data every time
     });
@@ -92,7 +105,12 @@ function initTabs() {
             btn.classList.add('active');
             document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
             
-            if (btn.dataset.tab === 'pc-status') loadPCStatus();
+            if (btn.dataset.tab === 'pc-status') {
+                loadPCStatus();
+                setTimeout(() => {
+                    if (typeof onWindowResize === 'function') onWindowResize();
+                }, 50);
+            }
             if (btn.dataset.tab === 'attendance') loadAttendance();
             if (btn.dataset.tab === 'registered-faces') loadRegisteredFaces();
             if (btn.dataset.tab === 'unknown-faces') loadUnknownFaces();
@@ -102,7 +120,7 @@ function initTabs() {
     document.getElementById('refresh-unknown-btn')?.addEventListener('click', loadUnknownFaces);
 }
 
-// PC Status
+// PC Status (Updates Counters + 3D Scene)
 async function loadPCStatus() {
     if (!BASE_URL) return;
     try {
@@ -113,50 +131,9 @@ async function loadPCStatus() {
         document.getElementById("stat-occupied").innerText = pcs.length - freePCs.length;
         document.getElementById("stat-total").innerText = pcs.length;
 
-        const pcsToRender = pcs.slice(0, 8); // We only have 8 physical slots
-
-        pcsToRender.forEach(pc => {
-            const isFree = pc.status.toLowerCase() === "free";
-            const cardClass = isFree ? "pc-card-free" : "pc-card-occupied";
-            const badgeClass = isFree ? "badge-free" : "badge-occupied";
-            const badgeText = isFree ? "🟢 AVAILABLE" : "🔴 IN USE";
-            
-            const slot = document.getElementById(`slot-${pc.pc_id}`);
-            if (slot) {
-                slot.className = `floor-pc ${slot.className.split(' ')[1]} ${cardClass}`;
-                slot.onclick = () => handlePCClick(pc.pc_id, isFree);
-                slot.innerHTML = `
-                    <div class="status-badge ${badgeClass}" style="position: absolute; top: 6px; right: 6px;">${badgeText}</div>
-                    <div style="font-size: 24px; margin-bottom: 4px; margin-top: 8px;">💻</div>
-                    <div class="pc-title">${pc.pc_id}</div>
-                    ${!isFree && pc.occupied_by ? `
-                        <div class="pc-meta" style="font-size: 10px; margin-top:0;">
-                            <strong>👤 ${pc.occupied_by}</strong>
-                        </div>
-                    ` : ""}
-                `;
-            }
-        });
-
-        // Anime.js breathing animation for occupied PCs
-        if (typeof anime !== 'undefined') {
-            anime({
-                targets: '.pc-card-occupied',
-                boxShadow: ['0 4px 6px -1px rgba(220, 38, 38, 0.2)', '0 10px 20px -2px rgba(220, 38, 38, 0.6)'],
-                borderColor: ['rgba(220, 38, 38, 0.4)', 'rgba(220, 38, 38, 1)'],
-                direction: 'alternate',
-                loop: true,
-                easing: 'easeInOutSine',
-                duration: 1500
-            });
-            anime({
-                targets: '.pc-card-free',
-                boxShadow: ['0 4px 6px -1px rgba(22, 163, 74, 0.1)', '0 6px 12px -2px rgba(22, 163, 74, 0.3)'],
-                direction: 'alternate',
-                loop: true,
-                easing: 'easeInOutSine',
-                duration: 2500
-            });
+        // Update the 3D Three.js Lab scene!
+        if (typeof updatePCStatusIn3D === "function") {
+            updatePCStatusIn3D(pcs);
         }
     } catch(e) {
         console.error("PC load failed", e);

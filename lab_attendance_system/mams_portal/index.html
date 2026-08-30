@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mam's Lab Portal</title>
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
     <header class="top-header">
         <div class="header-left">
             <h1>🔬 AI/ML Lab - Faculty Portal</h1>
-            <div class="header-sub">Remote Lab Monitoring</div>
+            <div class="header-sub">Remote Lab Monitoring • 3D Digital Twin</div>
         </div>
         <div class="header-right" id="connection-ui" style="display: none;">
             <input type="text" id="ngrok-url" class="form-input" placeholder="Enter Ngrok URL (e.g. https://abc.ngrok.app)" style="min-width: 250px;">
@@ -24,17 +25,22 @@
     </header>
 
     <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="pc-status">🖥️ PC Status</button>
+        <button class="tab-btn active" data-tab="pc-status">🖥️ 3D Lab Map</button>
         <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
         <button class="tab-btn" data-tab="registered-faces">👥 Registered Users</button>
         <button class="tab-btn" data-tab="unknown-faces">⚠️ Unknown Faces</button>
     </nav>
 
-    <!-- TAB: PC STATUS -->
+    <!-- TAB: PC STATUS (3D DIGITAL TWIN) -->
     <main id="tab-pc-status" class="tab-content active">
-        <div class="page-title">
-            <h2>🖥️ Live PC Availability</h2>
+        <div class="page-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2>🖥️ Live 3D AI Lab Room</h2>
+                <p>Interactive 3D spatial layout • Tap any workstation to manage</p>
+            </div>
+            <button id="reset-cam-btn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 14px;">🎯 Reset View</button>
         </div>
+        
         <div class="metrics-row">
             <div class="metric-card metric-green">
                 <div class="metric-value" id="stat-free">0</div>
@@ -50,28 +56,14 @@
             </div>
         </div>
         
-        <div class="lab-floorplan">
-            <!-- Room structure -->
-            <div class="lab-wall wall-top"></div>
-            <div class="lab-wall wall-left"></div>
-            <div class="lab-wall wall-right"></div>
-            <div class="lab-wall wall-bottom-left"></div>
-            <div class="lab-wall wall-bottom-right"></div>
-            <div class="lab-gate">Entrance</div>
-            
-            <!-- PCs 1-3 (Left side) -->
-            <div class="floor-pc pos-l1" id="slot-PC-1"></div>
-            <div class="floor-pc pos-l2" id="slot-PC-2"></div>
-            <div class="floor-pc pos-l3" id="slot-PC-3"></div>
-            
-            <!-- PCs 4-6 (Right side) -->
-            <div class="floor-pc pos-r1" id="slot-PC-4"></div>
-            <div class="floor-pc pos-r2" id="slot-PC-5"></div>
-            <div class="floor-pc pos-r3" id="slot-PC-6"></div>
-            
-            <!-- PCs 7-8 (Near Gate) -->
-            <div class="floor-pc pos-gate1" id="slot-PC-7"></div>
-            <div class="floor-pc pos-gate2" id="slot-PC-8"></div>
+        <!-- 3D Canvas Viewport -->
+        <div id="canvas-3d-container" class="canvas-3d-wrapper">
+            <canvas id="lab-3d-canvas"></canvas>
+            <div class="canvas-3d-controls-hint">
+                <span>🖱️ Drag to rotate</span> • 
+                <span>🔍 Pinch / Scroll to zoom</span> • 
+                <span>👆 Tap PC to assign / free</span>
+            </div>
         </div>
     </main>
 
@@ -143,6 +135,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=10"></script>
+    <script src="three_scene.js?v=1"></script>
+    <script src="script.js?v=11"></script>
 </body>
 </html>
