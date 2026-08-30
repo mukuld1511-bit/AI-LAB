@@ -113,64 +113,132 @@ async function loadPCStatus() {
         document.getElementById("stat-occupied").innerText = pcs.length - freePCs.length;
         document.getElementById("stat-total").innerText = pcs.length;
 
-        const grid = document.getElementById("pc-grid");
-        grid.innerHTML = pcs.map(pc => {
+        const pcsToRender = pcs.slice(0, 8); // We only have 8 physical slots
+
+        pcsToRender.forEach(pc => {
             const isFree = pc.status.toLowerCase() === "free";
             const cardClass = isFree ? "pc-card-free" : "pc-card-occupied";
             const badgeClass = isFree ? "badge-free" : "badge-occupied";
             const badgeText = isFree ? "🟢 AVAILABLE" : "🔴 IN USE";
             
-            return `
-                <div class="pc-card ${cardClass}" onclick="handlePCClick('${pc.pc_id}', ${isFree})" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <div class="status-badge ${badgeClass}" style="position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 4px 8px;">${badgeText}</div>
-                    <div style="font-size: 32px; margin-bottom: 8px; margin-top: 10px;">💻</div>
-                    <div class="pc-title" style="font-size: 24px; white-space: nowrap;">${pc.pc_id}</div>
+            const slot = document.getElementById(`slot-${pc.pc_id}`);
+            if (slot) {
+                slot.className = `floor-pc ${slot.className.split(' ')[1]} ${cardClass}`;
+                slot.onclick = () => handlePCClick(pc.pc_id, isFree);
+                slot.innerHTML = `
+                    <div class="status-badge ${badgeClass}" style="position: absolute; top: 6px; right: 6px;">${badgeText}</div>
+                    <div style="font-size: 24px; margin-bottom: 4px; margin-top: 8px;">💻</div>
+                    <div class="pc-title">${pc.pc_id}</div>
                     ${!isFree && pc.occupied_by ? `
-                        <div class="pc-meta">
-                            <strong>👤 ${pc.occupied_by}</strong><br>
-                            Started: ${pc.since_time ? pc.since_time.split(" ")[1] : "N/A"}
+                        <div class="pc-meta" style="font-size: 10px; margin-top:0;">
+                            <strong>👤 ${pc.occupied_by}</strong>
                         </div>
                     ` : ""}
-                </div>
-            `;
-        }).join("");
+                `;
+            }
+        });
+
+        // Anime.js breathing animation for occupied PCs
+        if (typeof anime !== 'undefined') {
+            anime({
+                targets: '.pc-card-occupied',
+                boxShadow: ['0 4px 6px -1px rgba(220, 38, 38, 0.2)', '0 10px 20px -2px rgba(220, 38, 38, 0.6)'],
+                borderColor: ['rgba(220, 38, 38, 0.4)', 'rgba(220, 38, 38, 1)'],
+                direction: 'alternate',
+                loop: true,
+                easing: 'easeInOutSine',
+                duration: 1500
+            });
+            anime({
+                targets: '.pc-card-free',
+                boxShadow: ['0 4px 6px -1px rgba(22, 163, 74, 0.1)', '0 6px 12px -2px rgba(22, 163, 74, 0.3)'],
+                direction: 'alternate',
+                loop: true,
+                easing: 'easeInOutSine',
+                duration: 2500
+            });
+        }
     } catch(e) {
         console.error("PC load failed", e);
     }
 }
 
+// Modal State
+let currentAction = null;
+let currentPCId = null;
+
+function closePCModal() {
+    document.getElementById("pc-modal").style.display = "none";
+    document.getElementById("modal-student-name").value = "";
+}
+
 // Handle PC Click
-async function handlePCClick(pcId, isFree) {
+function handlePCClick(pcId, isFree) {
     if (!BASE_URL) return;
     
+    currentPCId = pcId;
+    const modal = document.getElementById("pc-modal");
+    const title = document.getElementById("modal-title");
+    const desc = document.getElementById("modal-desc");
+    const inputGroup = document.getElementById("modal-input-group");
+    const actionBtn = document.getElementById("modal-action-btn");
+    
+    modal.style.display = "flex";
+    
     if (isFree) {
-        const name = prompt(`Enter student name to assign to ${pcId}:`);
-        if (!name) return; // Cancelled or empty
-        
-        try {
-            await apiFetch("/pc/occupy", {
-                method: "POST",
-                body: JSON.stringify({ pc_id: pcId, name: name })
-            });
-            loadPCStatus(); // Refresh grid
-        } catch(e) {
-            alert("Error occupying PC: " + e.message);
-        }
+        currentAction = "occupy";
+        title.innerText = `Assign ${pcId}`;
+        desc.innerText = `Enter the name of the student using ${pcId}`;
+        inputGroup.style.display = "block";
+        actionBtn.innerText = "Assign PC";
+        actionBtn.className = "btn btn-primary";
+        document.getElementById("modal-student-name").focus();
     } else {
-        const confirmFree = confirm(`Are you sure you want to mark ${pcId} as FREE?`);
-        if (!confirmFree) return;
-        
-        try {
-            await apiFetch("/pc/free", {
-                method: "POST",
-                body: JSON.stringify({ pc_id: pcId })
-            });
-            loadPCStatus(); // Refresh grid
-        } catch(e) {
-            alert("Error freeing PC: " + e.message);
-        }
+        currentAction = "free";
+        title.innerText = `Free ${pcId}`;
+        desc.innerText = `Are you sure you want to mark ${pcId} as available?`;
+        inputGroup.style.display = "none";
+        actionBtn.innerText = "Mark Free";
+        actionBtn.className = "btn btn-primary";
+        actionBtn.style.background = "var(--error)";
     }
 }
+
+document.getElementById("modal-action-btn")?.addEventListener("click", async () => {
+    if (!currentPCId) return;
+    
+    const actionBtn = document.getElementById("modal-action-btn");
+    actionBtn.disabled = true;
+    actionBtn.innerText = "Processing...";
+    
+    try {
+        if (currentAction === "occupy") {
+            const name = document.getElementById("modal-student-name").value.trim();
+            if (!name) {
+                alert("Please enter a name.");
+                actionBtn.disabled = false;
+                actionBtn.innerText = "Assign PC";
+                return;
+            }
+            await apiFetch("/pc/occupy", {
+                method: "POST",
+                body: JSON.stringify({ pc_id: currentPCId, name: name })
+            });
+        } else if (currentAction === "free") {
+            await apiFetch("/pc/free", {
+                method: "POST",
+                body: JSON.stringify({ pc_id: currentPCId })
+            });
+        }
+        
+        closePCModal();
+        loadPCStatus();
+    } catch(e) {
+        alert("Error: " + e.message);
+        actionBtn.disabled = false;
+        actionBtn.innerText = "Retry";
+    }
+});
 
 // Attendance
 async function loadAttendance() {

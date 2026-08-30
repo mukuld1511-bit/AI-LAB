@@ -6,6 +6,7 @@
     <title>Mam's Lab Portal</title>
     <link rel="stylesheet" href="style.css?v=2">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 </head>
 <body>
     <header class="top-header">
@@ -48,8 +49,29 @@
                 <div class="metric-label">TOTAL PCs</div>
             </div>
         </div>
-        <div id="pc-grid" class="pc-grid">
-            <!-- Rendered by JS -->
+        
+        <div class="lab-floorplan">
+            <!-- Room structure -->
+            <div class="lab-wall wall-top"></div>
+            <div class="lab-wall wall-left"></div>
+            <div class="lab-wall wall-right"></div>
+            <div class="lab-wall wall-bottom-left"></div>
+            <div class="lab-wall wall-bottom-right"></div>
+            <div class="lab-gate">Entrance</div>
+            
+            <!-- PCs 1-3 (Left side) -->
+            <div class="floor-pc pos-l1" id="slot-PC-1"></div>
+            <div class="floor-pc pos-l2" id="slot-PC-2"></div>
+            <div class="floor-pc pos-l3" id="slot-PC-3"></div>
+            
+            <!-- PCs 4-6 (Right side) -->
+            <div class="floor-pc pos-r1" id="slot-PC-4"></div>
+            <div class="floor-pc pos-r2" id="slot-PC-5"></div>
+            <div class="floor-pc pos-r3" id="slot-PC-6"></div>
+            
+            <!-- PCs 7-8 (Near Gate) -->
+            <div class="floor-pc pos-gate1" id="slot-PC-7"></div>
+            <div class="floor-pc pos-gate2" id="slot-PC-8"></div>
         </div>
     </main>
 
@@ -104,6 +126,23 @@
         </div>
     </main>
 
-    <script src="script.js?v=6"></script>
+    <!-- PC Action Modal -->
+    <div id="pc-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modal-title" style="margin-top: 0; color: var(--on-surface);">Manage PC</h3>
+            <p id="modal-desc" style="color: var(--on-surface-variant); font-size: 14px; margin-bottom: 20px;">Choose an action</p>
+            
+            <div id="modal-input-group" style="display: none;">
+                <input type="text" id="modal-student-name" class="form-input" placeholder="Enter student name..." style="width: 100%; margin-bottom: 20px;">
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closePCModal()" style="background: var(--surface-variant); color: var(--on-surface-variant);">Cancel</button>
+                <button id="modal-action-btn" class="btn btn-primary">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=10"></script>
 </body>
 </html>
