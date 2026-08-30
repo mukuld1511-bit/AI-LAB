@@ -121,11 +121,10 @@ async function loadPCStatus() {
             const badgeText = isFree ? "🟢 AVAILABLE" : "🔴 IN USE";
             
             return `
-                <div class="pc-card ${cardClass}">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div class="pc-title">💻 ${pc.pc_id}</div>
-                        <div class="status-badge ${badgeClass}">${badgeText}</div>
-                    </div>
+                <div class="pc-card ${cardClass}" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div class="status-badge ${badgeClass}" style="position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 4px 8px;">${badgeText}</div>
+                    <div style="font-size: 32px; margin-bottom: 8px; margin-top: 10px;">💻</div>
+                    <div class="pc-title" style="font-size: 24px; white-space: nowrap;">${pc.pc_id}</div>
                     ${!isFree && pc.occupied_by ? `
                         <div class="pc-meta">
                             <strong>👤 ${pc.occupied_by}</strong><br>
