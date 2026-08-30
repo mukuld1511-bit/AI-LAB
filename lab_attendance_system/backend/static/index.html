@@ -15,13 +15,10 @@
     <div id="settings-modal" class="modal-overlay">
         <div class="modal-card">
             <h2>⚙️ Backend Connection</h2>
-            <p>Enter your ngrok URL (or local backend URL) to connect:</p>
-            <input type="text" id="api-url-input" placeholder="https://abc123.ngrok-free.app" />
+            <p>You can now simply use localhost:8000. Settings modal is no longer required as the dashboard is unified!</p>
             <div class="modal-actions">
-                <button id="save-url-btn" class="btn btn-primary">💾 Save & Connect</button>
-                <button id="close-modal-btn" class="btn btn-secondary">Cancel</button>
+                <button id="close-modal-btn" class="btn btn-secondary">Close</button>
             </div>
-            <div id="connection-status"></div>
         </div>
     </div>
 
@@ -41,7 +38,11 @@
     <nav class="tab-nav">
         <button class="tab-btn active" data-tab="pc-status">🖥️ PC Status</button>
         <button class="tab-btn" data-tab="attendance">📋 Attendance</button>
+        <button class="tab-btn" data-tab="kiosk-entry">📸 Kiosk Entry</button>
         <button class="tab-btn" data-tab="unknown-faces">📸 Unknown Faces</button>
+        <button class="tab-btn" data-tab="face-registration">👤 Face Reg</button>
+        <button class="tab-btn" data-tab="registered-faces">👥 Registered</button>
+        <button class="tab-btn" data-tab="db-admin">🗄️ Admin</button>
     </nav>
 
     <!-- ═══════════════════════════════════════════ -->
@@ -134,24 +135,38 @@ please mark it as "Free" on the tracker so others can use it.
     <!-- ═══════════════════════════════════════════ -->
     <main id="tab-attendance" class="tab-content">
         <div class="page-title">
-            <h2>📋 Lab Attendance Logs (Face Recognition)</h2>
-            <p>Real-time camera in/out event history</p>
+            <h2>📋 Lab Attendance Logs</h2>
+            <p>Automatic IN/OUT records captured by AI</p>
         </div>
 
-        <!-- Filters -->
-        <div class="filter-row">
+        <div class="filter-bar">
             <div class="filter-group">
-                <label>Filter by Date</label>
+                <label>Date:</label>
                 <input type="date" id="filter-date" class="form-input">
             </div>
             <div class="filter-group">
-                <label>Filter by Name</label>
+                <label>Name:</label>
                 <input type="text" id="filter-name" class="form-input" placeholder="Search by name...">
             </div>
             <div class="filter-group filter-actions">
                 <button id="apply-filter-btn" class="btn btn-primary">🔍 Search</button>
                 <button id="reset-filter-btn" class="btn btn-secondary">🗑️ Reset</button>
             </div>
+        </div>
+
+        <!-- Manual Attendance Entry -->
+        <hr class="divider">
+        <h3 class="section-title">✍️ Manual Entry</h3>
+        <div class="claim-form" style="margin-bottom: 20px;">
+            <div class="form-row">
+                <input type="text" id="manual-name" class="form-input" placeholder="Name (e.g. Ayush)">
+                <select id="manual-action" class="form-select">
+                    <option value="IN">IN</option>
+                    <option value="OUT">OUT</option>
+                </select>
+                <button id="manual-btn" class="btn btn-primary">📝 Add Log</button>
+            </div>
+            <div id="manual-message" style="margin-top: 10px;"></div>
         </div>
 
         <div id="attendance-status"></div>
@@ -186,6 +201,80 @@ please mark it as "Free" on the tracker so others can use it.
         <div id="faces-grid" class="faces-grid">
             <!-- Populated by JS -->
         </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB: KIOSK ENTRY                           -->
+    <!-- ═══════════════════════════════════════════ -->
+    <main id="tab-kiosk-entry" class="tab-content">
+        <div class="page-title">
+            <h2>📸 1-Click Kiosk Entry</h2>
+            <p>Click the button below to turn on the camera for 1 second and automatically log IN</p>
+        </div>
+        <div style="text-align: center; margin-top: 50px;">
+            <button id="kiosk-scan-btn" class="btn btn-primary" style="font-size: 2em; padding: 20px 40px; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">
+                📷 Scan Face & Enter
+            </button>
+            <div id="kiosk-message" style="margin-top: 30px; font-size: 1.5em;"></div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB: REGISTERED FACES                      -->
+    <!-- ═══════════════════════════════════════════ -->
+    <main id="tab-registered-faces" class="tab-content">
+        <div class="page-title">
+            <h2>👥 Registered People</h2>
+            <p>List of all people currently recognized by the AI</p>
+        </div>
+        <div id="registered-faces-list" class="faces-grid" style="margin-top: 20px;">
+            <!-- Populated by JS -->
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB 4: FACE REGISTRATION                   -->
+    <!-- ═══════════════════════════════════════════ -->
+    <main id="tab-face-registration" class="tab-content">
+        <div class="page-title">
+            <h2>👤 Remote Face Registration</h2>
+            <p>Upload a photo to register a new person into the facial recognition database</p>
+        </div>
+        
+        <div class="enroll-form">
+            <div class="form-row">
+                <input type="text" id="enroll-name" class="form-input" placeholder="Person's Full Name (e.g. Ayush)">
+            </div>
+            <div class="form-row" style="margin-top: 15px;">
+                <p style="margin-bottom: 5px;">Option 1: Capture from Webcam</p>
+                <button id="capture-photo-btn" class="btn btn-secondary">📷 Capture Now</button>
+                <span id="capture-status" style="margin-left: 10px;"></span>
+            </div>
+            <div class="form-row" style="margin-top: 15px;">
+                <p style="margin-bottom: 5px;">Option 2: Upload Photo</p>
+                <input type="file" id="enroll-image" accept="image/*" class="form-input" style="padding-top: 10px;">
+            </div>
+            <div class="form-row" style="margin-top: 15px;">
+                <button id="enroll-btn" class="btn btn-primary">📤 Register Face</button>
+            </div>
+            <div id="enroll-message" style="margin-top: 15px;"></div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB 5: DB ADMIN                            -->
+    <!-- ═══════════════════════════════════════════ -->
+    <main id="tab-db-admin" class="tab-content">
+        <div class="page-title">
+            <h2>🗄️ Database Administration</h2>
+            <p>Download backup or clear database logs</p>
+        </div>
+        
+        <div class="metrics-row" style="margin-top: 30px; justify-content: flex-start; gap: 20px;">
+            <button id="download-db-btn" class="btn btn-primary" style="font-size: 1.1em; padding: 15px 20px;">📥 Download SQLite DB</button>
+            <button id="clear-db-btn" class="btn btn-secondary" style="font-size: 1.1em; padding: 15px 20px; background-color: #ffebee; color: #d32f2f; border-color: #ffcdd2;">⚠️ Clear Attendance Logs</button>
+        </div>
+        <div id="db-message" style="margin-top: 15px;"></div>
     </main>
 
     <!-- Footer -->

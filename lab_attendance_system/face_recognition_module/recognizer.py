@@ -57,6 +57,11 @@ def main():
     # (e.g. don't log IN then immediately log OUT 2 seconds later while person is still standing at door)
     last_logged_time = {}
     EVENT_COOLDOWN = 10.0  # seconds cooldown before logging same person again
+    
+    session_unknowns = {}  # Tracks unknowns for this session: {name: encoding}
+    last_face_locations = []
+    last_face_names = []
+    last_face_colors = []
 
     while True:
         ret, frame = cap.read()
@@ -79,11 +84,19 @@ def main():
             known_names = list(known_dict.keys())
             known_encodings = list(known_dict.values())
 
+            # Combine knowns and session unknowns for matching
+            all_known_names = list(known_names) + list(session_unknowns.keys())
+            all_known_encodings = list(known_encodings) + list(session_unknowns.values())
+
             # Convert BGR (OpenCV) to RGB (face_recognition)
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             # Detect faces using CPU-based HOG model ONLY (Do NOT use CNN)
             face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+            
+            new_face_locations = []
+            new_face_names = []
+            new_face_colors = []
 
             if len(face_locations) > 0:
                 face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
@@ -91,40 +104,44 @@ def main():
                 for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
                     matched_name = None
 
-                    if len(known_encodings) > 0:
-                        matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=0.55)
+                    if len(all_known_encodings) > 0:
+                        matches = face_recognition.compare_faces(all_known_encodings, face_encoding, tolerance=0.55)
                         if True in matches:
                             first_match_index = matches.index(True)
-                            matched_name = known_names[first_match_index]
+                            matched_name = all_known_names[first_match_index]
 
                     if matched_name is not None:
-                        # Known person matched
+                        is_known_person = matched_name in known_dict
+                        # Known person or previously seen unknown matched
                         # Check cooldown
                         last_time = last_logged_time.get(matched_name, 0)
-                        if (current_time - last_time) < EVENT_COOLDOWN:
-                            continue
-                        last_logged_time[matched_name] = current_time
+                        if (current_time - last_time) >= EVENT_COOLDOWN:
+                            last_logged_time[matched_name] = current_time
 
-                        # Check attendance_logs for that name's most recent row for today's date
-                        recent_log = database.get_latest_log_today(name=matched_name, today_date=today_str)
+                            # Check attendance_logs for that name's most recent row for today's date
+                            recent_log = database.get_latest_log_today(name=matched_name, today_date=today_str)
 
-                        if recent_log and recent_log.get("in_time") and not recent_log.get("out_time"):
-                            # UPDATE that row, set out_time = now
-                            database.update_out_time(log_id=recent_log["id"], out_time=now_str)
-                            print(f"[{now_str}] MATCH: {matched_name} | Action: OUT | Status: Out-time logged ({now_str})")
-                        else:
-                            # INSERT new row with name, is_known=True, in_time=now, date=today
-                            database.insert_attendance_log(
-                                name=matched_name,
-                                is_known=True,
-                                in_time=now_str,
-                                date=today_str,
-                                image_path=None
-                            )
-                            print(f"[{now_str}] MATCH: {matched_name} | Action: IN  | Status: In-time logged ({now_str})")
+                            if recent_log and recent_log.get("in_time") and not recent_log.get("out_time"):
+                                # UPDATE that row, set out_time = now
+                                database.update_out_time(log_id=recent_log["id"], out_time=now_str)
+                                print(f"[{now_str}] MATCH: {matched_name} | Action: OUT | Status: Out-time logged ({now_str})")
+                            else:
+                                # INSERT new row with name, is_known=True, in_time=now, date=today
+                                database.insert_attendance_log(
+                                    name=matched_name,
+                                    is_known=is_known_person,
+                                    in_time=now_str,
+                                    date=today_str,
+                                    image_path=None
+                                )
+                                print(f"[{now_str}] MATCH: {matched_name} | Action: IN  | Status: In-time logged ({now_str})")
+                        
+                        new_face_locations.append((top, right, bottom, left))
+                        new_face_names.append(matched_name)
+                        new_face_colors.append((0, 255, 0) if is_known_person else (0, 0, 255))
 
                     else:
-                        # Unknown person (no match)
+                        # Completely new unknown person
                         # Crop face region with small safety padding
                         h, w, _ = frame.shape
                         pad_top = max(0, top - 20)
@@ -148,6 +165,10 @@ def main():
                         # Incrementing counter for today's unknown faces
                         counter = database.get_unknown_counter(today_date=today_str)
                         unknown_label = f"Unknown_{counter}"
+                        
+                        # Track in session to avoid duplicate snapshots
+                        session_unknowns[unknown_label] = face_encoding
+                        last_logged_time[unknown_label] = current_time
 
                         # INSERT new row: name="Unknown_<incrementing number>", is_known=False, image_path=<saved path>, in_time=now, date=today
                         database.insert_attendance_log(
@@ -158,9 +179,24 @@ def main():
                             image_path=rel_img_path
                         )
                         print(f"[{now_str}] UNKNOWN FACE DETECTED | Action: IN  | Name: {unknown_label} | Image: {rel_img_path}")
+                        
+                        new_face_locations.append((top, right, bottom, left))
+                        new_face_names.append(unknown_label)
+                        new_face_colors.append((0, 0, 255))
+                        
+            last_face_locations = new_face_locations
+            last_face_names = new_face_names
+            last_face_colors = new_face_colors
 
         # Visual preview with bounding boxes for monitoring
         display_frame = frame.copy()
+        
+        # Draw bounding boxes
+        for (top, right, bottom, left), name, color in zip(last_face_locations, last_face_names, last_face_colors):
+            cv2.rectangle(display_frame, (left, top), (right, bottom), color, 2)
+            cv2.rectangle(display_frame, (left, bottom - 35), (right, bottom), color, cv2.FILLED)
+            cv2.putText(display_frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
+
         cv2.putText(
             display_frame,
             "AI Lab Attendance Camera (Active - 2s Cycle)",

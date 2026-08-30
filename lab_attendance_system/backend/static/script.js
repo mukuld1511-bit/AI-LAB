@@ -47,6 +47,7 @@ function initTabs() {
             if (btn.dataset.tab === "pc-status") loadPCStatus();
             else if (btn.dataset.tab === "attendance") loadAttendance();
             else if (btn.dataset.tab === "unknown-faces") loadUnknownFaces();
+            else if (btn.dataset.tab === "registered-faces") loadRegisteredFaces();
         });
     });
 }
@@ -133,14 +134,11 @@ function updateConnectionBadge(connected) {
 // API HELPER
 // ═══════════════════════════════════════
 async function apiFetch(endpoint, options = {}) {
-    if (!API_BASE) {
-        openSettings();
-        throw new Error("No API URL configured");
-    }
     const defaultHeaders = { "ngrok-skip-browser-warning": "true" };
     if (options.body) defaultHeaders["Content-Type"] = "application/json";
     
-    const resp = await fetch(API_BASE + endpoint, {
+    // Now hitting same origin
+    const resp = await fetch(endpoint, {
         ...options,
         headers: { ...defaultHeaders, ...(options.headers || {}) }
     });
@@ -321,7 +319,9 @@ async function loadAttendance() {
                     <td>${row.name || "-"}</td>
                     <td>${row.is_known ? "✅ Yes" : "❓ Unknown"}</td>
                     <td>${row.in_time || "-"}</td>
-                    <td>${row.out_time || "🟢 Currently in Lab"}</td>
+                    <td>
+                        ${row.out_time || `<button class="btn btn-secondary" onclick="markOut('${row.name}')" style="padding: 5px 10px; font-size: 0.9em; background-color: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2;">🚪 Mark OUT</button>`}
+                    </td>
                     <td>${row.date || "-"}</td>
                 </tr>
             `).join("");
@@ -331,13 +331,60 @@ async function loadAttendance() {
             tbody.innerHTML = "";
         }
     } catch (e) {
-        statusEl.innerHTML = `<span class="warning-box">⚠️ Could not fetch attendance logs: ${e.message}</span>`;
+        statusEl.innerHTML = `<span class="warning-box">⚠️ Could not fetch attendance: ${e.message}</span>`;
         tbody.innerHTML = "";
     }
 }
 
 // ═══════════════════════════════════════
-// PAGE 3: UNKNOWN FACES
+// MANUAL & QUICK OUT ATTENDANCE
+// ═══════════════════════════════════════
+async function markOut(name) {
+    if (!confirm(`Mark ${name} as OUT?`)) return;
+    
+    try {
+        const data = await apiFetch("/api/manual_attendance", {
+            method: "POST",
+            body: JSON.stringify({ name: name, action: "OUT" })
+        });
+        loadAttendance(); // Refresh table
+    } catch (err) {
+        alert("Failed to mark OUT: " + err.message);
+    }
+}
+
+document.getElementById("manual-btn").addEventListener("click", async () => {
+    const nameInput = document.getElementById("manual-name");
+    const actionSelect = document.getElementById("manual-action");
+    const msgEl = document.getElementById("manual-message");
+    
+    const name = nameInput.value.trim();
+    const action = actionSelect.value;
+    
+    if (!name) {
+        msgEl.innerHTML = '<span class="warning-box">⚠️ Please enter a name.</span>';
+        return;
+    }
+    
+    msgEl.innerHTML = '<span class="spinner"></span> Processing...';
+    try {
+        const data = await apiFetch("/api/manual_attendance", {
+            method: "POST",
+            body: JSON.stringify({ name, action })
+        });
+        
+        msgEl.innerHTML = `<span class="info-box" style="background: #e8f5e9; color: #2e7d32;">✅ ${data.message}</span>`;
+        nameInput.value = "";
+        
+        // Refresh logs immediately
+        loadAttendance();
+    } catch (err) {
+        msgEl.innerHTML = `<span class="warning-box">❌ Failed: ${err.message}</span>`;
+    }
+});
+
+// ═══════════════════════════════════════
+// TAB: UNKNOWN FACES
 // ═══════════════════════════════════════
 async function loadUnknownFaces() {
     const statusEl = document.getElementById("faces-status");
@@ -373,6 +420,32 @@ async function loadUnknownFaces() {
 }
 
 // ═══════════════════════════════════════
+// TAB: REGISTERED FACES
+// ═══════════════════════════════════════
+async function loadRegisteredFaces() {
+    const grid = document.getElementById("registered-faces-list");
+    grid.innerHTML = '<span class="spinner"></span> Loading...';
+
+    try {
+        const data = await apiFetch("/api/registered_faces");
+        if (data.faces && data.faces.length > 0) {
+            grid.innerHTML = data.faces.map(name => `
+                <div class="face-card" style="padding: 20px; text-align: center; border-radius: 8px; background: #fff; border: 1px solid #eee;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">👤</div>
+                    <div class="face-info" style="font-size: 1.2rem; font-weight: 600; color: #333;">
+                        ${name}
+                    </div>
+                </div>
+            `).join("");
+        } else {
+            grid.innerHTML = '<span class="info-box">ℹ️ No registered faces found.</span>';
+        }
+    } catch (e) {
+        grid.innerHTML = `<span class="warning-box">⚠️ Could not fetch registered faces: ${e.message}</span>`;
+    }
+}
+
+// ═══════════════════════════════════════
 // UTILITIES
 // ═══════════════════════════════════════
 function copyTemplate(btn) {
@@ -383,3 +456,122 @@ function copyTemplate(btn) {
         setTimeout(() => btn.textContent = orig, 1500);
     });
 }
+
+// ═══════════════════════════════════════
+// TAB 4: FACE REGISTRATION
+// ═══════════════════════════════════════
+
+// Kiosk Entry Button Logic
+document.getElementById("kiosk-scan-btn").addEventListener("click", async () => {
+    const msgEl = document.getElementById("kiosk-message");
+    msgEl.innerHTML = '<span class="spinner"></span> Turning on camera and scanning... please look at the webcam.';
+    
+    try {
+        const data = await apiFetch("/api/scan_entry", { method: "POST" });
+        msgEl.innerHTML = `<span class="info-box" style="background: #e8f5e9; color: #2e7d32;">✅ ${data.message}</span>`;
+    } catch (err) {
+        msgEl.innerHTML = `<span class="warning-box">❌ Scan failed: ${err.message}</span>`;
+    }
+});
+
+// Capture Photo Button Logic
+document.getElementById("capture-photo-btn").addEventListener("click", async () => {
+    const statusEl = document.getElementById("capture-status");
+    const name = document.getElementById("enroll-name").value.trim();
+    
+    if (!name) {
+        statusEl.innerHTML = '<span style="color: red;">⚠️ Enter name first.</span>';
+        return;
+    }
+    
+    statusEl.innerHTML = '<span class="spinner"></span> Capturing from webcam...';
+    try {
+        const data = await apiFetch("/api/capture_photo");
+        // We have the base64 image, now enroll it
+        statusEl.innerHTML = '<span class="spinner"></span> Registering...';
+        
+        const enrollResp = await fetch("/enroll", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name, image_base64: data.image_base64 })
+        });
+        
+        const enrollData = await enrollResp.json();
+        if (enrollResp.ok) {
+            statusEl.innerHTML = `✅ Registered successfully!`;
+            document.getElementById("enroll-name").value = "";
+        } else {
+            throw new Error(enrollData.detail || "Registration failed");
+        }
+        
+    } catch (err) {
+        statusEl.innerHTML = `<span style="color: red;">❌ ${err.message}</span>`;
+    }
+});
+
+document.getElementById("enroll-btn").addEventListener("click", async () => {
+    const name = document.getElementById("enroll-name").value.trim();
+    const fileInput = document.getElementById("enroll-image");
+    const msgEl = document.getElementById("enroll-message");
+    
+    if (!name) {
+        msgEl.innerHTML = '<span class="warning-box">⚠️ Please enter a name.</span>';
+        return;
+    }
+    if (fileInput.files.length === 0) {
+        msgEl.innerHTML = '<span class="warning-box">⚠️ Please select a photo.</span>';
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    msgEl.innerHTML = '<span class="spinner"></span> Processing and Uploading...';
+    
+    reader.onload = async (e) => {
+        const base64Image = e.target.result;
+        try {
+            const resp = await fetch("/enroll", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ name: name, image_base64: base64Image })
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                msgEl.innerHTML = `<span class="info-box" style="background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7;">✅ ${data.message}</span>`;
+                document.getElementById("enroll-name").value = "";
+                fileInput.value = "";
+            } else {
+                throw new Error(data.detail || "Upload failed");
+            }
+        } catch (err) {
+            msgEl.innerHTML = `<span class="warning-box">❌ Registration failed: ${err.message}</span>`;
+        }
+    };
+    reader.readAsDataURL(file);
+});
+
+// ═══════════════════════════════════════
+// TAB 5: DB ADMIN
+// ═══════════════════════════════════════
+document.getElementById("download-db-btn").addEventListener("click", () => {
+    window.open("/db/download", "_blank");
+});
+
+document.getElementById("clear-db-btn").addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to clear ALL attendance logs? This cannot be undone.")) return;
+    
+    const msgEl = document.getElementById("db-message");
+    msgEl.innerHTML = '<span class="spinner"></span> Clearing...';
+    try {
+        const data = await apiFetch("/db/clear", { method: "POST" });
+        msgEl.innerHTML = `<span class="info-box" style="background: #e8f5e9; color: #2e7d32;">✅ ${data.message}</span>`;
+        if (currentTab === "attendance") {
+            loadAttendanceLogs(); 
+        }
+    } catch (err) {
+        msgEl.innerHTML = `<span class="warning-box">❌ Failed to clear database: ${err.message}</span>`;
+    }
+});
