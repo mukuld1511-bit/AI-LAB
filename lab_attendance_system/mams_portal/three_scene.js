@@ -878,16 +878,16 @@ function buildInfinityChandelier() {
 }
 
 /**
- * Builds Workstations in Scaled Up Room:
- * - Continuous connected wooden slabs on Left (PC-1, PC-2, PC-3) and Right (PC-4, PC-5, PC-6) placed very close to walls
- * - PC-7 standalone executive table placed right against front wall
- * - PC-8 freestanding inside the center of the room
+ * Builds Workstations in Scaled Up Room with Increased Size Ratio:
+ * - Continuous connected wooden slabs on Left (PC-1, PC-2, PC-3) and Right (PC-4, PC-5, PC-6)
+ * - PC-7 at front wall near entrance
+ * - PC-8 rotated and moved forward into the room
  */
 function buildAllLabWorkstations() {
-    const slabW = 1.45;  // Deeper executive desk surface
-    const slabL = 10.8;  // Expanded continuous length
-    const slabH = 0.09;
-    const tablePosY = 1.0;
+    const slabW = 1.65; // Expanded wide desk surface
+    const slabL = 10.5; // Stretched workstation bench length
+    const slabH = 0.10;
+    const tablePosY = 1.05;
 
     // Wood Grain Texture for Tables & Workstation Slabs (Accurate sRGB Color Rendering)
     const textureLoader = new THREE.TextureLoader();
@@ -896,7 +896,7 @@ function buildAllLabWorkstations() {
     if (THREE.sRGBEncoding) woodTableTex.encoding = THREE.sRGBEncoding;
     woodTableTex.wrapS = THREE.RepeatWrapping;
     woodTableTex.wrapT = THREE.RepeatWrapping;
-    woodTableTex.repeat.set(1.5, 4.5);
+    woodTableTex.repeat.set(1.6, 4.2);
 
     const woodMat = new THREE.MeshStandardMaterial({
         map: woodTableTex,
@@ -915,9 +915,9 @@ function buildAllLabWorkstations() {
         scene.add(slab);
 
         // Heavy metal support leg frames under slab
-        const legZOffsets = [-slabL / 2 + 0.35, -slabL / 6, slabL / 6, slabL / 2 - 0.35];
+        const legZOffsets = [-slabL / 2 + 0.35, 0, slabL / 2 - 0.35];
         legZOffsets.forEach(lz => {
-            const frameGeo = new THREE.BoxGeometry(slabW - 0.1, tablePosY, 0.06);
+            const frameGeo = new THREE.BoxGeometry(slabW - 0.15, tablePosY, 0.08);
             const legFrame = new THREE.Mesh(frameGeo, metalLegMat);
             legFrame.position.set(centerX, tablePosY / 2, centerZ + lz);
             legFrame.castShadow = true;
@@ -925,35 +925,35 @@ function buildAllLabWorkstations() {
         });
     }
 
-    // 1. Left Continuous Wooden Slab (Holds PC-1, PC-2, PC-3) — Very close to Left Wall (X = -7.65)
-    createConnectedBench(-6.90, 0.0);
+    // 1. Left Continuous Wooden Slab (Holds PC-1, PC-2, PC-3)
+    createConnectedBench(-5.8, -0.5);
 
-    // 2. Right Continuous Wooden Slab (Holds PC-4, PC-5, PC-6) — Very close to Right Wall (X = +7.65)
-    createConnectedBench(6.90, 0.0);
+    // 2. Right Continuous Wooden Slab (Holds PC-4, PC-5, PC-6)
+    createConnectedBench(5.8, -0.5);
 
-    // 3. Mount Left Monitors & Accessories on Left Slab (Facing Right into room)
-    mountMonitorStation("PC-1", -6.90, 3.3, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-2", -6.90, 0.0, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-3", -6.90, -3.3, Math.PI / 2, tablePosY + slabH / 2);
+    // 3. Mount Left Monitors & Accessories on Left Slab
+    mountMonitorStation("PC-1", -5.8, 3.2, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-2", -5.8, -0.5, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-3", -5.8, -4.2, Math.PI / 2, tablePosY + slabH / 2);
 
-    // 4. Mount Right Monitors & Accessories on Right Slab (Facing Left into room)
-    mountMonitorStation("PC-4", 6.90, 3.3, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-5", 6.90, 0.0, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-6", 6.90, -3.3, -Math.PI / 2, tablePosY + slabH / 2);
+    // 4. Mount Right Monitors & Accessories on Right Slab
+    mountMonitorStation("PC-4", 5.8, 3.2, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-5", 5.8, -0.5, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 5.8, -4.2, -Math.PI / 2, tablePosY + slabH / 2);
 
-    // 5. PC-7 Table: Very close to Front Wall (Z = 7.65), facing into room
-    createStandaloneTable("PC-7", 2.4, 6.90, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
+    // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.3, rotated Math.PI)
+    createStandaloneTable("PC-7", 2.4, 5.3, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
 
-    // 6. PC-8: Freestanding inside the room (X = 0.0, Z = -4.5, rotated Math.PI)
+    // 6. PC-8: Moved forward inside room & rotated (X = 0.0, Z = -4.5, rotated Math.PI)
     createStandaloneTable("PC-8", 0.0, -4.5, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
 }
 
 /**
- * Creates a standalone table workstation (for PC-7 and PC-8) with increased size ratio
+ * Creates a standalone table workstation with increased size (for PC-7 and PC-8)
  */
 function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tablePosY, slabH) {
-    const tableW = 2.4;  // Expanded width
-    const tableD = 1.40; // Expanded depth
+    const tableW = 2.5;
+    const tableD = 1.4;
 
     const group = new THREE.Group();
     group.position.set(posX, 0, posZ);
@@ -967,7 +967,7 @@ function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tab
     group.add(top);
 
     // Legs
-    const legGeo = new THREE.BoxGeometry(0.07, tablePosY, 0.07);
+    const legGeo = new THREE.BoxGeometry(0.08, tablePosY, 0.08);
     const legOffsets = [
         [-tableW / 2 + 0.12, tablePosY / 2, -tableD / 2 + 0.12],
         [tableW / 2 - 0.12, tablePosY / 2, -tableD / 2 + 0.12],
@@ -988,7 +988,7 @@ function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tab
 }
 
 /**
- * Mounts Monitor, Stand, Keyboard, Mouse, Ergonomic Chair, and 3D Floating Badge
+ * Mounts Scaled-Up Monitor, Stand, Keyboard, Mouse, Ergonomic Chair, PC Tower, and 3D Floating Badge
  */
 function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
     const group = new THREE.Group();
@@ -997,21 +997,21 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 
     const bezelMat = new THREE.MeshStandardMaterial({ color: PALETTE.monitorBezel, roughness: 0.3 });
 
-    // Monitor Stand (Set back towards the rear edge of table/wall)
-    const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.02, 0.28), bezelMat);
-    standBase.position.set(0, surfaceY + 0.01, -0.42);
+    // Monitor Stand
+    const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.03, 0.30), bezelMat);
+    standBase.position.set(0, surfaceY + 0.015, -0.32);
     group.add(standBase);
 
-    const standArm = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.42, 0.05), bezelMat);
-    standArm.position.set(0, surfaceY + 0.22, -0.47);
+    const standArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.05), bezelMat);
+    standArm.position.set(0, surfaceY + 0.24, -0.38);
     group.add(standArm);
 
-    // High-Resolution Widescreen Monitor Bezel (32" scaled ratio)
-    const screenW = 1.20;
-    const screenH = 0.72;
-    const screenD = 0.04;
+    // Monitor Bezel (Large Ultrawide / Pro Scale: 1.45m x 0.85m)
+    const screenW = 1.45;
+    const screenH = 0.85;
+    const screenD = 0.05;
     const screenFrame = new THREE.Mesh(new THREE.BoxGeometry(screenW, screenH, screenD), bezelMat);
-    screenFrame.position.set(0, surfaceY + 0.48, -0.42);
+    screenFrame.position.set(0, surfaceY + 0.55, -0.32);
     screenFrame.castShadow = true;
     group.add(screenFrame);
 
@@ -1022,58 +1022,74 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
         emissiveIntensity: 0.75,
         roughness: 0.2
     });
-    const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(screenW - 0.07, screenH - 0.07), screenMat);
-    screenMesh.position.set(0, surfaceY + 0.48, -0.42 + screenD / 2 + 0.002);
+    const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(screenW - 0.08, screenH - 0.08), screenMat);
+    screenMesh.position.set(0, surfaceY + 0.55, -0.32 + screenD / 2 + 0.002);
     group.add(screenMesh);
 
-    // Keyboard & Mouse
+    // Keyboard & Mouse (Scaled proportionally)
     const kbMat = new THREE.MeshStandardMaterial({ color: PALETTE.keyboard, roughness: 0.6 });
-    const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.015, 0.24), kbMat);
-    keyboard.position.set(0, surfaceY + 0.008, 0.15);
+    const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.02, 0.28), kbMat);
+    keyboard.position.set(0, surfaceY + 0.01, 0.18);
     group.add(keyboard);
 
-    const mouseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.015, 0.13), kbMat);
-    mouseMesh.position.set(0.50, surfaceY + 0.008, 0.15);
+    const mouseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.02, 0.16), kbMat);
+    mouseMesh.position.set(0.58, surfaceY + 0.01, 0.18);
     group.add(mouseMesh);
 
-    // Ergonomic Chair
+    // PC High Performance Tower Beside Desk
+    const towerMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.5 });
+    const towerMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.65, 0.60), towerMat);
+    towerMesh.position.set(0.68, 0.33, -0.15);
+    towerMesh.castShadow = true;
+    group.add(towerMesh);
+
+    // Glowing Power LED on Tower
+    const towerLed = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.01), new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        emissive: 0x38bdf8,
+        emissiveIntensity: 1.5
+    }));
+    towerLed.position.set(0.68, 0.58, 0.155);
+    group.add(towerLed);
+
+    // Ergonomic Chair (Scaled Proportionally)
     const chairGroup = new THREE.Group();
-    chairGroup.position.set(0, 0, 0.85);
+    chairGroup.position.set(0, 0, 0.95);
 
     const chairMat = new THREE.MeshStandardMaterial({ color: PALETTE.chairSeat, roughness: 0.7 });
     const metalMat = new THREE.MeshStandardMaterial({ color: PALETTE.metalFrame, roughness: 0.4 });
 
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.08, 0.65), chairMat);
-    seat.position.set(0, 0.65, 0);
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.10, 0.72), chairMat);
+    seat.position.set(0, 0.68, 0);
     seat.castShadow = true;
     chairGroup.add(seat);
 
-    const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.70, 0.06), chairMat);
-    backrest.position.set(0, 1.05, 0.30);
+    const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.82, 0.08), chairMat);
+    backrest.position.set(0, 1.15, 0.32);
     backrest.castShadow = true;
     chairGroup.add(backrest);
 
-    const chairStem = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.6), metalMat);
-    chairStem.position.set(0, 0.3, 0);
+    const chairStem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.62), metalMat);
+    chairStem.position.set(0, 0.32, 0);
     chairGroup.add(chairStem);
 
-    const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.04, 6), metalMat);
-    chairBase.position.set(0, 0.02, 0);
+    const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 6), metalMat);
+    chairBase.position.set(0, 0.025, 0);
     chairGroup.add(chairBase);
 
     group.add(chairGroup);
 
-    // 3D Floating Badge Sprite
+    // 3D Floating Badge Sprite (Large High-DPI Scale)
     const sprite = createStatusSprite(pcId, "AVAILABLE", true);
-    sprite.position.set(0, surfaceY + 1.35, 0);
-    sprite.scale.set(2.0, 0.8, 1);
+    sprite.position.set(0, surfaceY + 1.55, 0);
+    sprite.scale.set(2.4, 0.95, 1);
     group.add(sprite);
 
-    // Click Hitbox for Raycaster
-    const hitBoxGeo = new THREE.BoxGeometry(2.0, 2.2, 2.0);
+    // Click Hitbox for Raycaster (Scaled to match larger station)
+    const hitBoxGeo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
     const hitBoxMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
     const hitBox = new THREE.Mesh(hitBoxGeo, hitBoxMat);
-    hitBox.position.set(0, 1.0, 0);
+    hitBox.position.set(0, 1.2, 0);
     hitBox.userData = { pcId: pcId };
     group.add(hitBox);
 
