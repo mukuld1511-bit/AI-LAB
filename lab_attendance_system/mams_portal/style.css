@@ -740,3 +740,59 @@ body {
     font-size: 14px;
     color: var(--on-background);
 }
+
+/* -- Unknown Faces -- */
+.unknown-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.unknown-card {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.unknown-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: var(--error);
+}
+
+.unknown-card .img-wrapper {
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    position: relative;
+    border-bottom: 2px solid var(--error-container);
+}
+
+.unknown-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.unknown-card:hover img {
+    transform: scale(1.05);
+}
+
+.unknown-meta {
+    padding: 15px;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+    line-height: 1.5;
+    background: linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.8) 100%);
+}
+
+.unknown-meta strong {
+    color: var(--error);
+    margin-right: 4px;
+}
