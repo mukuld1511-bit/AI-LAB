@@ -464,8 +464,7 @@ function buildRoomArchitecture() {
         roughness: 0.1,
         metalness: 0.2,
         transparent: true,
-        opacity: 0.35,
-        depthWrite: false
+        opacity: 0.35
     });
     const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.wallFrame, roughness: 0.4 });
 
@@ -695,8 +694,7 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
         roughness: 0.1,
         metalness: 0.15,
         transparent: true,
-        opacity: 0.55,
-        depthWrite: false
+        opacity: 0.55
     });
 
     const gateSpan = xRight - xLeft;
@@ -880,16 +878,16 @@ function buildInfinityChandelier() {
 }
 
 /**
- * Builds Workstations in Scaled Up Room with Increased Size Ratio:
+ * Builds Workstations in Scaled Up Room:
  * - Continuous connected wooden slabs on Left (PC-1, PC-2, PC-3) and Right (PC-4, PC-5, PC-6)
  * - PC-7 at front wall near entrance
  * - PC-8 rotated and moved forward into the room
  */
 function buildAllLabWorkstations() {
-    const slabW = 1.65; // Expanded wide desk surface
-    const slabL = 10.5; // Stretched workstation bench length
-    const slabH = 0.10;
-    const tablePosY = 1.05;
+    const slabW = 1.25;
+    const slabL = 9.2;
+    const slabH = 0.08;
+    const tablePosY = 1.0;
 
     // Wood Grain Texture for Tables & Workstation Slabs (Accurate sRGB Color Rendering)
     const textureLoader = new THREE.TextureLoader();
@@ -898,7 +896,7 @@ function buildAllLabWorkstations() {
     if (THREE.sRGBEncoding) woodTableTex.encoding = THREE.sRGBEncoding;
     woodTableTex.wrapS = THREE.RepeatWrapping;
     woodTableTex.wrapT = THREE.RepeatWrapping;
-    woodTableTex.repeat.set(1.6, 4.2);
+    woodTableTex.repeat.set(1.5, 4.0);
 
     const woodMat = new THREE.MeshStandardMaterial({
         map: woodTableTex,
@@ -917,9 +915,9 @@ function buildAllLabWorkstations() {
         scene.add(slab);
 
         // Heavy metal support leg frames under slab
-        const legZOffsets = [-slabL / 2 + 0.35, 0, slabL / 2 - 0.35];
+        const legZOffsets = [-slabL / 2 + 0.3, 0, slabL / 2 - 0.3];
         legZOffsets.forEach(lz => {
-            const frameGeo = new THREE.BoxGeometry(slabW - 0.15, tablePosY, 0.08);
+            const frameGeo = new THREE.BoxGeometry(slabW - 0.1, tablePosY, 0.06);
             const legFrame = new THREE.Mesh(frameGeo, metalLegMat);
             legFrame.position.set(centerX, tablePosY / 2, centerZ + lz);
             legFrame.castShadow = true;
@@ -928,34 +926,34 @@ function buildAllLabWorkstations() {
     }
 
     // 1. Left Continuous Wooden Slab (Holds PC-1, PC-2, PC-3)
-    createConnectedBench(-5.8, -0.5);
+    createConnectedBench(-6.0, -1.0);
 
     // 2. Right Continuous Wooden Slab (Holds PC-4, PC-5, PC-6)
-    createConnectedBench(5.8, -0.5);
+    createConnectedBench(6.0, -1.0);
 
     // 3. Mount Left Monitors & Accessories on Left Slab
-    mountMonitorStation("PC-1", -5.8, 3.2, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-2", -5.8, -0.5, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-3", -5.8, -4.2, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-1", -6.0, 2.4, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-2", -6.0, -1.0, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-3", -6.0, -4.4, Math.PI / 2, tablePosY + slabH / 2);
 
     // 4. Mount Right Monitors & Accessories on Right Slab
-    mountMonitorStation("PC-4", 5.8, 3.2, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-5", 5.8, -0.5, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-6", 5.8, -4.2, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-4", 6.0, 2.4, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-5", 6.0, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 6.0, -4.4, -Math.PI / 2, tablePosY + slabH / 2);
 
-    // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.3, rotated Math.PI)
-    createStandaloneTable("PC-7", 2.4, 5.3, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
+    // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.6, rotated Math.PI)
+    createStandaloneTable("PC-7", 2.4, 5.6, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
 
     // 6. PC-8: Moved forward inside room & rotated (X = 0.0, Z = -4.5, rotated Math.PI)
     createStandaloneTable("PC-8", 0.0, -4.5, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
 }
 
 /**
- * Creates a standalone table workstation with increased size (for PC-7 and PC-8)
+ * Creates a standalone table workstation (for PC-7 and PC-8)
  */
 function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tablePosY, slabH) {
-    const tableW = 2.5;
-    const tableD = 1.4;
+    const tableW = 2.0;
+    const tableD = 1.1;
 
     const group = new THREE.Group();
     group.position.set(posX, 0, posZ);
@@ -969,12 +967,12 @@ function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tab
     group.add(top);
 
     // Legs
-    const legGeo = new THREE.BoxGeometry(0.08, tablePosY, 0.08);
+    const legGeo = new THREE.BoxGeometry(0.06, tablePosY, 0.06);
     const legOffsets = [
-        [-tableW / 2 + 0.12, tablePosY / 2, -tableD / 2 + 0.12],
-        [tableW / 2 - 0.12, tablePosY / 2, -tableD / 2 + 0.12],
-        [-tableW / 2 + 0.12, tablePosY / 2, tableD / 2 - 0.12],
-        [tableW / 2 - 0.12, tablePosY / 2, tableD / 2 - 0.12]
+        [-tableW / 2 + 0.1, tablePosY / 2, -tableD / 2 + 0.1],
+        [tableW / 2 - 0.1, tablePosY / 2, -tableD / 2 + 0.1],
+        [-tableW / 2 + 0.1, tablePosY / 2, tableD / 2 - 0.1],
+        [tableW / 2 - 0.1, tablePosY / 2, tableD / 2 - 0.1]
     ];
     legOffsets.forEach(pos => {
         const leg = new THREE.Mesh(legGeo, metalLegMat);
@@ -990,7 +988,7 @@ function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tab
 }
 
 /**
- * Mounts Scaled-Up Monitor, Stand, Keyboard, Mouse, Ergonomic Chair, PC Tower, and 3D Floating Badge
+ * Mounts Monitor, Stand, Keyboard, Mouse, Ergonomic Chair, and 3D Floating Badge
  */
 function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
     const group = new THREE.Group();
@@ -1000,96 +998,82 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
     const bezelMat = new THREE.MeshStandardMaterial({ color: PALETTE.monitorBezel, roughness: 0.3 });
 
     // Monitor Stand
-    const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.03, 0.30), bezelMat);
-    standBase.position.set(0, surfaceY + 0.015, -0.32);
+    const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 0.25), bezelMat);
+    standBase.position.set(0, surfaceY + 0.01, -0.25);
     group.add(standBase);
 
-    const standArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.05), bezelMat);
-    standArm.position.set(0, surfaceY + 0.24, -0.38);
+    const standArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 0.04), bezelMat);
+    standArm.position.set(0, surfaceY + 0.2, -0.3);
     group.add(standArm);
 
-    // Monitor Bezel (Large Ultrawide / Pro Scale: 1.45m x 0.85m)
-    const screenW = 1.45;
-    const screenH = 0.85;
-    const screenD = 0.05;
+    // Monitor Bezel
+    const screenW = 1.05;
+    const screenH = 0.65;
+    const screenD = 0.04;
     const screenFrame = new THREE.Mesh(new THREE.BoxGeometry(screenW, screenH, screenD), bezelMat);
-    screenFrame.position.set(0, surfaceY + 0.55, -0.32);
+    screenFrame.position.set(0, surfaceY + 0.45, -0.25);
     screenFrame.castShadow = true;
     group.add(screenFrame);
 
-    // Glowing High-DPI Display Screen with PC Label rendered directly on Monitor Glass
-    const screenTexture = createScreenDisplayTexture(pcId, true, "");
-    const screenMat = new THREE.MeshBasicMaterial({
-        map: screenTexture
+    // Glowing Display Screen (Green/Red)
+    const screenMat = new THREE.MeshStandardMaterial({
+        color: PALETTE.screenFree,
+        emissive: PALETTE.screenFree,
+        emissiveIntensity: 0.75,
+        roughness: 0.2
     });
-    const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(screenW - 0.08, screenH - 0.08), screenMat);
-    screenMesh.position.set(0, surfaceY + 0.55, -0.32 + screenD / 2 + 0.002);
+    const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(screenW - 0.06, screenH - 0.06), screenMat);
+    screenMesh.position.set(0, surfaceY + 0.45, -0.25 + screenD / 2 + 0.002);
     group.add(screenMesh);
 
-    // Keyboard & Mouse (Scaled proportionally)
+    // Keyboard & Mouse
     const kbMat = new THREE.MeshStandardMaterial({ color: PALETTE.keyboard, roughness: 0.6 });
-    const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.02, 0.28), kbMat);
-    keyboard.position.set(0, surfaceY + 0.01, 0.18);
+    const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.015, 0.22), kbMat);
+    keyboard.position.set(0, surfaceY + 0.008, 0.15);
     group.add(keyboard);
 
-    const mouseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.02, 0.16), kbMat);
-    mouseMesh.position.set(0.58, surfaceY + 0.01, 0.18);
+    const mouseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.015, 0.12), kbMat);
+    mouseMesh.position.set(0.45, surfaceY + 0.008, 0.15);
     group.add(mouseMesh);
 
-    // PC High Performance Tower Beside Desk
-    const towerMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.5 });
-    const towerMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.65, 0.60), towerMat);
-    towerMesh.position.set(0.68, 0.33, -0.15);
-    towerMesh.castShadow = true;
-    group.add(towerMesh);
-
-    // Glowing Power LED on Tower
-    const towerLed = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.01), new THREE.MeshStandardMaterial({
-        color: 0x38bdf8,
-        emissive: 0x38bdf8,
-        emissiveIntensity: 1.5
-    }));
-    towerLed.position.set(0.68, 0.58, 0.155);
-    group.add(towerLed);
-
-    // Ergonomic Chair (Scaled Proportionally)
+    // Ergonomic Chair
     const chairGroup = new THREE.Group();
-    chairGroup.position.set(0, 0, 0.95);
+    chairGroup.position.set(0, 0, 0.75);
 
     const chairMat = new THREE.MeshStandardMaterial({ color: PALETTE.chairSeat, roughness: 0.7 });
     const metalMat = new THREE.MeshStandardMaterial({ color: PALETTE.metalFrame, roughness: 0.4 });
 
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.10, 0.72), chairMat);
-    seat.position.set(0, 0.68, 0);
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.6), chairMat);
+    seat.position.set(0, 0.65, 0);
     seat.castShadow = true;
     chairGroup.add(seat);
 
-    const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.82, 0.08), chairMat);
-    backrest.position.set(0, 1.15, 0.32);
+    const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.06), chairMat);
+    backrest.position.set(0, 1.02, 0.27);
     backrest.castShadow = true;
     chairGroup.add(backrest);
 
-    const chairStem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.62), metalMat);
-    chairStem.position.set(0, 0.32, 0);
+    const chairStem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.6), metalMat);
+    chairStem.position.set(0, 0.3, 0);
     chairGroup.add(chairStem);
 
-    const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 6), metalMat);
-    chairBase.position.set(0, 0.025, 0);
+    const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.04, 6), metalMat);
+    chairBase.position.set(0, 0.02, 0);
     chairGroup.add(chairBase);
 
     group.add(chairGroup);
 
-    // 3D Floating Badge Sprite (Cleanly floating right above monitor with ample vertical padding)
+    // 3D Floating Badge Sprite
     const sprite = createStatusSprite(pcId, "AVAILABLE", true);
-    sprite.position.set(0, surfaceY + 1.40, 0);
-    sprite.scale.set(2.4, 1.2, 1);
+    sprite.position.set(0, surfaceY + 1.25, 0);
+    sprite.scale.set(1.9, 0.75, 1);
     group.add(sprite);
 
-    // Click Hitbox for Raycaster (Scaled to match larger station)
-    const hitBoxGeo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
+    // Click Hitbox for Raycaster
+    const hitBoxGeo = new THREE.BoxGeometry(1.8, 2.0, 1.8);
     const hitBoxMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
     const hitBox = new THREE.Mesh(hitBoxGeo, hitBoxMat);
-    hitBox.position.set(0, 1.2, 0);
+    hitBox.position.set(0, 1.0, 0);
     hitBox.userData = { pcId: pcId };
     group.add(hitBox);
 
@@ -1097,10 +1081,8 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 
     pcWorkstations[pcId] = {
         group: group,
-        surfaceY: surfaceY,
         screenMesh: screenMesh,
         screenMat: screenMat,
-        screenTexture: screenTexture,
         sprite: sprite,
         hitBox: hitBox,
         status: "free",
@@ -1109,175 +1091,55 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 }
 
 /**
- * Creates High-DPI Monitor Screen Canvas Texture displaying PC Label, OS Wallpaper, and Live Status
- */
-function createScreenDisplayTexture(pcId, isFree, occupiedBy) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 600;
-    const ctx = canvas.getContext("2d");
-
-    drawScreenDisplayCanvas(ctx, pcId, isFree, occupiedBy);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    if (THREE.sRGBEncoding) texture.encoding = THREE.sRGBEncoding;
-    texture.userData = { canvas, ctx, pcId };
-    return texture;
-}
-
-function drawScreenDisplayCanvas(ctx, pcId, isFree, occupiedBy) {
-    ctx.clearRect(0, 0, 1024, 600);
-
-    // 1. Sleek Modern OS Desktop / Wallpaper Gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, 1024, 600);
-    if (isFree) {
-        bgGrad.addColorStop(0.0, "#064e3b"); // Deep rich emerald slate
-        bgGrad.addColorStop(0.5, "#047857");
-        bgGrad.addColorStop(1.0, "#0f172a");
-    } else {
-        bgGrad.addColorStop(0.0, "#7f1d1d"); // Deep rich crimson slate
-        bgGrad.addColorStop(0.5, "#991b1b");
-        bgGrad.addColorStop(1.0, "#0f172a");
-    }
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, 1024, 600);
-
-    // 2. Cyber Grid in Background
-    ctx.strokeStyle = isFree ? "rgba(110, 231, 183, 0.2)" : "rgba(252, 165, 165, 0.2)";
-    ctx.lineWidth = 1.5;
-    for (let x = 0; x < 1024; x += 64) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, 600);
-        ctx.stroke();
-    }
-    for (let y = 0; y < 600; y += 64) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(1024, y);
-        ctx.stroke();
-    }
-
-    // 3. Top OS Status Bar
-    ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-    ctx.fillRect(0, 0, 1024, 56);
-
-    ctx.fillStyle = "#38bdf8";
-    ctx.font = "bold 22px 'Inter', sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText("⚡ AI LAB WORKSTATION OS", 36, 36);
-
-    ctx.fillStyle = "#94a3b8";
-    ctx.textAlign = "right";
-    ctx.fillText("📶 ONLINE  •  10 Gbps LAN", 988, 36);
-
-    // 4. Central Large PC ID Box
-    const boxW = 640;
-    const boxH = 300;
-    const boxX = (1024 - boxW) / 2;
-    const boxY = 110;
-
-    ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
-    roundRect(ctx, boxX, boxY, boxW, boxH, 24);
-    ctx.fill();
-
-    ctx.strokeStyle = isFree ? "#34d399" : "#f87171";
-    ctx.lineWidth = 5;
-    roundRect(ctx, boxX, boxY, boxW, boxH, 24);
-    ctx.stroke();
-
-    // Large Bold PC Label ON MONITOR
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "900 100px 'Inter', sans-serif";
-    ctx.textAlign = "center";
-    ctx.shadowColor = isFree ? "rgba(52, 211, 153, 0.9)" : "rgba(248, 113, 113, 0.9)";
-    ctx.shadowBlur = 24;
-    ctx.fillText(pcId, 512, boxY + 120);
-    ctx.shadowBlur = 0;
-
-    // Status Pill inside box
-    const pillW = 500;
-    const pillH = 64;
-    const pillX = (1024 - pillW) / 2;
-    const pillY = boxY + 200;
-
-    ctx.fillStyle = isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)";
-    roundRect(ctx, pillX, pillY, pillW, pillH, 32);
-    ctx.fill();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "900 26px 'Inter', sans-serif";
-    const statusText = isFree ? "🟢 AVAILABLE TO USE" : `🔴 IN USE: ${occupiedBy || "OCCUPIED"}`;
-    ctx.fillText(statusText.toUpperCase(), 512, pillY + 40);
-
-    // 5. Bottom Instructions
-    ctx.fillStyle = "rgba(255, 255, 255, 0.90)";
-    ctx.font = "600 22px 'Inter', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(isFree ? "👉 Tap / Click workstation to occupy" : "👉 Tap / Click workstation to free / view", 512, 480);
-
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "500 18px 'Inter', sans-serif";
-    ctx.fillText("AI LAB Management Portal • Two-Way Synced", 512, 525);
-}
-
-/**
- * Generates high-DPI canvas texture for 3D floating sprite badge with ample padding
+ * Generates high-DPI canvas texture for 3D floating sprite badge
  */
 function createStatusSprite(pcId, statusText, isFree) {
     const canvas = document.createElement("canvas");
     canvas.width = 512;
-    canvas.height = 256;
+    canvas.height = 200;
     const ctx = canvas.getContext("2d");
 
     drawSpriteCanvas(ctx, pcId, statusText, isFree);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
-    const spriteMat = new THREE.SpriteMaterial({
-        map: texture,
-        transparent: true,
-        depthTest: false, // Prevents glass or geometries from cutting or blending sprite
-        depthWrite: false
-    });
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
-    sprite.renderOrder = 999; // Always renders crisply on top of transparent glass
     sprite.userData = { canvas: canvas, ctx: ctx, texture: texture };
     return sprite;
 }
 
 function drawSpriteCanvas(ctx, pcId, statusText, isFree) {
-    ctx.clearRect(0, 0, 512, 256);
+    ctx.clearRect(0, 0, 512, 200);
 
-    // Card background pill with full border padding
-    const radius = 28;
-    const bgColor = isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)";
-    ctx.fillStyle = "rgba(15, 23, 42, 0.94)";
-    roundRect(ctx, 14, 14, 484, 228, radius);
+    // Card background pill
+    const radius = 24;
+    const bgColor = isFree ? "rgba(16, 185, 129, 0.92)" : "rgba(239, 68, 68, 0.95)";
+    ctx.fillStyle = "rgba(15, 20, 28, 0.9)";
+    roundRect(ctx, 16, 16, 480, 168, radius);
     ctx.fill();
 
     ctx.strokeStyle = isFree ? "#10b981" : "#ef4444";
     ctx.lineWidth = 6;
-    roundRect(ctx, 14, 14, 484, 228, radius);
+    roundRect(ctx, 16, 16, 480, 168, radius);
     ctx.stroke();
 
     // PC Name (Top)
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 56px 'Inter', sans-serif";
+    ctx.font = "bold 52px 'Inter', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`💻 ${pcId}`, 256, 80);
+    ctx.fillText(`💻 ${pcId}`, 256, 70);
 
     // Status Pill (Bottom)
     ctx.fillStyle = bgColor;
-    roundRect(ctx, 36, 136, 440, 76, 24);
+    roundRect(ctx, 60, 110, 392, 54, 16);
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 32px 'Inter', sans-serif";
     const label = isFree ? "🟢 AVAILABLE" : `🔴 ${statusText}`;
-    ctx.fillText(label, 256, 174);
+    ctx.fillText(label, 256, 138);
 }
 
 function createTextBadge(text, textColor, bgColor) {
@@ -1302,15 +1164,8 @@ function createTextBadge(text, textColor, bgColor) {
     ctx.fillText(text, 256, 80);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({
-        map: texture,
-        transparent: true,
-        depthTest: false,
-        depthWrite: false
-    });
-    const sprite = new THREE.Sprite(mat);
-    sprite.renderOrder = 999;
-    return sprite;
+    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    return new THREE.Sprite(mat);
 }
 
 function roundRect(ctx, x, y, width, height, radius) {
@@ -1341,12 +1196,11 @@ function updatePCStatusIn3D(pcs) {
         item.status = isFree ? "free" : "occupied";
         item.pcData = pc;
 
-        // 1. Update Monitor Screen Canvas Texture directly on Screen Glass
-        if (item.screenTexture && item.screenTexture.userData) {
-            const { ctx } = item.screenTexture.userData;
-            drawScreenDisplayCanvas(ctx, pc.pc_id, isFree, pc.occupied_by);
-            item.screenTexture.needsUpdate = true;
-        }
+        // 1. Update Screen Material Color & Emissive
+        const targetColor = isFree ? PALETTE.screenFree : PALETTE.screenOccupied;
+        item.screenMat.color.setHex(targetColor);
+        item.screenMat.emissive.setHex(targetColor);
+        item.screenMat.emissiveIntensity = isFree ? 0.75 : 0.95;
 
         // 2. Update Floating Sprite Canvas Texture
         if (item.sprite && item.sprite.userData) {
@@ -1647,11 +1501,13 @@ function animate() {
         doorPivotRef.rotation.y += (targetDoorAngle - doorPivotRef.rotation.y) * 0.12;
     }
 
-    // 3. Subtle gentle pulse for floating badges
+    // 3. Subtle gentle pulse for occupied screens and floating badges
     Object.values(pcWorkstations).forEach(item => {
+        if (item.status === "occupied") {
+            item.screenMat.emissiveIntensity = 0.85 + Math.sin(time * 3.5) * 0.2;
+        }
         if (item.sprite) {
-            const baseBadgeY = (item.surfaceY || 1.1) + 1.40;
-            item.sprite.position.y = baseBadgeY + Math.sin(time * 2 + (item.group.position.x || 0)) * 0.02;
+            item.sprite.position.y = 1.0 + 1.25 + Math.sin(time * 2 + (item.group.position.x || 0)) * 0.03;
         }
     });
 
