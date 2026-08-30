@@ -46,6 +46,7 @@ let isDoorOpen = true;
 let targetDoorAngle = Math.PI / 4.2; // 42 degrees open
 let doorPivotRef = null;
 let doorHitBoxRef = null;
+let wallOccluders = [];
 
 let isLightOn = true;
 let isACOn = true;
