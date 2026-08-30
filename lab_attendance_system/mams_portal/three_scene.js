@@ -464,7 +464,8 @@ function buildRoomArchitecture() {
         roughness: 0.1,
         metalness: 0.2,
         transparent: true,
-        opacity: 0.35
+        opacity: 0.35,
+        depthWrite: false
     });
     const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.wallFrame, roughness: 0.4 });
 
@@ -694,7 +695,8 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
         roughness: 0.1,
         metalness: 0.15,
         transparent: true,
-        opacity: 0.55
+        opacity: 0.55,
+        depthWrite: false
     });
 
     const gateSpan = xRight - xLeft;
@@ -1236,9 +1238,11 @@ function createStatusSprite(pcId, statusText, isFree) {
     const spriteMat = new THREE.SpriteMaterial({
         map: texture,
         transparent: true,
+        depthTest: false, // Prevents glass or geometries from cutting or blending sprite
         depthWrite: false
     });
     const sprite = new THREE.Sprite(spriteMat);
+    sprite.renderOrder = 999; // Always renders crisply on top of transparent glass
     sprite.userData = { canvas: canvas, ctx: ctx, texture: texture };
     return sprite;
 }
@@ -1298,8 +1302,15 @@ function createTextBadge(text, textColor, bgColor) {
     ctx.fillText(text, 256, 80);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-    return new THREE.Sprite(mat);
+    const mat = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false
+    });
+    const sprite = new THREE.Sprite(mat);
+    sprite.renderOrder = 999;
+    return sprite;
 }
 
 function roundRect(ctx, x, y, width, height, radius) {
