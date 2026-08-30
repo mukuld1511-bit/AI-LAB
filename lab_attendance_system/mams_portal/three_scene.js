@@ -204,8 +204,8 @@ function buildRoomArchitecture() {
     grid.position.y = 0.005;
     scene.add(grid);
 
-    // 2. Four Dark Grey Corner Pillars
-    const pillarH = 3.6;
+    // 2. Four Dark Grey Corner Pillars (Tall Architectural Height)
+    const pillarH = 4.6;
     const pillarW = 0.65;
     const pillarGeo = new THREE.BoxGeometry(pillarW, pillarH, pillarW);
     const pillarMat = new THREE.MeshStandardMaterial({
@@ -229,14 +229,14 @@ function buildRoomArchitecture() {
         scene.add(pillar);
     });
 
-    // 3. Glass Walls with Dark Metal Framing
-    const wallH = 1.2;
+    // 3. Full-Height Glass Walls with Dark Metal Framing
+    const wallH = 3.6;
     const glassMat = new THREE.MeshStandardMaterial({
         color: PALETTE.glassWall,
         roughness: 0.1,
         metalness: 0.2,
         transparent: true,
-        opacity: 0.4
+        opacity: 0.35
     });
     const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.wallFrame, roughness: 0.4 });
 
@@ -248,18 +248,18 @@ function buildRoomArchitecture() {
         scene.add(wall);
 
         // Top Frame Trim
-        const topFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.05, d + 0.02), frameMat);
-        topFrame.position.set(x, y + h / 2 + 0.025, z);
+        const topFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.08, d + 0.02), frameMat);
+        topFrame.position.set(x, y + h / 2 + 0.04, z);
         scene.add(topFrame);
     }
 
-    // Back Glass Wall
+    // Back Glass Wall (Full Height)
     createGlassWall(roomW - pillarW * 2, wallH, 0.12, 0, wallH / 2, -roomD / 2 + 0.06);
 
-    // Left Glass Wall
+    // Left Glass Wall (Full Height)
     createGlassWall(0.12, wallH, roomD - pillarW * 2, -roomW / 2 + 0.06, wallH / 2, 0);
 
-    // Right Glass Wall
+    // Right Glass Wall (Full Height)
     createGlassWall(0.12, wallH, roomD - pillarW * 2, roomW / 2 - 0.06, wallH / 2, 0);
 
     // Front Wall with Entrance Opening (Near Left side of front wall)
@@ -289,32 +289,32 @@ function buildRoomArchitecture() {
 }
 
 /**
- * Overhead Warm Modular Tube in Shape of Infinity (∞)
+ * Overhead Warm Modular Tube in Shape of Infinity (∞) — Raised High
  */
 function buildInfinityChandelier() {
-    const infinityCurve = new InfinityCurve(3.6, 3.3);
-    const tubeGeo = new THREE.TubeGeometry(infinityCurve, 160, 0.075, 16, true);
+    const infinityCurve = new InfinityCurve(3.8, 4.4); // Raised to 4.4m
+    const tubeGeo = new THREE.TubeGeometry(infinityCurve, 160, 0.08, 16, true);
     
     // Glowing warm LED material
     const tubeMat = new THREE.MeshStandardMaterial({
         color: PALETTE.infinityGlow,
         emissive: PALETTE.infinityGlow,
-        emissiveIntensity: 1.8,
+        emissiveIntensity: 2.0,
         roughness: 0.1
     });
 
     const infinityTube = new THREE.Mesh(tubeGeo, tubeMat);
     scene.add(infinityTube);
 
-    // Light cords hanging from ceiling
+    // Light cords hanging from high ceiling
     const cordMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
-    const cordGeo = new THREE.CylinderGeometry(0.012, 0.012, 1.2);
+    const cordGeo = new THREE.CylinderGeometry(0.012, 0.012, 1.4);
 
     const cordPoints = [
-        [-2.4, 3.9, 0],
-        [2.4, 3.9, 0],
-        [0, 3.9, 1.4],
-        [0, 3.9, -1.4]
+        [-2.4, 5.1, 0],
+        [2.4, 5.1, 0],
+        [0, 5.1, 1.5],
+        [0, 5.1, -1.5]
     ];
 
     cordPoints.forEach(pos => {
@@ -323,13 +323,13 @@ function buildInfinityChandelier() {
         scene.add(cord);
     });
 
-    // Warm Spotlights under the infinity loops
-    const spotLeft = new THREE.PointLight(PALETTE.infinityGlow, 1.1, 10, 1.5);
-    spotLeft.position.set(-2.0, 3.0, 0);
+    // Warm Spotlights under the raised infinity loops
+    const spotLeft = new THREE.PointLight(PALETTE.infinityGlow, 1.3, 14, 1.4);
+    spotLeft.position.set(-2.0, 4.1, 0);
     scene.add(spotLeft);
 
-    const spotRight = new THREE.PointLight(PALETTE.infinityGlow, 1.1, 10, 1.5);
-    spotRight.position.set(2.0, 3.0, 0);
+    const spotRight = new THREE.PointLight(PALETTE.infinityGlow, 1.3, 14, 1.4);
+    spotRight.position.set(2.0, 4.1, 0);
     scene.add(spotRight);
 }
 
@@ -387,8 +387,8 @@ function buildAllLabWorkstations() {
     mountMonitorStation("PC-5", 5.3, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
     mountMonitorStation("PC-6", 5.3, -3.8, -Math.PI / 2, tablePosY + slabH / 2);
 
-    // 5. PC-7 Table on Front Entrance Wall (X = 1.8, Z = 4.8)
-    createStandaloneTable("PC-7", 1.8, 4.8, 0, woodMat, metalLegMat, tablePosY, slabH);
+    // 5. PC-7 Table on Front Entrance Wall (X = 1.8, Z = 4.8, rotated Math.PI)
+    createStandaloneTable("PC-7", 1.8, 4.8, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
 
     // 6. PC-8: Moved forward inside room & rotated (Z = -3.8, X = 0.0, rotated Math.PI)
     createStandaloneTable("PC-8", 0.0, -3.8, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
