@@ -28,7 +28,7 @@ const PALETTE = {
     floor: 0x11141a,          // Sleek dark black floor
     floorGrid: 0x242b38,      // Subtle grid line
     pillar: 0x1e2430,         // Dark grey pillars
-    glassWall: 0x64748b,      // Tempered architectural glass
+    glassWall: 0x93c5fd,      // Clear airy tempered glass
     wallFrame: 0x334155,      // Wall trim metal
     woodSlab: 0xf5e1b8,       // Rich warm creamish wood
     creamWall: 0xf0e2ca,      // Architectural cream wall section
@@ -53,6 +53,42 @@ let isACOn = true;
 let ambientLightRef, hemiLightRef, keyLightRef, fillLightRef, spotLeftRef, spotRightRef, infinityTubeMatRef;
 let acCassetteMats = [];
 let switchPanelRef = { lightBtnMat: null, acBtnMat: null, panelHitBox: null };
+
+/**
+ * Creates high-res procedural Light-Coloured Skybox with soft daylight gradients
+ */
+function createLightSkyboxTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext("2d");
+
+    // Smooth architectural daylight sky gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, 1024);
+    grad.addColorStop(0.0, "#a5d8ff"); // Clear light sky blue at the zenith
+    grad.addColorStop(0.35, "#d0ebff"); // Soft daylight cyan-blue
+    grad.addColorStop(0.65, "#e7f5ff"); // Crisp airy horizon transition
+    grad.addColorStop(0.85, "#f8fafc"); // Bright white horizon haze
+    grad.addColorStop(1.0, "#e2e8f0"); // Soft light floor boundary
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Subtle soft distant fluffy clouds along horizon
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    for (let i = 0; i < 8; i++) {
+        const cx = (i * 150) % 1024;
+        const cy = 520 + Math.sin(i * 1.8) * 50;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 90, 0, Math.PI * 2);
+        ctx.arc(cx + 60, cy - 20, 70, 0, Math.PI * 2);
+        ctx.arc(cx + 120, cy + 10, 80, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+}
 
 // Parametric Lemniscate (Infinity Symbol ∞)
 class InfinityCurve extends THREE.Curve {
@@ -82,10 +118,10 @@ function init3DLabScene() {
     const canvas = document.getElementById("lab-3d-canvas");
     if (!container || !canvas) return;
 
-    // 1. Scene
+    // 1. Scene with Crisp Light-Coloured Skybox
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0d13); // Cinematic dark backdrop
-    scene.fog = new THREE.FogExp2(0x0b0d13, 0.010);
+    scene.background = createLightSkyboxTexture();
+    scene.fog = new THREE.FogExp2(0xf1f5f9, 0.008);
 
     // 2. Camera (Isometric View)
     const aspect = container.clientWidth / container.clientHeight;
