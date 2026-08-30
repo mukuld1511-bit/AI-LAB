@@ -1,24 +1,26 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- * 3D Interactive Lab Scene (Three.js) — Luxury Studio Architectural Theme
+ * 3D Interactive AI LAB Digital Twin (Three.js)
  * 
  * Features:
- * - Black reflective tile floor
- * - 4 Corner Dark Grey Architectural Pillars
- * - Glass Walls with Front Wall Entrance
+ * - Strictly "AI LAB" Branding
+ * - Black Reflective Floor with 4 Tall Dark Grey Corner Pillars
+ * - 30% Solid Cream Wall Sections on Left & Right + 70% Glass Walls
+ * - Red Board with White Inset Plate "AI LAB" Sign on Right of Gate
+ * - Interactive Openable/Closeable Single Glass Gate (Click to swing open/close)
+ * - Interactive Smart Light Switch on Left Corner Pillar (Click to toggle lights ON/OFF)
+ * - Interactive Smart AC Switch on Left Corner Pillar + AC Wall Unit (Click to toggle AC ON/OFF)
  * - Continuous connected creamish-yellow wooden slab benches on Left & Right
- * - PC-8 moved forward into room & rotated
- * - PC-7 on front entrance wall
+ * - PC-8 moved forward into room & rotated; PC-7 on front entrance wall
  * - Overhead warm-glow suspended Infinity Tube light (∞)
- * - Cozy warm architectural lighting
- * - Live glowing monitor screens (Green/Red) & raycasting modal
+ * - Real-time green/red monitor screen status & modal interaction
  * ═══════════════════════════════════════════════════════════════════
  */
 
 let scene, camera, renderer, controls;
 let pcWorkstations = {}; // Map of pc_id -> { group, screenMesh, sprite, status, pcData }
 let raycaster, mouse;
-let hoveredPC = null;
+let hoveredItem = null;
 let animationFrameId = null;
 
 // Palette & Architectural Materials
@@ -29,6 +31,7 @@ const PALETTE = {
     glassWall: 0x64748b,      // Tempered architectural glass
     wallFrame: 0x334155,      // Wall trim metal
     woodSlab: 0xe5c583,       // Creamish yellow wood
+    creamWall: 0xecd7b0,      // Solid cream wall section
     metalFrame: 0x1e222b,     // Dark metal table frame/legs
     monitorBezel: 0x0a0c10,   // Matte black monitor
     keyboard: 0x1e2430,       // Dark keyboard
@@ -38,21 +41,21 @@ const PALETTE = {
     screenOccupied: 0xef4444  // Crimson red glow
 };
 
-// Interactive States
+// Interactive States & Objects
 let isDoorOpen = true;
-let targetDoorAngle = Math.PI / 4.2;
+let targetDoorAngle = Math.PI / 4.2; // 42 degrees open
 let doorPivotRef = null;
 let doorHitBoxRef = null;
 
 let isLightOn = true;
 let isACOn = true;
-let ambientLightRef, hemiLightRef, keyLightRef, fillLightRef, spotLeftRef, spotRightRef, infinityTubeRef;
-let acDisplayMeshRef = null;
-let switchPanelRef = { lightBtn: null, acBtn: null, panelHitBox: null, lightLed: null, acLed: null };
+let ambientLightRef, hemiLightRef, keyLightRef, fillLightRef, spotLeftRef, spotRightRef, infinityTubeMatRef;
+let acDisplayMatRef = null;
+let switchPanelRef = { lightBtnMat: null, acBtnMat: null, panelHitBox: null };
 
 // Parametric Lemniscate (Infinity Symbol ∞)
 class InfinityCurve extends THREE.Curve {
-    constructor(scale = 3.6, height = 3.4) {
+    constructor(scale = 3.8, height = 4.4) {
         super();
         this.scale = scale;
         this.height = height;
@@ -80,8 +83,8 @@ function init3DLabScene() {
 
     // 1. Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0d13); // Dark cinematic backdrop
-    scene.fog = new THREE.FogExp2(0x0b0d13, 0.015);
+    scene.background = new THREE.Color(0x0b0d13); // Cinematic dark backdrop
+    scene.fog = new THREE.FogExp2(0x0b0d13, 0.012);
 
     // 2. Camera (Isometric View)
     const aspect = container.clientWidth / container.clientHeight;
@@ -109,26 +112,26 @@ function init3DLabScene() {
         controls.dampingFactor = 0.05;
         controls.maxPolarAngle = Math.PI / 2.05; // Stay above floor
         controls.minDistance = 6;
-        controls.maxDistance = 35;
-        controls.target.set(0, 1.1, 0);
+        controls.maxDistance = 38;
+        controls.target.set(0, 1.2, 0);
     }
 
     // 5. Warm Lighting Setup
     setupWarmLighting();
 
-    // 6. Build Room Architecture (Black floor, glass walls, 4 pillars, entrance)
+    // 6. Build Room Architecture (Black floor, 30% cream walls, glass walls, 4 pillars, single glass gate)
     buildRoomArchitecture();
 
     // 7. Infinity Overhead Light Fixture (∞)
     buildInfinityChandelier();
 
-    // 8. Build AC Unit on Back Wall & Smart Control Panel on Pillar
+    // 8. Build AC Unit on Back Wall & Smart Control Panel on Left Corner Pillar
     buildACAndSwitchPanel();
 
     // 9. Build Workstations (Connected slabs + PC-7 + PC-8)
     buildAllLabWorkstations();
 
-    // 10. Raycasting for Click / Touch
+    // 10. Raycasting for Interaction
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
@@ -142,7 +145,7 @@ function init3DLabScene() {
     if (resetBtn) {
         resetBtn.addEventListener("click", () => {
             setDefaultCameraPosition();
-            if (controls) controls.target.set(0, 1.1, 0);
+            if (controls) controls.target.set(0, 1.2, 0);
         });
     }
 
@@ -152,7 +155,7 @@ function init3DLabScene() {
 
 function setDefaultCameraPosition() {
     camera.position.set(13.5, 14.5, 15.5);
-    camera.lookAt(0, 1.1, 0);
+    camera.lookAt(0, 1.2, 0);
 }
 
 /**
@@ -194,9 +197,9 @@ function buildACAndSwitchPanel() {
     const roomD = 14;
     const pillarW = 0.65;
 
-    // 1. Smart Switch Panel Mounted on Left Corner Pillar (Near PC-8, facing +Z)
+    // 1. Smart Switch Panel on Left Corner Pillar (Near PC-8, facing +X into room)
     const panelW = 0.45;
-    const panelH = 0.75;
+    const panelH = 0.8;
     const panelGroup = new THREE.Group();
     const pillarPosX = -roomW / 2 + pillarW / 2; // -6.475
     const pillarPosZ = -roomD / 2 + pillarW / 2; // -6.475
@@ -216,7 +219,7 @@ function buildACAndSwitchPanel() {
     const lightBtnMat = new THREE.MeshStandardMaterial({
         color: 0xffb84d,
         emissive: 0xffb84d,
-        emissiveIntensity: 1.0,
+        emissiveIntensity: 1.2,
         roughness: 0.2
     });
     const lightBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 16), lightBtnMat);
@@ -228,64 +231,72 @@ function buildACAndSwitchPanel() {
     const acBtnMat = new THREE.MeshStandardMaterial({
         color: 0x38bdf8,
         emissive: 0x38bdf8,
-        emissiveIntensity: 1.0,
+        emissiveIntensity: 1.2,
         roughness: 0.2
     });
     const acBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 16), acBtnMat);
     acBtn.rotation.x = Math.PI / 2;
-    acBtn.position.set(0, -0.16, 0.02);
+    acBtn.position.set(0, -0.18, 0.02);
     panelGroup.add(acBtn);
 
     // 3D Panel Label Sprite
     const panelLabel = createTextBadge("⚡ AC & LIGHTS", "#e2e8f0", "#1e293b");
-    panelLabel.position.set(0, 0.65, 0);
+    panelLabel.position.set(0, 0.68, 0);
     panelLabel.scale.set(1.4, 0.45, 1);
     panelGroup.add(panelLabel);
 
-    // Clickable Hitbox for Pillar Switchboard
-    const panelHitBox = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.3), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 }));
-    panelHitBox.userData = { isSwitchPanel: true };
-    panelGroup.add(panelHitBox);
+    // Clickable Hitbox for Light Switch
+    const lightHitBox = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 0.2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 }));
+    lightHitBox.position.set(0, 0.18, 0.05);
+    lightHitBox.userData = { isLightSwitch: true };
+    panelGroup.add(lightHitBox);
+
+    // Clickable Hitbox for AC Switch
+    const acHitBox = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.35, 0.2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 }));
+    acHitBox.position.set(0, -0.18, 0.05);
+    acHitBox.userData = { isACSwitch: true };
+    panelGroup.add(acHitBox);
 
     scene.add(panelGroup);
 
     switchPanelRef = {
         lightBtnMat: lightBtnMat,
         acBtnMat: acBtnMat,
-        panelHitBox: panelHitBox
+        lightHitBox: lightHitBox,
+        acHitBox: acHitBox
     };
 
-    // 2. Indoor Split AC Unit on Back Wall
+    // 2. Indoor Split AC Unit on Back Wall (Above PC-8)
     const acGroup = new THREE.Group();
-    acGroup.position.set(-3.2, 3.0, -roomD / 2 + 0.25);
+    acGroup.position.set(-3.0, 3.2, -roomD / 2 + 0.25);
 
     const acMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
-    const acBody = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.32), acMat);
+    const acBody = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.48, 0.32), acMat);
     acBody.castShadow = true;
     acGroup.add(acBody);
 
     // AC Louver Vent
     const ventMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
-    const vent = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.06, 0.02), ventMat);
-    vent.position.set(0, -0.15, 0.16);
+    const vent = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.06, 0.02), ventMat);
+    vent.position.set(0, -0.16, 0.16);
     acGroup.add(vent);
 
     // Digital Temperature LED Display (24°C)
     const acDisplayMat = new THREE.MeshStandardMaterial({
         color: 0x38bdf8,
         emissive: 0x38bdf8,
-        emissiveIntensity: 1.4
+        emissiveIntensity: 1.5
     });
-    const acDisplay = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.08), acDisplayMat);
-    acDisplay.position.set(0.5, 0.05, 0.165);
+    const acDisplay = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.09), acDisplayMat);
+    acDisplay.position.set(0.52, 0.06, 0.165);
     acGroup.add(acDisplay);
-    acDisplayMeshRef = acDisplayMat;
+    acDisplayMatRef = acDisplayMat;
 
     scene.add(acGroup);
 }
 
 /**
- * Builds Black Floor, 4 Dark Grey Pillars, Glass Walls, and Front Entrance
+ * Builds Black Floor, 4 Dark Grey Pillars, 30% Cream Walls, Glass Walls, and Single Glass Gate
  */
 function buildRoomArchitecture() {
     const roomW = 14;
@@ -340,7 +351,7 @@ function buildRoomArchitecture() {
     const glassLen = totalWallLen * 0.70;     // 70% glass section (~8.9m)
 
     const creamWallMat = new THREE.MeshStandardMaterial({
-        color: 0xecd7b0, // Architectural cream wall
+        color: PALETTE.creamWall, // Architectural cream wall
         roughness: 0.65,
         metalness: 0.05
     });
@@ -386,7 +397,7 @@ function buildRoomArchitecture() {
 }
 
 /**
- * Builds Interactive Single Glass Gate + Red Board with White Plate Sign
+ * Builds Interactive Single Glass Gate + Red Board with White Plate Sign on Right Side of Gate
  */
 function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     const gateGroup = new THREE.Group();
@@ -442,7 +453,7 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     doorHandle.position.set(doorW - 0.15, doorH / 2 + 0.05, 0.045);
     doorPivot.add(doorHandle);
 
-    // Clickable Hitbox on the Door to Toggle Open / Close
+    // Clickable Hitbox on Door to Toggle Open / Close
     const doorHitBox = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, 0.4), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 }));
     doorHitBox.position.set(doorW / 2, doorH / 2 + 0.05, 0);
     doorHitBox.userData = { isDoor: true };
@@ -465,211 +476,7 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     redBoardMesh.castShadow = true;
     signBoardGroup.add(redBoardMesh);
 
-    // White Plate Inset with "AI LAB" Name
-    const whitePlateTexture = createAILabPlateTexture();
-    const whitePlateMat = new THREE.MeshStandardMaterial({
-        map: whitePlateTexture,
-        roughness: 0.2,
-        metalness: 0.05
-    });
-    const whitePlateMesh = new THREE.Mesh(new THREE.BoxGeometry(1.24, 0.64, 0.02), whitePlateMat);
-    whitePlateMesh.position.set(0, 0, 0.035);
-    signBoardGroup.add(whitePlateMesh);
-
-    gateGroup.add(signBoardGroup);
-
-    // 5. Access Scanner Pedestal on entrance side
-    const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.3 });
-    const scannerPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.1, 0.2), pedestalMat);
-    scannerPedestal.position.set(xRight + 0.25, 0.55, zPos + 0.65);
-    scannerPedestal.castShadow = true;
-    gateGroup.add(scannerPedestal);
-
-    const scannerBezel = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.16), new THREE.MeshStandardMaterial({
-        color: 0x3b82f6,
-        emissive: 0x3b82f6,
-        emissiveIntensity: 1.2
-    }));
-    scannerBezel.position.set(xRight + 0.25, 1.12, zPos + 0.65);
-    gateGroup.add(scannerBezel);
-
-    scene.add(gateGroup);
-}
-
-/**
- * Builds Black Floor, 4 Dark Grey Pillars, Glass Walls, and Front Entrance
- */
-function buildRoomArchitecture() {
-    const roomW = 14;
-    const roomD = 14;
-
-    // 1. Black Floor Base
-    const floorGeo = new THREE.PlaneGeometry(roomW, roomD);
-    const floorMat = new THREE.MeshStandardMaterial({
-        color: PALETTE.floor,
-        roughness: 0.25,
-        metalness: 0.15
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
-    // Subtle dark grid
-    const grid = new THREE.GridHelper(roomW, 14, PALETTE.floorGrid, PALETTE.floorGrid);
-    grid.position.y = 0.005;
-    scene.add(grid);
-
-    // 2. Four Dark Grey Corner Pillars (Tall Architectural Height)
-    const pillarH = 4.6;
-    const pillarW = 0.65;
-    const pillarGeo = new THREE.BoxGeometry(pillarW, pillarH, pillarW);
-    const pillarMat = new THREE.MeshStandardMaterial({
-        color: PALETTE.pillar,
-        roughness: 0.4,
-        metalness: 0.25
-    });
-
-    const pillarPositions = [
-        [-roomW / 2 + pillarW / 2, pillarH / 2, -roomD / 2 + pillarW / 2], // Top-Left
-        [roomW / 2 - pillarW / 2, pillarH / 2, -roomD / 2 + pillarW / 2],  // Top-Right
-        [-roomW / 2 + pillarW / 2, pillarH / 2, roomD / 2 - pillarW / 2],  // Bottom-Left
-        [roomW / 2 - pillarW / 2, pillarH / 2, roomD / 2 - pillarW / 2]   // Bottom-Right
-    ];
-
-    pillarPositions.forEach(pos => {
-        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-        pillar.position.set(...pos);
-        pillar.castShadow = true;
-        pillar.receiveShadow = true;
-        scene.add(pillar);
-    });
-
-    // 3. Wall Architecture (Left & Right walls have 30% Cream Section + 70% Glass Wall)
-    const wallH = 3.6;
-    const totalWallLen = roomD - pillarW * 2; // ~12.7m
-    const creamLen = totalWallLen * 0.30;     // 30% cream section (~3.8m)
-    const glassLen = totalWallLen * 0.70;     // 70% glass section (~8.9m)
-
-    const creamWallMat = new THREE.MeshStandardMaterial({
-        color: 0xecd7b0, // Architectural cream wall
-        roughness: 0.65,
-        metalness: 0.05
-    });
-    const glassMat = new THREE.MeshStandardMaterial({
-        color: PALETTE.glassWall,
-        roughness: 0.1,
-        metalness: 0.2,
-        transparent: true,
-        opacity: 0.35
-    });
-    const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.wallFrame, roughness: 0.4 });
-
-    function createWallSegment(w, h, d, x, y, z, material) {
-        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-        wall.position.set(x, y, z);
-        wall.castShadow = true;
-        wall.receiveShadow = true;
-        scene.add(wall);
-
-        // Top Frame Trim
-        const topFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.08, d + 0.02), frameMat);
-        topFrame.position.set(x, y + h / 2 + 0.04, z);
-        scene.add(topFrame);
-    }
-
-    // Back Glass Wall (Full Width)
-    createWallSegment(roomW - pillarW * 2, wallH, 0.12, 0, wallH / 2, -roomD / 2 + 0.06, glassMat);
-
-    // Left Wall: 30% Cream section (back portion) + 70% Glass section (front portion)
-    createWallSegment(0.14, wallH, creamLen, -roomW / 2 + 0.07, wallH / 2, -roomD / 2 + pillarW + creamLen / 2, creamWallMat);
-    createWallSegment(0.12, wallH, glassLen, -roomW / 2 + 0.06, wallH / 2, roomD / 2 - pillarW - glassLen / 2, glassMat);
-
-    // Right Wall: 30% Cream section (back portion) + 70% Glass section (front portion)
-    createWallSegment(0.14, wallH, creamLen, roomW / 2 - 0.07, wallH / 2, -roomD / 2 + pillarW + creamLen / 2, creamWallMat);
-    createWallSegment(0.12, wallH, glassLen, roomW / 2 - 0.06, wallH / 2, roomD / 2 - pillarW - glassLen / 2, glassMat);
-
-    // Front Wall with Entrance Opening
-    createWallSegment(1.8, wallH, 0.12, -roomW / 2 + 1.55, wallH / 2, roomD / 2 - 0.06, glassMat);
-    createWallSegment(7.5, wallH, 0.12, 2.65, wallH / 2, roomD / 2 - 0.06, glassMat);
-
-    // 4. Physical 3D Entrance Gate with Single Glass Door & Red Signboard
-    build3DLabGate(-4.3, -1.8, roomD / 2 - 0.06, wallH);
-}
-
-/**
- * Builds Single Glass Gate + Red Board with White Plate Sign on Right Side of Gate
- */
-function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
-    const gateGroup = new THREE.Group();
-    const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.pillar, roughness: 0.35, metalness: 0.3 });
-    const handleMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.15, metalness: 0.85 });
-    const doorGlassMat = new THREE.MeshStandardMaterial({
-        color: 0x93c5fd,
-        roughness: 0.1,
-        metalness: 0.15,
-        transparent: true,
-        opacity: 0.55
-    });
-
-    const gateSpan = xRight - xLeft;
-    const doorW = gateSpan - 0.1;
-    const doorH = gateHeight - 0.3;
-
-    // 1. Left & Right Door Frame Jambs
-    const postGeo = new THREE.BoxGeometry(0.14, gateHeight, 0.14);
-    const leftPost = new THREE.Mesh(postGeo, frameMat);
-    leftPost.position.set(xLeft, gateHeight / 2, zPos);
-    leftPost.castShadow = true;
-    gateGroup.add(leftPost);
-
-    const rightPost = new THREE.Mesh(postGeo, frameMat);
-    rightPost.position.set(xRight, gateHeight / 2, zPos);
-    rightPost.castShadow = true;
-    gateGroup.add(rightPost);
-
-    // 2. Overhead Lintel Beam
-    const lintelW = gateSpan + 0.14;
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(lintelW, 0.18, 0.16), frameMat);
-    lintel.position.set((xLeft + xRight) / 2, gateHeight - 0.09, zPos);
-    lintel.castShadow = true;
-    gateGroup.add(lintel);
-
-    // 3. Single Glass Gate (Pivoted on Left Jamb, Swung Open Inwards)
-    const doorPivot = new THREE.Group();
-    doorPivot.position.set(xLeft + 0.06, 0, zPos);
-    doorPivot.rotation.y = Math.PI / 4.2; // Single door swung 42 deg open inwards
-
-    // Door glass pane
-    const doorLeafGeo = new THREE.BoxGeometry(doorW, doorH, 0.04);
-    const singleDoorMesh = new THREE.Mesh(doorLeafGeo, doorGlassMat);
-    singleDoorMesh.position.set(doorW / 2, doorH / 2 + 0.05, 0);
-    singleDoorMesh.castShadow = true;
-    doorPivot.add(singleDoorMesh);
-
-    // Stainless steel vertical door handle bar
-    const handleGeo = new THREE.CylinderGeometry(0.016, 0.016, 1.1);
-    const doorHandle = new THREE.Mesh(handleGeo, handleMat);
-    doorHandle.position.set(doorW - 0.15, doorH / 2 + 0.05, 0.045);
-    doorPivot.add(doorHandle);
-
-    gateGroup.add(doorPivot);
-
-    // 4. Red Board with White Plate Signboard (On Right Side of Gate)
-    const signBoardGroup = new THREE.Group();
-    signBoardGroup.position.set(xRight + 0.8, 1.85, zPos + 0.08);
-
-    // Red Board Backing
-    const redBoardMat = new THREE.MeshStandardMaterial({
-        color: 0xdc2626, // Vivid Red Board
-        roughness: 0.3,
-        metalness: 0.1
-    });
-    const redBoardMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 0.05), redBoardMat);
-    redBoardMesh.castShadow = true;
-    signBoardGroup.add(redBoardMesh);
-
-    // White Plate Inset with "AI LAB" Name
+    // White Plate Inset with strictly "AI LAB" Name
     const whitePlateTexture = createAILabPlateTexture();
     const whitePlateMat = new THREE.MeshStandardMaterial({
         map: whitePlateTexture,
@@ -746,6 +553,7 @@ function buildInfinityChandelier() {
         emissiveIntensity: 2.0,
         roughness: 0.1
     });
+    infinityTubeMatRef = tubeMat;
 
     const infinityTube = new THREE.Mesh(tubeGeo, tubeMat);
     scene.add(infinityTube);
@@ -768,13 +576,13 @@ function buildInfinityChandelier() {
     });
 
     // Warm Spotlights under the raised infinity loops
-    const spotLeft = new THREE.PointLight(PALETTE.infinityGlow, 1.3, 14, 1.4);
-    spotLeft.position.set(-2.0, 4.1, 0);
-    scene.add(spotLeft);
+    spotLeftRef = new THREE.PointLight(PALETTE.infinityGlow, 1.3, 14, 1.4);
+    spotLeftRef.position.set(-2.0, 4.1, 0);
+    scene.add(spotLeftRef);
 
-    const spotRight = new THREE.PointLight(PALETTE.infinityGlow, 1.3, 14, 1.4);
-    spotRight.position.set(2.0, 4.1, 0);
-    scene.add(spotRight);
+    spotRightRef = new THREE.PointLight(PALETTE.infinityGlow, 1.3, 14, 1.4);
+    spotRightRef.position.set(2.0, 4.1, 0);
+    scene.add(spotRightRef);
 }
 
 /**
@@ -1105,7 +913,7 @@ function updatePCStatusIn3D(pcs) {
 /**
  * Raycasting Mouse Interactions
  */
-function getIntersectedPC(clientX, clientY) {
+function getIntersectedObject(clientX, clientY) {
     const canvas = document.getElementById("lab-3d-canvas");
     if (!canvas) return null;
 
@@ -1116,29 +924,33 @@ function getIntersectedPC(clientX, clientY) {
     raycaster.setFromCamera(mouse, camera);
 
     const hitBoxes = Object.values(pcWorkstations).map(w => w.hitBox);
+    if (doorHitBoxRef) hitBoxes.push(doorHitBoxRef);
+    if (switchPanelRef.lightHitBox) hitBoxes.push(switchPanelRef.lightHitBox);
+    if (switchPanelRef.acHitBox) hitBoxes.push(switchPanelRef.acHitBox);
+
     const intersects = raycaster.intersectObjects(hitBoxes);
 
     if (intersects.length > 0) {
-        return intersects[0].object.userData.pcId;
+        return intersects[0].object.userData;
     }
     return null;
 }
 
 function onMouseMove(event) {
     const canvas = document.getElementById("lab-3d-canvas");
-    const pcId = getIntersectedPC(event.clientX, event.clientY);
+    const targetData = getIntersectedObject(event.clientX, event.clientY);
 
-    if (pcId) {
+    if (targetData) {
         canvas.style.cursor = "pointer";
-        if (hoveredPC !== pcId) {
-            hoveredPC = pcId;
-            highlightPC(pcId, true);
+        if (targetData.pcId && hoveredItem !== targetData.pcId) {
+            hoveredItem = targetData.pcId;
+            highlightPC(targetData.pcId, true);
         }
     } else {
         canvas.style.cursor = "default";
-        if (hoveredPC) {
-            highlightPC(hoveredPC, false);
-            hoveredPC = null;
+        if (hoveredItem) {
+            highlightPC(hoveredItem, false);
+            hoveredItem = null;
         }
     }
 }
@@ -1155,28 +967,116 @@ function highlightPC(pcId, isHovered) {
 }
 
 function onCanvasClick(event) {
-    const pcId = getIntersectedPC(event.clientX, event.clientY);
-    if (pcId) {
-        const item = pcWorkstations[pcId];
+    const targetData = getIntersectedObject(event.clientX, event.clientY);
+    if (!targetData) return;
+
+    if (targetData.pcId) {
+        const item = pcWorkstations[targetData.pcId];
         const isFree = item ? item.status === "free" : true;
         if (typeof handlePCClick === "function") {
-            handlePCClick(pcId, isFree);
+            handlePCClick(targetData.pcId, isFree);
         }
+    } else if (targetData.isDoor) {
+        toggleDoor();
+    } else if (targetData.isLightSwitch) {
+        toggleLabLights();
+    } else if (targetData.isACSwitch) {
+        toggleLabAC();
     }
 }
 
 function onTouchStart(event) {
     if (event.touches.length === 1) {
         const touch = event.touches[0];
-        const pcId = getIntersectedPC(touch.clientX, touch.clientY);
-        if (pcId) {
-            const item = pcWorkstations[pcId];
+        const targetData = getIntersectedObject(touch.clientX, touch.clientY);
+        if (!targetData) return;
+
+        if (targetData.pcId) {
+            const item = pcWorkstations[targetData.pcId];
             const isFree = item ? item.status === "free" : true;
             if (typeof handlePCClick === "function") {
-                handlePCClick(pcId, isFree);
+                handlePCClick(targetData.pcId, isFree);
             }
+        } else if (targetData.isDoor) {
+            toggleDoor();
+        } else if (targetData.isLightSwitch) {
+            toggleLabLights();
+        } else if (targetData.isACSwitch) {
+            toggleLabAC();
         }
     }
+}
+
+/**
+ * Interactive Controls: Door, Light, AC
+ */
+function toggleDoor() {
+    isDoorOpen = !isDoorOpen;
+    targetDoorAngle = isDoorOpen ? Math.PI / 4.2 : 0.0;
+    showToast(isDoorOpen ? "🚪 Entrance Gate: OPENED" : "🚪 Entrance Gate: CLOSED");
+}
+
+function toggleLabLights() {
+    isLightOn = !isLightOn;
+
+    if (isLightOn) {
+        ambientLightRef.intensity = 0.65;
+        hemiLightRef.intensity = 0.55;
+        keyLightRef.intensity = 0.9;
+        fillLightRef.intensity = 0.8;
+        if (spotLeftRef) spotLeftRef.intensity = 1.3;
+        if (spotRightRef) spotRightRef.intensity = 1.3;
+        if (infinityTubeMatRef) infinityTubeMatRef.emissiveIntensity = 2.0;
+        if (switchPanelRef.lightBtnMat) switchPanelRef.lightBtnMat.emissiveIntensity = 1.2;
+        showToast("💡 AI LAB Lights: ON");
+    } else {
+        ambientLightRef.intensity = 0.08;
+        hemiLightRef.intensity = 0.08;
+        keyLightRef.intensity = 0.15;
+        fillLightRef.intensity = 0.1;
+        if (spotLeftRef) spotLeftRef.intensity = 0.0;
+        if (spotRightRef) spotRightRef.intensity = 0.0;
+        if (infinityTubeMatRef) infinityTubeMatRef.emissiveIntensity = 0.1;
+        if (switchPanelRef.lightBtnMat) switchPanelRef.lightBtnMat.emissiveIntensity = 0.1;
+        showToast("🌙 AI LAB Lights: OFF (Cinematic Night Mode)");
+    }
+}
+
+function toggleLabAC() {
+    isACOn = !isACOn;
+
+    if (isACOn) {
+        if (acDisplayMatRef) {
+            acDisplayMatRef.emissive.setHex(0x38bdf8);
+            acDisplayMatRef.emissiveIntensity = 1.5;
+        }
+        if (switchPanelRef.acBtnMat) switchPanelRef.acBtnMat.emissiveIntensity = 1.2;
+        showToast("❄️ AI LAB AC: ON (Cooling at 24°C)");
+    } else {
+        if (acDisplayMatRef) {
+            acDisplayMatRef.emissive.setHex(0x475569);
+            acDisplayMatRef.emissiveIntensity = 0.15;
+        }
+        if (switchPanelRef.acBtnMat) switchPanelRef.acBtnMat.emissiveIntensity = 0.1;
+        showToast("⏸️ AI LAB AC: STANDBY / OFF");
+    }
+}
+
+function showToast(message) {
+    let toast = document.getElementById("canvas-3d-toast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "canvas-3d-toast";
+        toast.className = "canvas-toast";
+        const container = document.getElementById("canvas-3d-container");
+        if (container) container.appendChild(toast);
+    }
+    toast.innerText = message;
+    toast.classList.add("show");
+    clearTimeout(toast._timeout);
+    toast._timeout = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2800);
 }
 
 function onWindowResize() {
@@ -1191,7 +1091,7 @@ function onWindowResize() {
 }
 
 /**
- * Render Loop with subtle breathing animation on monitors & infinity glow
+ * Render Loop with smooth door swing animation, breathing monitors & infinity pulse
  */
 let clock = new THREE.Clock();
 
@@ -1202,7 +1102,12 @@ function animate() {
 
     if (controls) controls.update();
 
-    // Subtle gentle pulse for occupied screens and floating badges
+    // 1. Smooth Door Swing Interpolation
+    if (doorPivotRef) {
+        doorPivotRef.rotation.y += (targetDoorAngle - doorPivotRef.rotation.y) * 0.12;
+    }
+
+    // 2. Subtle gentle pulse for occupied screens and floating badges
     Object.values(pcWorkstations).forEach(item => {
         if (item.status === "occupied") {
             item.screenMat.emissiveIntensity = 0.85 + Math.sin(time * 3.5) * 0.2;
