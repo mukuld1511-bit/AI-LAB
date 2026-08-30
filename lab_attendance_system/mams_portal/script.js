@@ -123,13 +123,13 @@ async function loadPCStatus() {
             return `
                 <div class="pc-card ${cardClass}">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div class="pc-title">💻 ${pc.id}</div>
+                        <div class="pc-title">💻 ${pc.pc_id}</div>
                         <div class="status-badge ${badgeClass}">${badgeText}</div>
                     </div>
                     ${!isFree && pc.occupied_by ? `
                         <div class="pc-meta">
                             <strong>👤 ${pc.occupied_by}</strong><br>
-                            Started: ${pc.start_time.split(" ")[1] || pc.start_time}
+                            Started: ${pc.since_time ? pc.since_time.split(" ")[1] : "N/A"}
                         </div>
                     ` : ""}
                 </div>
@@ -210,18 +210,18 @@ async function loadUnknownFaces() {
     try {
         const data = await apiFetch("/unknown_faces");
         
-        if (data.unknown_faces.length === 0) {
+        if (data.length === 0) {
             grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No unknown faces detected today! 🎉</div>';
             return;
         }
 
-        grid.innerHTML = data.unknown_faces.map(face => `
+        grid.innerHTML = data.map(face => `
             <div class="unknown-card">
                 <div class="img-wrapper">
-                    <img src="${BASE_URL}${face.image_url}" alt="Unknown face" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%22 height=%22100%22 fill=%22%23eee%22/><text x=%2250%22 y=%2250%22 font-family=%22Arial%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>No Image</text></svg>'">
+                    <img src="${BASE_URL}${face.url}" alt="Unknown face" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%22 height=%22100%22 fill=%22%23eee%22/><text x=%2250%22 y=%2250%22 font-family=%22Arial%22 font-size=%2214%22 fill=%22%23999%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22>No Image</text></svg>'">
                 </div>
                 <div class="unknown-meta">
-                    <strong>Time:</strong> ${face.time}<br>
+                    <strong>Time:</strong> ${face.timestamp}<br>
                     <strong>Date:</strong> ${face.date}
                 </div>
             </div>
