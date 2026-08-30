@@ -879,14 +879,14 @@ function buildInfinityChandelier() {
 
 /**
  * Builds Workstations in Scaled Up Room:
- * - Continuous connected wooden slabs on Left (PC-1, PC-2, PC-3) and Right (PC-4, PC-5, PC-6)
- * - PC-7 at front wall near entrance
- * - PC-8 rotated and moved forward into the room
+ * - Left & Right continuous wooden slabs stuck directly to left and right walls (increased size ratio)
+ * - PC-7 stuck directly to front entrance wall
+ * - PC-8 freestanding in room center
  */
 function buildAllLabWorkstations() {
-    const slabW = 1.25;
-    const slabL = 9.2;
-    const slabH = 0.08;
+    const slabW = 1.60;  // Increased table depth ratio (1.6m wide)
+    const slabL = 11.2;  // Increased length ratio (11.2m long)
+    const slabH = 0.09;  // Solid premium slab thickness
     const tablePosY = 1.0;
 
     // Wood Grain Texture for Tables & Workstation Slabs (Accurate sRGB Color Rendering)
@@ -896,7 +896,7 @@ function buildAllLabWorkstations() {
     if (THREE.sRGBEncoding) woodTableTex.encoding = THREE.sRGBEncoding;
     woodTableTex.wrapS = THREE.RepeatWrapping;
     woodTableTex.wrapT = THREE.RepeatWrapping;
-    woodTableTex.repeat.set(1.5, 4.0);
+    woodTableTex.repeat.set(1.6, 5.0);
 
     const woodMat = new THREE.MeshStandardMaterial({
         map: woodTableTex,
@@ -915,7 +915,7 @@ function buildAllLabWorkstations() {
         scene.add(slab);
 
         // Heavy metal support leg frames under slab
-        const legZOffsets = [-slabL / 2 + 0.3, 0, slabL / 2 - 0.3];
+        const legZOffsets = [-slabL / 2 + 0.4, -slabL / 6, slabL / 6, slabL / 2 - 0.4];
         legZOffsets.forEach(lz => {
             const frameGeo = new THREE.BoxGeometry(slabW - 0.1, tablePosY, 0.06);
             const legFrame = new THREE.Mesh(frameGeo, metalLegMat);
@@ -925,36 +925,35 @@ function buildAllLabWorkstations() {
         });
     }
 
-    // 1. Left Continuous Wooden Slab (Holds PC-1, PC-2, PC-3)
-    createConnectedBench(-6.0, -1.0);
+    // 1. Left Continuous Wooden Slab (Stuck directly to Left Wall at X = -7.65)
+    // Center at -7.65 + slabW / 2 = -6.85
+    createConnectedBench(-6.85, 0.0);
 
-    // 2. Right Continuous Wooden Slab (Holds PC-4, PC-5, PC-6)
-    createConnectedBench(6.0, -1.0);
+    // 2. Right Continuous Wooden Slab (Stuck directly to Right Wall at X = +7.65)
+    // Center at +7.65 - slabW / 2 = +6.85
+    createConnectedBench(6.85, 0.0);
 
-    // 3. Mount Left Monitors & Accessories on Left Slab
-    mountMonitorStation("PC-1", -6.0, 2.4, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-2", -6.0, -1.0, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-3", -6.0, -4.4, Math.PI / 2, tablePosY + slabH / 2);
+    // 3. Mount Left Monitors & Accessories on Left Slab (Facing +X)
+    mountMonitorStation("PC-1", -6.85, 3.6, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-2", -6.85, 0.0, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-3", -6.85, -3.6, Math.PI / 2, tablePosY + slabH / 2);
 
-    // 4. Mount Right Monitors & Accessories on Right Slab
-    mountMonitorStation("PC-4", 6.0, 2.4, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-5", 6.0, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-6", 6.0, -4.4, -Math.PI / 2, tablePosY + slabH / 2);
+    // 4. Mount Right Monitors & Accessories on Right Slab (Facing -X)
+    mountMonitorStation("PC-4", 6.85, 3.6, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-5", 6.85, 0.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 6.85, -3.6, -Math.PI / 2, tablePosY + slabH / 2);
 
-    // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.6, rotated Math.PI)
-    createStandaloneTable("PC-7", 2.4, 5.6, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
+    // 5. PC-7 Table stuck directly to Front Entrance Wall (Z = 7.65 - 1.5/2 = 6.90, X = 3.2, rotated Math.PI)
+    createStandaloneTable("PC-7", 3.2, 6.90, Math.PI, woodMat, metalLegMat, tablePosY, slabH, 2.4, 1.5);
 
-    // 6. PC-8: Moved forward inside room & rotated (X = 0.0, Z = -4.5, rotated Math.PI)
-    createStandaloneTable("PC-8", 0.0, -4.5, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
+    // 6. PC-8: Freestanding executive supervisor station in room (X = 0.0, Z = -4.2, rotated Math.PI)
+    createStandaloneTable("PC-8", 0.0, -4.2, Math.PI, woodMat, metalLegMat, tablePosY, slabH, 2.6, 1.5);
 }
 
 /**
- * Creates a standalone table workstation (for PC-7 and PC-8)
+ * Creates a standalone table workstation (for PC-7 and PC-8) with custom dimensions
  */
-function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tablePosY, slabH) {
-    const tableW = 2.0;
-    const tableD = 1.1;
-
+function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tablePosY, slabH, tableW = 2.4, tableD = 1.5) {
     const group = new THREE.Group();
     group.position.set(posX, 0, posZ);
     group.rotation.y = rotY;
@@ -969,10 +968,10 @@ function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tab
     // Legs
     const legGeo = new THREE.BoxGeometry(0.06, tablePosY, 0.06);
     const legOffsets = [
-        [-tableW / 2 + 0.1, tablePosY / 2, -tableD / 2 + 0.1],
-        [tableW / 2 - 0.1, tablePosY / 2, -tableD / 2 + 0.1],
-        [-tableW / 2 + 0.1, tablePosY / 2, tableD / 2 - 0.1],
-        [tableW / 2 - 0.1, tablePosY / 2, tableD / 2 - 0.1]
+        [-tableW / 2 + 0.12, tablePosY / 2, -tableD / 2 + 0.12],
+        [tableW / 2 - 0.12, tablePosY / 2, -tableD / 2 + 0.12],
+        [-tableW / 2 + 0.12, tablePosY / 2, tableD / 2 - 0.12],
+        [tableW / 2 - 0.12, tablePosY / 2, tableD / 2 - 0.12]
     ];
     legOffsets.forEach(pos => {
         const leg = new THREE.Mesh(legGeo, metalLegMat);
