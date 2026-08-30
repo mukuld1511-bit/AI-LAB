@@ -1,5 +1,5 @@
 // ── HARDCODE YOUR PERMANENT NGROK DOMAIN HERE ──
-let BASE_URL = "https://upright-lion.ngrok.app"; // CHANGE THIS to your actual static Ngrok domain
+let BASE_URL = "https://amaretto-confess-subtract.ngrok-free.dev"; // CHANGE THIS to your actual static Ngrok domain
 
 // Fallback to localStorage if not hardcoded
 if (!BASE_URL || BASE_URL === "https://upright-lion.ngrok.app") {
