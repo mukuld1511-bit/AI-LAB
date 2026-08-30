@@ -1017,8 +1017,12 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 
     // Glowing Display Screen with PC ID and Status rendered directly on the monitor display
     const screenTexData = createMonitorScreenTexture(pcId, true, null);
-    const screenMat = new THREE.MeshBasicMaterial({
-        map: screenTexData.texture
+    const screenMat = new THREE.MeshStandardMaterial({
+        map: screenTexData.texture,
+        roughness: 0.2,
+        metalness: 0.05,
+        emissive: 0x052e16,
+        emissiveIntensity: 0.8
     });
     const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(screenW - 0.08, screenH - 0.08), screenMat);
     screenMesh.position.set(0, surfaceY + 0.55, -0.32 + screenD / 2 + 0.002);
@@ -1099,12 +1103,12 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 }
 
 /**
- * Generates High-DPI (1024x600) Screen Interface Texture with Prominent PC Name on Monitor Display
+ * Generates High-DPI screen interface texture rendered directly on the monitor display
  */
 function createMonitorScreenTexture(pcId, isFree, studentName = null) {
     const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 600;
+    canvas.width = 512;
+    canvas.height = 300;
     const ctx = canvas.getContext("2d");
 
     drawScreenCanvas(ctx, pcId, isFree, studentName);
@@ -1116,85 +1120,65 @@ function createMonitorScreenTexture(pcId, isFree, studentName = null) {
 }
 
 function drawScreenCanvas(ctx, pcId, isFree, studentName = null) {
-    ctx.clearRect(0, 0, 1024, 600);
+    ctx.clearRect(0, 0, 512, 300);
 
-    // 1. Dark Futuristic Cyber Wallpaper Gradient
-    const bg = ctx.createLinearGradient(0, 0, 0, 600);
+    // 1. Dark Cyber Wallpaper Gradient
+    const bg = ctx.createLinearGradient(0, 0, 0, 300);
     if (isFree) {
-        bg.addColorStop(0.0, "#022c22");
-        bg.addColorStop(0.5, "#064e3b");
-        bg.addColorStop(1.0, "#011c14");
+        bg.addColorStop(0, "#022c22");
+        bg.addColorStop(0.6, "#064e3b");
+        bg.addColorStop(1, "#021c15");
     } else {
-        bg.addColorStop(0.0, "#450a0a");
-        bg.addColorStop(0.5, "#7f1d1d");
-        bg.addColorStop(1.0, "#280505");
+        bg.addColorStop(0, "#450a0a");
+        bg.addColorStop(0.6, "#7f1d1d");
+        bg.addColorStop(1, "#280505");
     }
     ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, 1024, 600);
+    ctx.fillRect(0, 0, 512, 300);
 
-    // 2. High-Tech Cyber Grid Lines
-    ctx.strokeStyle = isFree ? "rgba(52, 211, 153, 0.20)" : "rgba(248, 113, 113, 0.20)";
-    ctx.lineWidth = 1.5;
-    for (let x = 32; x < 1024; x += 64) {
+    // 2. Cyber Grid lines
+    ctx.strokeStyle = isFree ? "rgba(52, 211, 153, 0.18)" : "rgba(248, 113, 113, 0.18)";
+    ctx.lineWidth = 1;
+    for (let x = 20; x < 512; x += 32) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, 600);
+        ctx.lineTo(x, 300);
         ctx.stroke();
     }
-    for (let y = 32; y < 600; y += 64) {
+    for (let y = 20; y < 300; y += 32) {
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(1024, y);
+        ctx.lineTo(512, y);
         ctx.stroke();
     }
 
-    // 3. Glowing Outer Neon Border on the Screen
-    ctx.strokeStyle = isFree ? "#10b981" : "#ef4444";
-    ctx.lineWidth = 8;
-    roundRect(ctx, 16, 16, 992, 568, 20);
-    ctx.stroke();
-
-    // 4. Top System Bar Header
+    // 3. Top System Bar
     ctx.fillStyle = isFree ? "#34d399" : "#f87171";
-    ctx.font = "bold 32px 'Inter', monospace";
-    ctx.textAlign = "left";
-    ctx.fillText(`⚡ AI LAB // WORKSTATION NODE`, 44, 75);
+    ctx.font = "bold 18px 'Inter', monospace";
+    ctx.fillText(`AI LAB // NODE ${pcId}`, 24, 38);
 
+    // 4. Large Center PC Name
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 26px 'Inter', monospace";
-    ctx.textAlign = "right";
-    ctx.fillText(isFree ? "STATUS: READY" : "STATUS: OCCUPIED", 980, 75);
-
-    // 5. PROMINENT GIANT BOLD PC NAME (Centered on Screen)
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "900 150px 'Inter', sans-serif";
+    ctx.font = "900 68px 'Inter', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = isFree ? "rgba(52, 211, 153, 0.9)" : "rgba(239, 68, 68, 0.9)";
-    ctx.shadowBlur = 30;
-    ctx.fillText(pcId, 512, 260);
-    ctx.shadowBlur = 0; // Reset blur
+    ctx.fillText(pcId, 256, 125);
 
-    // 6. Bold Real-Time Status Pill (Bottom-Center)
-    const pillColor = isFree ? "#10b981" : "#dc2626";
+    // 5. Status Pill on Screen
+    const pillColor = isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)";
     ctx.fillStyle = pillColor;
-    roundRect(ctx, 212, 380, 600, 90, 24);
+    roundRect(ctx, 96, 185, 320, 48, 12);
     ctx.fill();
 
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
-    roundRect(ctx, 212, 380, 600, 90, 24);
-    ctx.stroke();
-
     ctx.fillStyle = "#ffffff";
-    ctx.font = "900 42px 'Inter', sans-serif";
-    const statusText = isFree ? "🟢 AVAILABLE (FREE)" : `🔴 ${studentName || "IN USE"}`;
-    ctx.fillText(statusText, 512, 425);
+    ctx.font = "bold 22px 'Inter', sans-serif";
+    const statusText = isFree ? "🟢 AVAILABLE" : `🔴 ${studentName || "IN USE"}`;
+    ctx.fillText(statusText, 256, 209);
 
-    // 7. Footer Instructions
+    // 6. Bottom System Status Info
     ctx.fillStyle = isFree ? "#a7f3d0" : "#fecaca";
-    ctx.font = "bold 24px 'Inter', monospace";
-    ctx.fillText(isFree ? "👉 CLICK SCREEN TO ASSIGN PC" : "👉 CLICK SCREEN TO MARK FREE", 512, 530);
+    ctx.font = "14px 'Inter', monospace";
+    ctx.fillText(isFree ? "GPU COMPUTE READY  •  TAP TO OCCUPY" : "ACTIVE SESSION  •  TAP TO FREE", 256, 270);
 }
 
 function roundRect(ctx, x, y, width, height, radius) {
@@ -1231,6 +1215,11 @@ function updatePCStatusIn3D(pcs) {
             const studentLabel = isFree ? null : (pc.occupied_by || "IN USE");
             drawScreenCanvas(ctx, pc.pc_id, isFree, studentLabel);
             texture.needsUpdate = true;
+        }
+
+        if (item.screenMat) {
+            item.screenMat.emissive.setHex(isFree ? 0x052e16 : 0x450a0a);
+            item.screenMat.emissiveIntensity = isFree ? 0.8 : 1.0;
         }
     });
 }
