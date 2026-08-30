@@ -1,11 +1,9 @@
 // ── HARDCODE YOUR PERMANENT NGROK DOMAIN HERE ──
-const DEFAULT_NGROK_URL = "https://amaretto-confess-subtract.ngrok-free.dev";
-let BASE_URL = localStorage.getItem("ngrok_url") || DEFAULT_NGROK_URL;
+let BASE_URL = "https://amaretto-confess-subtract.ngrok-free.dev"; // CHANGE THIS to your actual static Ngrok domain
 
-// Ensure stale/defunct localStorage URLs don't block the live backend
-if (!BASE_URL || BASE_URL.includes("upright-lion") || !BASE_URL.startsWith("http")) {
-    BASE_URL = DEFAULT_NGROK_URL;
-    localStorage.setItem("ngrok_url", BASE_URL);
+// Fallback to localStorage if not hardcoded
+if (!BASE_URL || BASE_URL === "https://upright-lion.ngrok.app") {
+    BASE_URL = localStorage.getItem("ngrok_url") || "";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -19,83 +17,65 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Ngrok Connection
     const urlInput = document.getElementById("ngrok-url");
-    if (urlInput) {
+    if (BASE_URL) {
         urlInput.value = BASE_URL;
+        checkConnection();
+    } else {
+        // Show input UI if no URL is provided at all
+        document.getElementById("connection-ui").style.display = "block";
+        document.getElementById("connection-status").innerHTML = "Waiting for URL...";
     }
 
-    checkConnection();
-
-    document.getElementById("connect-btn")?.addEventListener("click", () => {
-        let url = urlInput ? urlInput.value.trim() : "";
+    document.getElementById("connect-btn").addEventListener("click", () => {
+        let url = urlInput.value.trim();
         if (url.endsWith("/")) url = url.slice(0, -1);
-        BASE_URL = url || DEFAULT_NGROK_URL;
+        BASE_URL = url;
         localStorage.setItem("ngrok_url", BASE_URL);
         checkConnection();
     });
 
-    document.getElementById("apply-filter-btn")?.addEventListener("click", loadAttendance);
+    document.getElementById("apply-filter-btn").addEventListener("click", loadAttendance);
 
-    // Auto-poll PC status every 6 seconds for live 3D mirror
+    // Auto-poll PC status every 8 seconds for live 3D mirror
     setInterval(() => {
         if (BASE_URL) loadPCStatus();
-    }, 6000);
+    }, 8000);
 });
 
-// API Helper with AbortController Timeout
-async function apiFetch(endpoint, options = {}, timeoutMs = 6000) {
+// API Helper
+async function apiFetch(endpoint, options = {}) {
     if (!BASE_URL) throw new Error("Not connected");
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
-            ...options,
-            signal: controller.signal,
-            headers: {
-                "ngrok-skip-browser-warning": "true",
-                "Content-Type": "application/json",
-                ...(options.headers || {})
-            },
-            cache: "no-store" // Force fresh data
-        });
-        clearTimeout(timer);
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.detail || `HTTP error ${response.status}`);
-        }
-        return response.json();
-    } catch (err) {
-        clearTimeout(timer);
-        throw err;
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+        ...options,
+        headers: {
+            "ngrok-skip-browser-warning": "true",
+            "Content-Type": "application/json",
+            ...(options.headers || {})
+        },
+        cache: "no-store" // Force browser to fetch fresh data every time
+    });
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP error ${response.status}`);
     }
+    return response.json();
 }
 
-// Check Connection with Auto-Retry
-let isCheckingConn = false;
+// Check Connection
 async function checkConnection() {
-    if (isCheckingConn) return;
-    isCheckingConn = true;
-
     const status = document.getElementById("connection-status");
-    if (status) {
-        status.className = "badge";
-        status.innerHTML = "Connecting to Lab...";
-        status.style.backgroundColor = "#fbbf24";
-        status.style.color = "#1e293b";
-    }
+    status.className = "badge";
+    status.innerHTML = "Connecting...";
+    status.style.backgroundColor = "#fbbf24";
 
     try {
-        await apiFetch("/pc/status", {}, 5000);
-        if (status) {
-            status.innerHTML = "🟢 Connected to Lab";
-            status.className = "badge badge-connected";
-            status.style.backgroundColor = "";
-            status.style.color = "";
-        }
+        await apiFetch("/pc/status");
+        status.innerHTML = "Connected to Lab";
+        status.className = "badge badge-connected";
+        status.style.backgroundColor = ""; // reset
         
         // Hide the manual input UI since connection was successful!
-        const connUi = document.getElementById("connection-ui");
-        if (connUi) connUi.style.display = "none";
+        document.getElementById("connection-ui").style.display = "none";
         
         // Load data for all tabs
         loadPCStatus();
@@ -103,18 +83,12 @@ async function checkConnection() {
         loadRegisteredFaces();
         loadUnknownFaces();
     } catch (e) {
-        console.warn("Connection attempt failed:", e.message);
-        if (status) {
-            status.innerHTML = "🔴 Lab Offline (Retrying...)";
-            status.className = "badge badge-disconnected";
-            status.style.backgroundColor = "";
-            status.style.color = "";
-        }
+        status.innerHTML = "Disconnected";
+        status.className = "badge badge-disconnected";
+        status.style.backgroundColor = "";
         
-        // Auto-retry in 3.5 seconds
-        setTimeout(checkConnection, 3500);
-    } finally {
-        isCheckingConn = false;
+        // Show the manual input UI because automatic connection failed
+        document.getElementById("connection-ui").style.display = "block";
     }
 }
 
