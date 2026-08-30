@@ -268,24 +268,111 @@ function buildRoomArchitecture() {
     // Right section of front wall (Leaves entrance opening from X = -4.3 to X = -1.8)
     createGlassWall(7.5, wallH, 0.12, 2.65, wallH / 2, roomD / 2 - 0.06);
 
-    // Entrance Floor Mat / Lighting Marker on Front Wall
-    const entranceGeo = new THREE.PlaneGeometry(2.4, 1.8);
-    const entranceMat = new THREE.MeshStandardMaterial({
-        color: 0x3b82f6,
-        roughness: 0.6,
-        transparent: true,
-        opacity: 0.3
-    });
-    const entranceFloor = new THREE.Mesh(entranceGeo, entranceMat);
-    entranceFloor.rotation.x = -Math.PI / 2;
-    entranceFloor.position.set(-3.05, 0.01, roomD / 2 - 0.9);
-    scene.add(entranceFloor);
+    // 4. Physical 3D Entrance Gate Architecture
+    build3DLabGate(-4.3, -1.8, roomD / 2 - 0.06, wallH);
+}
 
-    // 3D Entrance Sign Sprite
-    const entranceSprite = createTextBadge("🚪 LAB ENTRANCE", "#93c5fd", "#1e3a8a");
-    entranceSprite.position.set(-3.05, 1.6, roomD / 2 - 0.9);
-    entranceSprite.scale.set(1.9, 0.65, 1);
-    scene.add(entranceSprite);
+/**
+ * Builds 3D Physical Entrance Gate (Jambs, Lintel, Double Swinging Glass Doors, Handles & Scanner)
+ */
+function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
+    const gateGroup = new THREE.Group();
+    const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.pillar, roughness: 0.35, metalness: 0.3 });
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.15, metalness: 0.85 });
+    const doorGlassMat = new THREE.MeshStandardMaterial({
+        color: 0x93c5fd,
+        roughness: 0.1,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.55
+    });
+
+    const doorW = (xRight - xLeft) / 2 - 0.04;
+    const doorH = gateHeight - 0.2;
+
+    // 1. Left & Right Door Posts (Jambs)
+    const postGeo = new THREE.BoxGeometry(0.14, gateHeight, 0.14);
+    const leftPost = new THREE.Mesh(postGeo, frameMat);
+    leftPost.position.set(xLeft, gateHeight / 2, zPos);
+    leftPost.castShadow = true;
+    gateGroup.add(leftPost);
+
+    const rightPost = new THREE.Mesh(postGeo, frameMat);
+    rightPost.position.set(xRight, gateHeight / 2, zPos);
+    rightPost.castShadow = true;
+    gateGroup.add(rightPost);
+
+    // 2. Overhead Lintel Beam
+    const lintelW = xRight - xLeft + 0.14;
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(lintelW, 0.18, 0.16), frameMat);
+    lintel.position.set((xLeft + xRight) / 2, gateHeight - 0.09, zPos);
+    lintel.castShadow = true;
+    gateGroup.add(lintel);
+
+    // 3. Left Swinging Glass Door Leaf (Ajar / Open inwards)
+    const leftDoorPivot = new THREE.Group();
+    leftDoorPivot.position.set(xLeft + 0.05, 0, zPos);
+    leftDoorPivot.rotation.y = Math.PI / 4.5; // Swung 40 deg inwards
+
+    // Door glass panel
+    const doorLeafGeo = new THREE.BoxGeometry(doorW, doorH, 0.035);
+    const leftDoorMesh = new THREE.Mesh(doorLeafGeo, doorGlassMat);
+    leftDoorMesh.position.set(doorW / 2, doorH / 2, 0);
+    leftDoorMesh.castShadow = true;
+    leftDoorPivot.add(leftDoorMesh);
+
+    // Door frame border (Dark trim around glass)
+    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(doorW + 0.02, doorH + 0.02, 0.04), frameMat);
+    doorFrame.position.set(doorW / 2, doorH / 2, 0);
+    // leftDoorPivot.add(doorFrame);
+
+    // Handle bar
+    const handleGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.9);
+    const leftHandle = new THREE.Mesh(handleGeo, handleMat);
+    leftHandle.position.set(doorW - 0.1, doorH / 2, 0.04);
+    leftDoorPivot.add(leftHandle);
+
+    gateGroup.add(leftDoorPivot);
+
+    // 4. Right Swinging Glass Door Leaf (Ajar / Open inwards)
+    const rightDoorPivot = new THREE.Group();
+    rightDoorPivot.position.set(xRight - 0.05, 0, zPos);
+    rightDoorPivot.rotation.y = -Math.PI / 4.5; // Swung -40 deg inwards
+
+    const rightDoorMesh = new THREE.Mesh(doorLeafGeo, doorGlassMat);
+    rightDoorMesh.position.set(-doorW / 2, doorH / 2, 0);
+    rightDoorMesh.castShadow = true;
+    rightDoorPivot.add(rightDoorMesh);
+
+    const rightHandle = new THREE.Mesh(handleGeo, handleMat);
+    rightHandle.position.set(-doorW + 0.1, doorH / 2, 0.04);
+    rightDoorPivot.add(rightHandle);
+
+    gateGroup.add(rightDoorPivot);
+
+    // 5. Access Scanner Pedestal on entrance side
+    const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.3 });
+    const scannerPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.1, 0.2), pedestalMat);
+    scannerPedestal.position.set(xRight + 0.35, 0.55, zPos + 0.6);
+    scannerPedestal.castShadow = true;
+    gateGroup.add(scannerPedestal);
+
+    // Glowing Blue RFID/NFC Reader on top of pedestal
+    const scannerBezel = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.16), new THREE.MeshStandardMaterial({
+        color: 0x3b82f6,
+        emissive: 0x3b82f6,
+        emissiveIntensity: 1.2
+    }));
+    scannerBezel.position.set(xRight + 0.35, 1.12, zPos + 0.6);
+    gateGroup.add(scannerBezel);
+
+    // 6. 3D Gate Overhead Illuminated Sign
+    const gateSign = createTextBadge("🚪 AI/ML LAB GATE", "#bfdbfe", "#1e3a8a");
+    gateSign.position.set((xLeft + xRight) / 2, gateHeight + 0.55, zPos);
+    gateSign.scale.set(2.2, 0.75, 1);
+    gateGroup.add(gateSign);
+
+    scene.add(gateGroup);
 }
 
 /**
