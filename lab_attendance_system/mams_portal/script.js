@@ -1,9 +1,11 @@
 // ── HARDCODE YOUR PERMANENT NGROK DOMAIN HERE ──
-let BASE_URL = "https://amaretto-confess-subtract.ngrok-free.dev"; // CHANGE THIS to your actual static Ngrok domain
+const DEFAULT_NGROK_URL = "https://amaretto-confess-subtract.ngrok-free.dev";
+let BASE_URL = localStorage.getItem("ngrok_url") || DEFAULT_NGROK_URL;
 
-// Fallback to localStorage if not hardcoded
-if (!BASE_URL || BASE_URL === "https://upright-lion.ngrok.app") {
-    BASE_URL = localStorage.getItem("ngrok_url") || "";
+// Ensure stale/defunct localStorage URLs don't block the live backend
+if (!BASE_URL || BASE_URL.includes("upright-lion") || !BASE_URL.startsWith("http")) {
+    BASE_URL = DEFAULT_NGROK_URL;
+    localStorage.setItem("ngrok_url", BASE_URL);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -17,65 +19,83 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Ngrok Connection
     const urlInput = document.getElementById("ngrok-url");
-    if (BASE_URL) {
+    if (urlInput) {
         urlInput.value = BASE_URL;
-        checkConnection();
-    } else {
-        // Show input UI if no URL is provided at all
-        document.getElementById("connection-ui").style.display = "block";
-        document.getElementById("connection-status").innerHTML = "Waiting for URL...";
     }
 
-    document.getElementById("connect-btn").addEventListener("click", () => {
-        let url = urlInput.value.trim();
+    checkConnection();
+
+    document.getElementById("connect-btn")?.addEventListener("click", () => {
+        let url = urlInput ? urlInput.value.trim() : "";
         if (url.endsWith("/")) url = url.slice(0, -1);
-        BASE_URL = url;
+        BASE_URL = url || DEFAULT_NGROK_URL;
         localStorage.setItem("ngrok_url", BASE_URL);
         checkConnection();
     });
 
-    document.getElementById("apply-filter-btn").addEventListener("click", loadAttendance);
+    document.getElementById("apply-filter-btn")?.addEventListener("click", loadAttendance);
 
-    // Auto-poll PC status every 8 seconds for live 3D mirror
+    // Auto-poll PC status every 6 seconds for live 3D mirror
     setInterval(() => {
         if (BASE_URL) loadPCStatus();
-    }, 8000);
+    }, 6000);
 });
 
-// API Helper
-async function apiFetch(endpoint, options = {}) {
+// API Helper with AbortController Timeout
+async function apiFetch(endpoint, options = {}, timeoutMs = 6000) {
     if (!BASE_URL) throw new Error("Not connected");
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-        ...options,
-        headers: {
-            "ngrok-skip-browser-warning": "true",
-            "Content-Type": "application/json",
-            ...(options.headers || {})
-        },
-        cache: "no-store" // Force browser to fetch fresh data every time
-    });
-    if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP error ${response.status}`);
-    }
-    return response.json();
-}
-
-// Check Connection
-async function checkConnection() {
-    const status = document.getElementById("connection-status");
-    status.className = "badge";
-    status.innerHTML = "Connecting...";
-    status.style.backgroundColor = "#fbbf24";
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-        await apiFetch("/pc/status");
-        status.innerHTML = "Connected to Lab";
-        status.className = "badge badge-connected";
-        status.style.backgroundColor = ""; // reset
+        const response = await fetch(`${BASE_URL}${endpoint}`, {
+            ...options,
+            signal: controller.signal,
+            headers: {
+                "ngrok-skip-browser-warning": "true",
+                "Content-Type": "application/json",
+                ...(options.headers || {})
+            },
+            cache: "no-store" // Force fresh data
+        });
+        clearTimeout(timer);
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || `HTTP error ${response.status}`);
+        }
+        return response.json();
+    } catch (err) {
+        clearTimeout(timer);
+        throw err;
+    }
+}
+
+// Check Connection with Auto-Retry
+let isCheckingConn = false;
+async function checkConnection() {
+    if (isCheckingConn) return;
+    isCheckingConn = true;
+
+    const status = document.getElementById("connection-status");
+    if (status) {
+        status.className = "badge";
+        status.innerHTML = "Connecting to Lab...";
+        status.style.backgroundColor = "#fbbf24";
+        status.style.color = "#1e293b";
+    }
+
+    try {
+        await apiFetch("/pc/status", {}, 5000);
+        if (status) {
+            status.innerHTML = "🟢 Connected to Lab";
+            status.className = "badge badge-connected";
+            status.style.backgroundColor = "";
+            status.style.color = "";
+        }
         
         // Hide the manual input UI since connection was successful!
-        document.getElementById("connection-ui").style.display = "none";
+        const connUi = document.getElementById("connection-ui");
+        if (connUi) connUi.style.display = "none";
         
         // Load data for all tabs
         loadPCStatus();
@@ -83,12 +103,18 @@ async function checkConnection() {
         loadRegisteredFaces();
         loadUnknownFaces();
     } catch (e) {
-        status.innerHTML = "Disconnected";
-        status.className = "badge badge-disconnected";
-        status.style.backgroundColor = "";
+        console.warn("Connection attempt failed:", e.message);
+        if (status) {
+            status.innerHTML = "🔴 Lab Offline (Retrying...)";
+            status.className = "badge badge-disconnected";
+            status.style.backgroundColor = "";
+            status.style.color = "";
+        }
         
-        // Show the manual input UI because automatic connection failed
-        document.getElementById("connection-ui").style.display = "block";
+        // Auto-retry in 3.5 seconds
+        setTimeout(checkConnection, 3500);
+    } finally {
+        isCheckingConn = false;
     }
 }
 
