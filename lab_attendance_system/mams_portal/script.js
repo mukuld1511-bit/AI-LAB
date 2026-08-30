@@ -118,7 +118,7 @@ async function loadPCStatus() {
             return `
                 <div class="pc-card ${cardClass}">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div class="pc-title">${pc.id.replace("PC", "")}</div>
+                        <div class="pc-title">💻 ${pc.id}</div>
                         <div class="status-badge ${badgeClass}">${badgeText}</div>
                     </div>
                     ${!isFree && pc.occupied_by ? `

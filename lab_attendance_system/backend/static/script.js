@@ -53,64 +53,29 @@ function initTabs() {
 }
 
 // ═══════════════════════════════════════
-// SETTINGS MODAL
+// SETTINGS MODAL (Obsolete in Unified Dashboard)
 // ═══════════════════════════════════════
 function initSettings() {
     const modal = document.getElementById("settings-modal");
-    const input = document.getElementById("api-url-input");
-    const saveBtn = document.getElementById("save-url-btn");
     const closeBtn = document.getElementById("close-modal-btn");
     const settingsBtn = document.getElementById("settings-btn");
 
-    settingsBtn.addEventListener("click", openSettings);
-    closeBtn.addEventListener("click", () => modal.classList.remove("open"));
+    if (settingsBtn) {
+        settingsBtn.addEventListener("click", openSettings);
+    }
     
-    // Close on overlay click
-    modal.addEventListener("click", (e) => {
-        if (e.target === modal) modal.classList.remove("open");
-    });
-
-    saveBtn.addEventListener("click", async () => {
-        let url = input.value.trim().replace(/\/+$/, "");
-        if (!url) {
-            showConnectionStatus("❌ Please enter a URL", "msg-error");
-            return;
-        }
-        // Add http:// if missing
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            url = "https://" + url;
-        }
-
-        showConnectionStatus('<span class="spinner"></span> Testing connection...', "");
-        
-        try {
-            const resp = await fetch(url + "/health", {
-                method: "GET",
-                headers: { "ngrok-skip-browser-warning": "true" }
-            });
-            if (resp.ok) {
-                API_BASE = url;
-                localStorage.setItem("lab_api_url", url);
-                showConnectionStatus("✅ Connected successfully!", "msg-success");
-                updateConnectionBadge(true);
-                setTimeout(() => modal.classList.remove("open"), 800);
-                connectAndLoad();
-            } else {
-                showConnectionStatus("❌ Server responded with status " + resp.status, "msg-error");
-            }
-        } catch (e) {
-            showConnectionStatus("❌ Cannot reach server: " + e.message, "msg-error");
-        }
-    });
-
-    // Pre-fill saved URL
-    if (API_BASE) input.value = API_BASE;
+    if (closeBtn && modal) {
+        closeBtn.addEventListener("click", () => modal.classList.remove("open"));
+        // Close on overlay click
+        modal.addEventListener("click", (e) => {
+            if (e.target === modal) modal.classList.remove("open");
+        });
+    }
 }
 
 function openSettings() {
     const modal = document.getElementById("settings-modal");
-    modal.classList.add("open");
-    document.getElementById("api-url-input").focus();
+    if (modal) modal.classList.add("open");
 }
 
 function showConnectionStatus(html, cls) {
@@ -218,7 +183,7 @@ function renderPCGrid(pcs) {
 
         html += `
             <div class="${cardClass}">
-                <div class="pc-title">${pc.pc_id || pc.id}</div>
+                <div class="pc-title">💻 ${pc.pc_id || pc.id}</div>
                 <span class="${badgeClass}">${badgeText}</span>
                 <div class="pc-meta">${meta}</div>
                 ${freeBtn}
