@@ -1,13 +1,17 @@
 /**
  * ═══════════════════════════════════════════════════════════════════
- * 3D Interactive Lab Scene (Three.js)
- * Physical Layout:
- * - 3 PCs along Left Wall (PC-1, PC-2, PC-3) up to the corner
- * - Entrance on Left Wall near front
- * - 3 PCs along Right Wall (PC-4, PC-5, PC-6)
- * - PC-7 near front/entrance area
- * - PC-8 along Back Wall (facing back wall)
- * - Wooden cream tables, sleek black monitors with glowing screens
+ * 3D Interactive Lab Scene (Three.js) — Luxury Studio Architectural Theme
+ * 
+ * Features:
+ * - Black reflective tile floor
+ * - 4 Corner Dark Grey Architectural Pillars
+ * - Glass Walls with Front Wall Entrance
+ * - Continuous connected creamish-yellow wooden slab benches on Left & Right
+ * - PC-8 moved forward into room & rotated
+ * - PC-7 on front entrance wall
+ * - Overhead warm-glow suspended Infinity Tube light (∞)
+ * - Cozy warm architectural lighting
+ * - Live glowing monitor screens (Green/Red) & raycasting modal
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -17,21 +21,42 @@ let raycaster, mouse;
 let hoveredPC = null;
 let animationFrameId = null;
 
-// Palette
-const COLORS = {
-    floor: 0xf1f5f9,
-    floorGrid: 0xe2e8f0,
-    wall: 0x94a3b8,
-    wallGlass: 0xcfd8dc,
-    tableWood: 0xded0bb, // Cream wood
-    tableLegs: 0x1e293b, // Dark metal
-    monitorBezel: 0x0f172a,
-    keyboard: 0x1e293b,
-    chairSeat: 0x334155,
-    screenFree: 0x10b981,     // Glowing Green
-    screenOccupied: 0xef4444, // Glowing Red
-    screenHover: 0x38bdf8     // Cyan highlight
+// Palette & Architectural Materials
+const PALETTE = {
+    floor: 0x11141a,          // Sleek dark black floor
+    floorGrid: 0x242b38,      // Subtle grid line
+    pillar: 0x1e2430,         // Dark grey pillars
+    glassWall: 0x64748b,      // Tempered architectural glass
+    wallFrame: 0x334155,      // Wall trim metal
+    woodSlab: 0xe5c583,       // Creamish yellow wood
+    metalFrame: 0x1e222b,     // Dark metal table frame/legs
+    monitorBezel: 0x0a0c10,   // Matte black monitor
+    keyboard: 0x1e2430,       // Dark keyboard
+    chairSeat: 0x252a36,      // Dark ergonomic chair
+    infinityGlow: 0xffb84d,   // Warm golden-amber LED
+    screenFree: 0x10b981,     // Emerald green glow
+    screenOccupied: 0xef4444  // Crimson red glow
 };
+
+// Parametric Lemniscate (Infinity Symbol ∞)
+class InfinityCurve extends THREE.Curve {
+    constructor(scale = 3.6, height = 3.4) {
+        super();
+        this.scale = scale;
+        this.height = height;
+    }
+    getPoint(t, optionalTarget = new THREE.Vector3()) {
+        const point = optionalTarget;
+        const angle = t * Math.PI * 2;
+        const sin = Math.sin(angle);
+        const cos = Math.cos(angle);
+        const denom = 1 + sin * sin;
+        const x = (this.scale * cos) / denom;
+        const z = (this.scale * sin * cos * 1.8) / denom;
+        const y = this.height;
+        return point.set(x, y, z);
+    }
+}
 
 /**
  * Initializes the entire 3D Three.js scene
@@ -43,19 +68,19 @@ function init3DLabScene() {
 
     // 1. Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf8fafc);
-    scene.fog = new THREE.FogExp2(0xf8fafc, 0.018);
+    scene.background = new THREE.Color(0x0b0d13); // Dark cinematic backdrop
+    scene.fog = new THREE.FogExp2(0x0b0d13, 0.015);
 
-    // 2. Camera (Isometric Perspective)
+    // 2. Camera (Isometric View)
     const aspect = container.clientWidth / container.clientHeight;
-    camera = new THREE.PerspectiveCamera(42, aspect, 0.1, 100);
+    camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 100);
     setDefaultCameraPosition();
 
     // 3. Renderer
     renderer = new THREE.WebGLRenderer({
         canvas: canvas,
         antialias: true,
-        alpha: true,
+        alpha: false,
         powerPreference: "high-performance"
     });
     renderer.setSize(container.clientWidth, container.clientHeight);
@@ -63,33 +88,36 @@ function init3DLabScene() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.25;
 
     // 4. OrbitControls
     if (typeof THREE.OrbitControls !== "undefined") {
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2.05; // Don't go below floor
+        controls.maxPolarAngle = Math.PI / 2.05; // Stay above floor
         controls.minDistance = 6;
         controls.maxDistance = 35;
-        controls.target.set(0, 1.2, 0);
+        controls.target.set(0, 1.1, 0);
     }
 
-    // 5. Lighting
-    setupLighting();
+    // 5. Warm Lighting Setup
+    setupWarmLighting();
 
-    // 6. Build Physical Room
-    buildRoom();
+    // 6. Build Room Architecture (Black floor, glass walls, 4 pillars, entrance)
+    buildRoomArchitecture();
 
-    // 7. Build Workstations (8 PCs)
-    buildAllWorkstations();
+    // 7. Infinity Overhead Light Fixture (∞)
+    buildInfinityChandelier();
 
-    // 8. Raycasting for Interaction
+    // 8. Build Workstations (Connected slabs + PC-7 + PC-8)
+    buildAllLabWorkstations();
+
+    // 9. Raycasting for Click / Touch
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
-    // Event Listeners
+    // Listeners
     canvas.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("click", onCanvasClick);
     canvas.addEventListener("touchstart", onTouchStart, { passive: false });
@@ -99,165 +127,293 @@ function init3DLabScene() {
     if (resetBtn) {
         resetBtn.addEventListener("click", () => {
             setDefaultCameraPosition();
-            if (controls) controls.target.set(0, 1.2, 0);
+            if (controls) controls.target.set(0, 1.1, 0);
         });
     }
 
-    // Start Animation Loop
+    // Start Render Loop
     animate();
 }
 
 function setDefaultCameraPosition() {
-    camera.position.set(13, 14, 15);
-    camera.lookAt(0, 1.2, 0);
+    camera.position.set(13.5, 14.5, 15.5);
+    camera.lookAt(0, 1.1, 0);
 }
 
 /**
- * Studio Lighting Setup
+ * Cozy Warm Lighting Setup
  */
-function setupLighting() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+function setupWarmLighting() {
+    // Warm Ambient
+    const ambientLight = new THREE.AmbientLight(0xffecd2, 0.65);
     scene.add(ambientLight);
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe2e8f0, 0.6);
+    // Warm Hemisphere
+    const hemiLight = new THREE.HemisphereLight(0xfff5eb, 0x1e2029, 0.55);
     hemiLight.position.set(0, 20, 0);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xfffbeb, 0.85);
-    dirLight.position.set(12, 18, 10);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 40;
-    const d = 12;
-    dirLight.shadow.camera.left = -d;
-    dirLight.shadow.camera.right = d;
-    dirLight.shadow.camera.top = d;
-    dirLight.shadow.camera.bottom = -d;
-    dirLight.shadow.bias = -0.0005;
-    scene.add(dirLight);
+    // Key Warm Sun/Directional Light
+    const warmKeyLight = new THREE.DirectionalLight(0xffd8a8, 0.9);
+    warmKeyLight.position.set(10, 16, 9);
+    warmKeyLight.castShadow = true;
+    warmKeyLight.shadow.mapSize.width = 2048;
+    warmKeyLight.shadow.mapSize.height = 2048;
+    warmKeyLight.shadow.camera.near = 0.5;
+    warmKeyLight.shadow.camera.far = 40;
+    const d = 10;
+    warmKeyLight.shadow.camera.left = -d;
+    warmKeyLight.shadow.camera.right = d;
+    warmKeyLight.shadow.camera.top = d;
+    warmKeyLight.shadow.camera.bottom = -d;
+    warmKeyLight.shadow.bias = -0.0004;
+    scene.add(warmKeyLight);
 
-    // Soft blue fill from opposite side
-    const fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.4);
-    fillLight.position.set(-12, 10, -10);
-    scene.add(fillLight);
+    // Soft warm fill light
+    const warmFill = new THREE.PointLight(0xffb84d, 0.8, 18, 1.2);
+    warmFill.position.set(0, 3.2, 0);
+    scene.add(warmFill);
+
+    // Secondary subtle rim light
+    const rimLight = new THREE.DirectionalLight(0xffe0b2, 0.35);
+    rimLight.position.set(-10, 8, -8);
+    scene.add(rimLight);
 }
 
 /**
- * Builds Floor, Low Walls, Entrance, and Floor Grid
+ * Builds Black Floor, 4 Dark Grey Pillars, Glass Walls, and Front Entrance
  */
-function buildRoom() {
+function buildRoomArchitecture() {
     const roomW = 14;
     const roomD = 14;
 
-    // Floor Base
+    // 1. Black Floor Base
     const floorGeo = new THREE.PlaneGeometry(roomW, roomD);
     const floorMat = new THREE.MeshStandardMaterial({
-        color: COLORS.floor,
-        roughness: 0.4,
-        metalness: 0.05
+        color: PALETTE.floor,
+        roughness: 0.25,
+        metalness: 0.15
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Grid Floor Overlay
-    const grid = new THREE.GridHelper(roomW, 14, 0xcbd5e1, 0xe2e8f0);
+    // Subtle dark grid
+    const grid = new THREE.GridHelper(roomW, 14, PALETTE.floorGrid, PALETTE.floorGrid);
     grid.position.y = 0.005;
     scene.add(grid);
 
-    // Architectural Half-Height Walls (0.75m height)
-    const wallH = 0.8;
-    const wallThick = 0.2;
-    const wallMat = new THREE.MeshStandardMaterial({
-        color: COLORS.wallGlass,
-        roughness: 0.2,
-        metalness: 0.1,
-        transparent: true,
-        opacity: 0.65
+    // 2. Four Dark Grey Corner Pillars
+    const pillarH = 3.6;
+    const pillarW = 0.65;
+    const pillarGeo = new THREE.BoxGeometry(pillarW, pillarH, pillarW);
+    const pillarMat = new THREE.MeshStandardMaterial({
+        color: PALETTE.pillar,
+        roughness: 0.4,
+        metalness: 0.25
     });
-    const wallTrimMat = new THREE.MeshStandardMaterial({ color: COLORS.wall, roughness: 0.5 });
 
-    function createWall(w, h, d, x, y, z) {
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-        mesh.position.set(x, y, z);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        scene.add(mesh);
+    const pillarPositions = [
+        [-roomW / 2 + pillarW / 2, pillarH / 2, -roomD / 2 + pillarW / 2], // Top-Left
+        [roomW / 2 - pillarW / 2, pillarH / 2, -roomD / 2 + pillarW / 2],  // Top-Right
+        [-roomW / 2 + pillarW / 2, pillarH / 2, roomD / 2 - pillarW / 2],  // Bottom-Left
+        [roomW / 2 - pillarW / 2, pillarH / 2, roomD / 2 - pillarW / 2]   // Bottom-Right
+    ];
 
-        // Top trim
-        const trim = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, d), wallTrimMat);
-        trim.position.set(x, y + h / 2 + 0.02, z);
-        scene.add(trim);
+    pillarPositions.forEach(pos => {
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(...pos);
+        pillar.castShadow = true;
+        pillar.receiveShadow = true;
+        scene.add(pillar);
+    });
+
+    // 3. Glass Walls with Dark Metal Framing
+    const wallH = 1.2;
+    const glassMat = new THREE.MeshStandardMaterial({
+        color: PALETTE.glassWall,
+        roughness: 0.1,
+        metalness: 0.2,
+        transparent: true,
+        opacity: 0.4
+    });
+    const frameMat = new THREE.MeshStandardMaterial({ color: PALETTE.wallFrame, roughness: 0.4 });
+
+    function createGlassWall(w, h, d, x, y, z) {
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), glassMat);
+        wall.position.set(x, y, z);
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+        scene.add(wall);
+
+        // Top Frame Trim
+        const topFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.05, d + 0.02), frameMat);
+        topFrame.position.set(x, y + h / 2 + 0.025, z);
+        scene.add(topFrame);
     }
 
-    // Back Wall (Z = -roomD/2)
-    createWall(roomW, wallH, wallThick, 0, wallH / 2, -roomD / 2);
+    // Back Glass Wall
+    createGlassWall(roomW - pillarW * 2, wallH, 0.12, 0, wallH / 2, -roomD / 2 + 0.06);
 
-    // Right Wall (X = +roomW/2)
-    createWall(wallThick, wallH, roomD, roomW / 2, wallH / 2, 0);
+    // Left Glass Wall
+    createGlassWall(0.12, wallH, roomD - pillarW * 2, -roomW / 2 + 0.06, wallH / 2, 0);
 
-    // Front Wall (Z = +roomD/2)
-    createWall(roomW, wallH, wallThick, 0, wallH / 2, roomD / 2);
+    // Right Glass Wall
+    createGlassWall(0.12, wallH, roomD - pillarW * 2, roomW / 2 - 0.06, wallH / 2, 0);
 
-    // Left Wall with Entrance opening near front-left corner
-    // Left Wall section from Z = -7 to Z = 2 (Length 9)
-    createWall(wallThick, wallH, 9.5, -roomW / 2, wallH / 2, -2.25);
-    // Entrance gap from Z = 2.5 to Z = 5.5
-    // Left Wall front corner stub from Z = 5.5 to Z = 7 (Length 1.5)
-    createWall(wallThick, wallH, 1.5, -roomW / 2, wallH / 2, 6.25);
+    // Front Wall with Entrance Opening (Near Left side of front wall)
+    // Left section of front wall (0.8m)
+    createGlassWall(1.8, wallH, 0.12, -roomW / 2 + 1.55, wallH / 2, roomD / 2 - 0.06);
+    // Right section of front wall (Leaves entrance opening from X = -4.3 to X = -1.8)
+    createGlassWall(7.5, wallH, 0.12, 2.65, wallH / 2, roomD / 2 - 0.06);
 
-    // Entrance Floor Mat / Marker
-    const entranceMatGeo = new THREE.PlaneGeometry(1.8, 2.5);
+    // Entrance Floor Mat / Lighting Marker on Front Wall
+    const entranceGeo = new THREE.PlaneGeometry(2.4, 1.8);
     const entranceMat = new THREE.MeshStandardMaterial({
         color: 0x3b82f6,
-        roughness: 0.7,
+        roughness: 0.6,
         transparent: true,
-        opacity: 0.25
+        opacity: 0.3
     });
-    const entranceFloor = new THREE.Mesh(entranceMatGeo, entranceMat);
+    const entranceFloor = new THREE.Mesh(entranceGeo, entranceMat);
     entranceFloor.rotation.x = -Math.PI / 2;
-    entranceFloor.position.set(-roomW / 2 + 0.9, 0.01, 4.0);
+    entranceFloor.position.set(-3.05, 0.01, roomD / 2 - 0.9);
     scene.add(entranceFloor);
 
     // 3D Entrance Sign Sprite
-    const entranceSprite = createTextBadge("🚪 LAB ENTRANCE", "#1e40af", "#dbeafe");
-    entranceSprite.position.set(-roomW / 2 + 0.9, 1.4, 4.0);
-    entranceSprite.scale.set(1.8, 0.6, 1);
+    const entranceSprite = createTextBadge("🚪 LAB ENTRANCE", "#93c5fd", "#1e3a8a");
+    entranceSprite.position.set(-3.05, 1.6, roomD / 2 - 0.9);
+    entranceSprite.scale.set(1.9, 0.65, 1);
     scene.add(entranceSprite);
 }
 
 /**
- * Builds a single Workstation (Cream Wood Table, Black Monitor, Keyboard, Mouse, Chair, Floating Badge)
+ * Overhead Warm Modular Tube in Shape of Infinity (∞)
  */
-function createWorkstation(pcId, posX, posZ, rotY, monitorFacingOpposite = false) {
+function buildInfinityChandelier() {
+    const infinityCurve = new InfinityCurve(3.6, 3.3);
+    const tubeGeo = new THREE.TubeGeometry(infinityCurve, 160, 0.075, 16, true);
+    
+    // Glowing warm LED material
+    const tubeMat = new THREE.MeshStandardMaterial({
+        color: PALETTE.infinityGlow,
+        emissive: PALETTE.infinityGlow,
+        emissiveIntensity: 1.8,
+        roughness: 0.1
+    });
+
+    const infinityTube = new THREE.Mesh(tubeGeo, tubeMat);
+    scene.add(infinityTube);
+
+    // Light cords hanging from ceiling
+    const cordMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
+    const cordGeo = new THREE.CylinderGeometry(0.012, 0.012, 1.2);
+
+    const cordPoints = [
+        [-2.4, 3.9, 0],
+        [2.4, 3.9, 0],
+        [0, 3.9, 1.4],
+        [0, 3.9, -1.4]
+    ];
+
+    cordPoints.forEach(pos => {
+        const cord = new THREE.Mesh(cordGeo, cordMat);
+        cord.position.set(...pos);
+        scene.add(cord);
+    });
+
+    // Warm Spotlights under the infinity loops
+    const spotLeft = new THREE.PointLight(PALETTE.infinityGlow, 1.1, 10, 1.5);
+    spotLeft.position.set(-2.0, 3.0, 0);
+    scene.add(spotLeft);
+
+    const spotRight = new THREE.PointLight(PALETTE.infinityGlow, 1.1, 10, 1.5);
+    spotRight.position.set(2.0, 3.0, 0);
+    scene.add(spotRight);
+}
+
+/**
+ * Builds Workstations:
+ * - Continuous connected wooden slabs on Left (PC-1, PC-2, PC-3) and Right (PC-4, PC-5, PC-6)
+ * - PC-7 at front wall near entrance
+ * - PC-8 rotated and moved forward into the room
+ */
+function buildAllLabWorkstations() {
+    const slabW = 1.15;
+    const slabL = 7.8;
+    const slabH = 0.08;
+    const tablePosY = 1.0;
+
+    const woodMat = new THREE.MeshStandardMaterial({
+        color: PALETTE.woodSlab, // Creamish yellow wood
+        roughness: 0.45,
+        metalness: 0.08
+    });
+    const metalLegMat = new THREE.MeshStandardMaterial({ color: PALETTE.metalFrame, roughness: 0.35 });
+
+    // Helper: Build a continuous bench slab with support legs
+    function createConnectedBench(centerX, centerZ) {
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(slabW, slabH, slabL), woodMat);
+        slab.position.set(centerX, tablePosY, centerZ);
+        slab.castShadow = true;
+        slab.receiveShadow = true;
+        scene.add(slab);
+
+        // Heavy metal support leg frames under slab
+        const legZOffsets = [-slabL / 2 + 0.2, 0, slabL / 2 - 0.2];
+        legZOffsets.forEach(lz => {
+            const frameGeo = new THREE.BoxGeometry(slabW - 0.1, tablePosY, 0.06);
+            const legFrame = new THREE.Mesh(frameGeo, metalLegMat);
+            legFrame.position.set(centerX, tablePosY / 2, centerZ + lz);
+            legFrame.castShadow = true;
+            scene.add(legFrame);
+        });
+    }
+
+    // 1. Left Continuous Wooden Slab (Holds PC-1, PC-2, PC-3)
+    createConnectedBench(-5.3, -1.0);
+
+    // 2. Right Continuous Wooden Slab (Holds PC-4, PC-5, PC-6)
+    createConnectedBench(5.3, -1.0);
+
+    // 3. Mount Left Monitors & Accessories on Left Slab
+    mountMonitorStation("PC-1", -5.3, 1.8, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-2", -5.3, -1.0, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-3", -5.3, -3.8, Math.PI / 2, tablePosY + slabH / 2);
+
+    // 4. Mount Right Monitors & Accessories on Right Slab
+    mountMonitorStation("PC-4", 5.3, 1.8, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-5", 5.3, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 5.3, -3.8, -Math.PI / 2, tablePosY + slabH / 2);
+
+    // 5. PC-7 Table on Front Entrance Wall (X = 1.8, Z = 4.8)
+    createStandaloneTable("PC-7", 1.8, 4.8, 0, woodMat, metalLegMat, tablePosY, slabH);
+
+    // 6. PC-8: Moved forward inside room & rotated (Z = -3.8, X = 0.0, rotated Math.PI)
+    createStandaloneTable("PC-8", 0.0, -3.8, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
+}
+
+/**
+ * Creates a standalone table workstation (for PC-7 and PC-8)
+ */
+function createStandaloneTable(pcId, posX, posZ, rotY, woodMat, metalLegMat, tablePosY, slabH) {
+    const tableW = 2.0;
+    const tableD = 1.1;
+
     const group = new THREE.Group();
     group.position.set(posX, 0, posZ);
     group.rotation.y = rotY;
 
-    // 1. Table Top (Cream Wood)
-    const tableW = 2.0;
-    const tableD = 1.1;
-    const tableH = 0.08;
-    const tablePosY = 1.0;
+    // Tabletop
+    const top = new THREE.Mesh(new THREE.BoxGeometry(tableW, slabH, tableD), woodMat);
+    top.position.set(0, tablePosY, 0);
+    top.castShadow = true;
+    top.receiveShadow = true;
+    group.add(top);
 
-    const woodMat = new THREE.MeshStandardMaterial({
-        color: COLORS.tableWood,
-        roughness: 0.5,
-        metalness: 0.05
-    });
-    const tableTop = new THREE.Mesh(new THREE.BoxGeometry(tableW, tableH, tableD), woodMat);
-    tableTop.position.set(0, tablePosY, 0);
-    tableTop.castShadow = true;
-    tableTop.receiveShadow = true;
-    group.add(tableTop);
-
-    // 2. Table Legs (Dark Metal Frame)
-    const legMat = new THREE.MeshStandardMaterial({ color: COLORS.tableLegs, roughness: 0.4 });
+    // Legs
     const legGeo = new THREE.BoxGeometry(0.06, tablePosY, 0.06);
-
     const legOffsets = [
         [-tableW / 2 + 0.1, tablePosY / 2, -tableD / 2 + 0.1],
         [tableW / 2 - 0.1, tablePosY / 2, -tableD / 2 + 0.1],
@@ -265,70 +421,74 @@ function createWorkstation(pcId, posX, posZ, rotY, monitorFacingOpposite = false
         [tableW / 2 - 0.1, tablePosY / 2, tableD / 2 - 0.1]
     ];
     legOffsets.forEach(pos => {
-        const leg = new THREE.Mesh(legGeo, legMat);
+        const leg = new THREE.Mesh(legGeo, metalLegMat);
         leg.position.set(...pos);
         leg.castShadow = true;
         group.add(leg);
     });
 
-    // 3. Monitor Setup
-    const monitorGroup = new THREE.Group();
-    const monitorOffsetZ = monitorFacingOpposite ? 0.25 : -0.25;
-    monitorGroup.position.set(0, tablePosY + tableH / 2, monitorOffsetZ);
-    if (monitorFacingOpposite) {
-        monitorGroup.rotation.y = Math.PI;
-    }
+    scene.add(group);
 
-    // Monitor Stand Base & Arm
-    const bezelMat = new THREE.MeshStandardMaterial({ color: COLORS.monitorBezel, roughness: 0.3 });
+    // Mount Monitor on this standalone table
+    mountMonitorStation(pcId, posX, posZ, rotY, tablePosY + slabH / 2);
+}
+
+/**
+ * Mounts Monitor, Stand, Keyboard, Mouse, Ergonomic Chair, and 3D Floating Badge
+ */
+function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
+    const group = new THREE.Group();
+    group.position.set(posX, 0, posZ);
+    group.rotation.y = rotY;
+
+    const bezelMat = new THREE.MeshStandardMaterial({ color: PALETTE.monitorBezel, roughness: 0.3 });
+
+    // Monitor Stand
     const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 0.25), bezelMat);
-    standBase.position.set(0, 0.01, 0);
-    monitorGroup.add(standBase);
+    standBase.position.set(0, surfaceY + 0.01, -0.25);
+    group.add(standBase);
 
     const standArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 0.04), bezelMat);
-    standArm.position.set(0, 0.19, -0.05);
-    monitorGroup.add(standArm);
+    standArm.position.set(0, surfaceY + 0.2, -0.3);
+    group.add(standArm);
 
-    // Monitor Frame / Bezel
+    // Monitor Bezel
     const screenW = 1.05;
     const screenH = 0.65;
     const screenD = 0.04;
     const screenFrame = new THREE.Mesh(new THREE.BoxGeometry(screenW, screenH, screenD), bezelMat);
-    screenFrame.position.set(0, 0.45, 0);
+    screenFrame.position.set(0, surfaceY + 0.45, -0.25);
     screenFrame.castShadow = true;
-    monitorGroup.add(screenFrame);
+    group.add(screenFrame);
 
-    // Glowing Display Screen
+    // Glowing Display Screen (Green/Red)
     const screenMat = new THREE.MeshStandardMaterial({
-        color: COLORS.screenFree,
-        emissive: COLORS.screenFree,
+        color: PALETTE.screenFree,
+        emissive: PALETTE.screenFree,
         emissiveIntensity: 0.75,
         roughness: 0.2
     });
     const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(screenW - 0.06, screenH - 0.06), screenMat);
-    screenMesh.position.set(0, 0.45, screenD / 2 + 0.002);
-    monitorGroup.add(screenMesh);
+    screenMesh.position.set(0, surfaceY + 0.45, -0.25 + screenD / 2 + 0.002);
+    group.add(screenMesh);
 
-    group.add(monitorGroup);
-
-    // 4. Keyboard & Mouse
-    const kbMat = new THREE.MeshStandardMaterial({ color: COLORS.keyboard, roughness: 0.6 });
-    const kbZ = monitorFacingOpposite ? -0.18 : 0.18;
+    // Keyboard & Mouse
+    const kbMat = new THREE.MeshStandardMaterial({ color: PALETTE.keyboard, roughness: 0.6 });
     const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.015, 0.22), kbMat);
-    keyboard.position.set(0, tablePosY + tableH / 2 + 0.008, kbZ);
+    keyboard.position.set(0, surfaceY + 0.008, 0.15);
     group.add(keyboard);
 
     const mouseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.015, 0.12), kbMat);
-    mouseMesh.position.set(0.45, tablePosY + tableH / 2 + 0.008, kbZ);
+    mouseMesh.position.set(0.45, surfaceY + 0.008, 0.15);
     group.add(mouseMesh);
 
-    // 5. Ergonomic Lab Chair
+    // Ergonomic Chair
     const chairGroup = new THREE.Group();
-    const chairZ = monitorFacingOpposite ? -0.75 : 0.75;
-    chairGroup.position.set(0, 0, chairZ);
-    if (monitorFacingOpposite) chairGroup.rotation.y = Math.PI;
+    chairGroup.position.set(0, 0, 0.75);
 
-    const chairMat = new THREE.MeshStandardMaterial({ color: COLORS.chairSeat, roughness: 0.7 });
+    const chairMat = new THREE.MeshStandardMaterial({ color: PALETTE.chairSeat, roughness: 0.7 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: PALETTE.metalFrame, roughness: 0.4 });
+
     const seat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.08, 0.6), chairMat);
     seat.position.set(0, 0.65, 0);
     seat.castShadow = true;
@@ -339,24 +499,24 @@ function createWorkstation(pcId, posX, posZ, rotY, monitorFacingOpposite = false
     backrest.castShadow = true;
     chairGroup.add(backrest);
 
-    const chairStem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.6), legMat);
+    const chairStem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.6), metalMat);
     chairStem.position.set(0, 0.3, 0);
     chairGroup.add(chairStem);
 
-    const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.04, 6), legMat);
+    const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.04, 6), metalMat);
     chairBase.position.set(0, 0.02, 0);
     chairGroup.add(chairBase);
 
     group.add(chairGroup);
 
-    // 6. Floating Status Sprite (Text + Badge)
+    // 3D Floating Badge Sprite
     const sprite = createStatusSprite(pcId, "AVAILABLE", true);
-    sprite.position.set(0, tablePosY + 1.25, 0);
+    sprite.position.set(0, surfaceY + 1.25, 0);
     sprite.scale.set(1.9, 0.75, 1);
     group.add(sprite);
 
-    // 7. Clickable Hitbox for Raycaster
-    const hitBoxGeo = new THREE.BoxGeometry(tableW + 0.2, 2.0, tableD + 0.8);
+    // Click Hitbox for Raycaster
+    const hitBoxGeo = new THREE.BoxGeometry(1.8, 2.0, 1.8);
     const hitBoxMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
     const hitBox = new THREE.Mesh(hitBoxGeo, hitBoxMat);
     hitBox.position.set(0, 1.0, 0);
@@ -374,31 +534,6 @@ function createWorkstation(pcId, posX, posZ, rotY, monitorFacingOpposite = false
         status: "free",
         pcData: null
     };
-}
-
-/**
- * Creates all 8 PCs according to user's layout specification:
- * - 3 consecutive PCs along left wall (PC-1, PC-2, PC-3)
- * - 3 consecutive PCs along right wall (PC-4, PC-5, PC-6)
- * - PC-7 near front/entrance
- * - PC-8 facing back wall
- */
-function buildAllWorkstations() {
-    // Left Wall PCs (X = -5.3, facing inwards into the lab, rotated Math.PI / 2)
-    createWorkstation("PC-1", -5.3, 1.8, Math.PI / 2);
-    createWorkstation("PC-2", -5.3, -0.9, Math.PI / 2);
-    createWorkstation("PC-3", -5.3, -3.6, Math.PI / 2);
-
-    // Right Wall PCs (X = +5.3, facing inwards, rotated -Math.PI / 2)
-    createWorkstation("PC-4", 5.3, 1.8, -Math.PI / 2);
-    createWorkstation("PC-5", 5.3, -0.9, -Math.PI / 2);
-    createWorkstation("PC-6", 5.3, -3.6, -Math.PI / 2);
-
-    // PC-7 (Front / Entrance area, facing room = 0 deg)
-    createWorkstation("PC-7", 0.0, 4.2, 0);
-
-    // PC-8 (Back Wall, "facing the back wall" = rotated Math.PI)
-    createWorkstation("PC-8", 0.0, -5.2, Math.PI, true);
 }
 
 /**
@@ -426,7 +561,7 @@ function drawSpriteCanvas(ctx, pcId, statusText, isFree) {
     // Card background pill
     const radius = 24;
     const bgColor = isFree ? "rgba(16, 185, 129, 0.92)" : "rgba(239, 68, 68, 0.95)";
-    ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+    ctx.fillStyle = "rgba(15, 20, 28, 0.9)";
     roundRect(ctx, 16, 16, 480, 168, radius);
     ctx.fill();
 
@@ -508,7 +643,7 @@ function updatePCStatusIn3D(pcs) {
         item.pcData = pc;
 
         // 1. Update Screen Material Color & Emissive
-        const targetColor = isFree ? COLORS.screenFree : COLORS.screenOccupied;
+        const targetColor = isFree ? PALETTE.screenFree : PALETTE.screenOccupied;
         item.screenMat.color.setHex(targetColor);
         item.screenMat.emissive.setHex(targetColor);
         item.screenMat.emissiveIntensity = isFree ? 0.75 : 0.95;
@@ -569,7 +704,7 @@ function highlightPC(pcId, isHovered) {
     if (!item) return;
 
     if (isHovered) {
-        item.screenMat.emissiveIntensity = 1.35;
+        item.screenMat.emissiveIntensity = 1.4;
     } else {
         item.screenMat.emissiveIntensity = item.status === "free" ? 0.75 : 0.95;
     }
@@ -612,7 +747,7 @@ function onWindowResize() {
 }
 
 /**
- * Render Loop with subtle breathing animation on monitors
+ * Render Loop with subtle breathing animation on monitors & infinity glow
  */
 let clock = new THREE.Clock();
 
