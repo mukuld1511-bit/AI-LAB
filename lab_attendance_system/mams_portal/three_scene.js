@@ -106,7 +106,7 @@ function init3DLabScene() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.3;
 
-    // 4. OrbitControls
+    // 4. OrbitControls (Rotation Axis Fixed to Exact Center of Room)
     if (typeof THREE.OrbitControls !== "undefined") {
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
@@ -115,12 +115,11 @@ function init3DLabScene() {
         controls.rotateSpeed = 0.9;
         controls.enableZoom = true;
         controls.zoomSpeed = 1.0;
-        controls.enablePan = true;
-        controls.panSpeed = 0.8;
+        controls.enablePan = false; // Prevents shifting the rotation axis away from room center
         controls.maxPolarAngle = Math.PI / 2.05; // Stay above floor
-        controls.minDistance = 3;
+        controls.minDistance = 4;
         controls.maxDistance = 50;
-        controls.target.set(0, 1.2, 0);
+        controls.target.set(0, 1.2, 0); // Exact center axis of the room
     }
 
     // 5. Rich Warm Lighting Setup
@@ -151,8 +150,7 @@ function init3DLabScene() {
     // View Angle Buttons
     document.getElementById("reset-cam-btn")?.addEventListener("click", () => {
         setDefaultCameraPosition();
-        if (controls) controls.target.set(0, 1.2, 0);
-        showToast("🎯 Reset Isometric View");
+        showToast("🎯 Reset View to Center");
     });
 
     document.getElementById("rotate-90-btn")?.addEventListener("click", () => {
@@ -160,7 +158,7 @@ function init3DLabScene() {
     });
 
     document.getElementById("gate-view-btn")?.addEventListener("click", () => {
-        setCameraView(-3.0, 3.2, 11.5, -3.0, 1.2, 0);
+        setCameraView(-3.0, 3.2, 11.5, 0, 1.2, 0);
         showToast("🚪 Entrance Gate View");
     });
 
@@ -177,7 +175,7 @@ function setDefaultCameraPosition() {
     setCameraView(15.5, 16.5, 17.5, 0, 1.2, 0);
 }
 
-function setCameraView(px, py, pz, tx, ty, tz) {
+function setCameraView(px, py, pz, tx = 0, ty = 1.2, tz = 0) {
     camera.position.set(px, py, pz);
     if (controls) {
         controls.target.set(tx, ty, tz);
@@ -189,11 +187,13 @@ function setCameraView(px, py, pz, tx, ty, tz) {
 
 function rotateViewByAngle(rad) {
     if (!controls) return;
-    const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+    const roomCenter = new THREE.Vector3(0, 1.2, 0);
+    const offset = new THREE.Vector3().subVectors(camera.position, roomCenter);
     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), rad);
-    camera.position.addVectors(controls.target, offset);
+    camera.position.addVectors(roomCenter, offset);
+    controls.target.copy(roomCenter);
     controls.update();
-    showToast("🔄 Rotated View 90°");
+    showToast("🔄 Rotated 90° Around Room Center");
 }
 
 /**
@@ -351,6 +351,8 @@ function buildSingleCenterCeilingACAndSwitchPanel() {
  * Builds Scaled-Up Black Floor, 4 Dark Grey Pillars, 30% Cream Walls, Glass Walls, and Single Glass Gate
  */
 function buildRoomArchitecture() {
+    wallOccluders = []; // Reset occluders
+
     const roomW = 16.0;
     const roomD = 16.0;
     const pillarW = 0.70;
@@ -396,7 +398,9 @@ function buildRoomArchitecture() {
         pillar.position.set(...pos);
         pillar.castShadow = true;
         pillar.receiveShadow = true;
+        pillar.userData = { isOccluder: true, isWall: true };
         scene.add(pillar);
+        wallOccluders.push(pillar);
     });
 
     // 3. Wall Architecture (Seamlessly sealed room connecting directly into all 4 corner pillars)
@@ -425,7 +429,9 @@ function buildRoomArchitecture() {
         wall.position.set(x, y, z);
         wall.castShadow = true;
         wall.receiveShadow = true;
+        wall.userData = { isOccluder: true, isWall: true };
         scene.add(wall);
+        wallOccluders.push(wall);
 
         // Top Frame Trim
         const topFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.08, d + 0.02), frameMat);
@@ -495,12 +501,16 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     const leftPost = new THREE.Mesh(postGeo, frameMat);
     leftPost.position.set(xLeft, gateHeight / 2, zPos);
     leftPost.castShadow = true;
+    leftPost.userData = { isOccluder: true, isWall: true };
     gateGroup.add(leftPost);
+    wallOccluders.push(leftPost);
 
     const rightPost = new THREE.Mesh(postGeo, frameMat);
     rightPost.position.set(xRight, gateHeight / 2, zPos);
     rightPost.castShadow = true;
+    rightPost.userData = { isOccluder: true, isWall: true };
     gateGroup.add(rightPost);
+    wallOccluders.push(rightPost);
 
     // 2. Overhead Lintel Beam
     const lintelW = gateSpan + 0.14;
@@ -549,7 +559,9 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     });
     const redBoardMesh = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.85, 0.05), redBoardMat);
     redBoardMesh.castShadow = true;
+    redBoardMesh.userData = { isOccluder: true, isWall: true };
     signBoardGroup.add(redBoardMesh);
+    wallOccluders.push(redBoardMesh);
 
     // White Plate Inset with strictly "AI LAB" Name
     const whitePlateTexture = createAILabPlateTexture();
@@ -563,6 +575,24 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     signBoardGroup.add(whitePlateMesh);
 
     gateGroup.add(signBoardGroup);
+
+    // 5. Access Scanner Pedestal on entrance side
+    const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.3 });
+    const scannerPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.1, 0.2), pedestalMat);
+    scannerPedestal.position.set(xRight + 0.25, 0.55, zPos + 0.65);
+    scannerPedestal.castShadow = true;
+    gateGroup.add(scannerPedestal);
+
+    const scannerBezel = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.16), new THREE.MeshStandardMaterial({
+        color: 0x3b82f6,
+        emissive: 0x3b82f6,
+        emissiveIntensity: 1.2
+    }));
+    scannerBezel.position.set(xRight + 0.25, 1.12, zPos + 0.65);
+    gateGroup.add(scannerBezel);
+
+    scene.add(gateGroup);
+}
 
     // 5. Access Scanner Pedestal on entrance side
     const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.3 });
@@ -1003,10 +1033,17 @@ function getIntersectedObject(clientX, clientY) {
     if (switchPanelRef.lightHitBox) hitBoxes.push(switchPanelRef.lightHitBox);
     if (switchPanelRef.acHitBox) hitBoxes.push(switchPanelRef.acHitBox);
 
-    const intersects = raycaster.intersectObjects(hitBoxes);
+    // Combine interactive targets with solid wall & pillar occluders
+    const allTargets = [...hitBoxes, ...wallOccluders];
+    const intersects = raycaster.intersectObjects(allTargets, false);
 
     if (intersects.length > 0) {
-        return intersects[0].object.userData;
+        const firstHit = intersects[0].object;
+        // If the line of sight is blocked by a wall or pillar, do NOT click through!
+        if (firstHit.userData && (firstHit.userData.isOccluder || firstHit.userData.isWall)) {
+            return null;
+        }
+        return firstHit.userData;
     }
     return null;
 }
