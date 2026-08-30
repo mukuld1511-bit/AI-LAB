@@ -997,49 +997,51 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 
     const bezelMat = new THREE.MeshStandardMaterial({ color: PALETTE.monitorBezel, roughness: 0.3 });
 
-    // Monitor Stand
-    const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.03, 0.30), bezelMat);
-    standBase.position.set(0, surfaceY + 0.015, -0.32);
+    // Monitor Stand (Heavy Duty Pro Base)
+    const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.04, 0.35), bezelMat);
+    standBase.position.set(0, surfaceY + 0.02, -0.36);
     group.add(standBase);
 
-    const standArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.05), bezelMat);
-    standArm.position.set(0, surfaceY + 0.24, -0.38);
+    const standArm = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.55, 0.06), bezelMat);
+    standArm.position.set(0, surfaceY + 0.28, -0.42);
     group.add(standArm);
 
-    // Monitor Bezel (Large Ultrawide / Pro Scale: 1.45m x 0.85m)
-    const screenW = 1.45;
-    const screenH = 0.85;
+    // Massive Pro Monitor Bezel (1.90m x 1.10m Ultrawide Display)
+    const screenW = 1.90;
+    const screenH = 1.10;
     const screenD = 0.05;
     const screenFrame = new THREE.Mesh(new THREE.BoxGeometry(screenW, screenH, screenD), bezelMat);
-    screenFrame.position.set(0, surfaceY + 0.55, -0.32);
+    screenFrame.position.set(0, surfaceY + 0.68, -0.36);
     screenFrame.castShadow = true;
     group.add(screenFrame);
 
-    // Glowing Display Screen (Green/Red)
+    // Dedicated Glowing Screen Panel with High-Visibility PC ID and Live Status
+    const screenTexData = createMonitorScreenTexture(pcId, true, null);
     const screenMat = new THREE.MeshStandardMaterial({
-        color: PALETTE.screenFree,
-        emissive: PALETTE.screenFree,
-        emissiveIntensity: 0.75,
-        roughness: 0.2
+        map: screenTexData.texture,
+        roughness: 0.15,
+        metalness: 0.05,
+        emissive: 0x052e16,
+        emissiveIntensity: 0.9
     });
     const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(screenW - 0.08, screenH - 0.08), screenMat);
-    screenMesh.position.set(0, surfaceY + 0.55, -0.32 + screenD / 2 + 0.002);
+    screenMesh.position.set(0, surfaceY + 0.68, -0.36 + screenD / 2 + 0.002);
     group.add(screenMesh);
 
     // Keyboard & Mouse (Scaled proportionally)
     const kbMat = new THREE.MeshStandardMaterial({ color: PALETTE.keyboard, roughness: 0.6 });
-    const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.02, 0.28), kbMat);
-    keyboard.position.set(0, surfaceY + 0.01, 0.18);
+    const keyboard = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.025, 0.32), kbMat);
+    keyboard.position.set(0, surfaceY + 0.012, 0.18);
     group.add(keyboard);
 
-    const mouseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.02, 0.16), kbMat);
-    mouseMesh.position.set(0.58, surfaceY + 0.01, 0.18);
+    const mouseMesh = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.18), kbMat);
+    mouseMesh.position.set(0.68, surfaceY + 0.012, 0.18);
     group.add(mouseMesh);
 
     // PC High Performance Tower Beside Desk
     const towerMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.5 });
-    const towerMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.65, 0.60), towerMat);
-    towerMesh.position.set(0.68, 0.33, -0.15);
+    const towerMesh = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.72, 0.68), towerMat);
+    towerMesh.position.set(0.78, 0.36, -0.15);
     towerMesh.castShadow = true;
     group.add(towerMesh);
 
@@ -1049,7 +1051,7 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
         emissive: 0x38bdf8,
         emissiveIntensity: 1.5
     }));
-    towerLed.position.set(0.68, 0.58, 0.155);
+    towerLed.position.set(0.78, 0.64, 0.195);
     group.add(towerLed);
 
     // Ergonomic Chair (Scaled Proportionally)
@@ -1059,13 +1061,13 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
     const chairMat = new THREE.MeshStandardMaterial({ color: PALETTE.chairSeat, roughness: 0.7 });
     const metalMat = new THREE.MeshStandardMaterial({ color: PALETTE.metalFrame, roughness: 0.4 });
 
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.10, 0.72), chairMat);
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.10, 0.76), chairMat);
     seat.position.set(0, 0.68, 0);
     seat.castShadow = true;
     chairGroup.add(seat);
 
-    const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.80, 0.82, 0.08), chairMat);
-    backrest.position.set(0, 1.15, 0.32);
+    const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.86, 0.08), chairMat);
+    backrest.position.set(0, 1.18, 0.34);
     backrest.castShadow = true;
     chairGroup.add(backrest);
 
@@ -1073,23 +1075,17 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
     chairStem.position.set(0, 0.32, 0);
     chairGroup.add(chairStem);
 
-    const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 6), metalMat);
+    const chairBase = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.05, 6), metalMat);
     chairBase.position.set(0, 0.025, 0);
     chairGroup.add(chairBase);
 
     group.add(chairGroup);
 
-    // 3D Floating Badge Sprite (Large High-DPI Scale)
-    const sprite = createStatusSprite(pcId, "AVAILABLE", true);
-    sprite.position.set(0, surfaceY + 1.55, 0);
-    sprite.scale.set(2.4, 0.95, 1);
-    group.add(sprite);
-
     // Click Hitbox for Raycaster (Scaled to match larger station)
-    const hitBoxGeo = new THREE.BoxGeometry(2.4, 2.4, 2.4);
+    const hitBoxGeo = new THREE.BoxGeometry(2.6, 2.6, 2.6);
     const hitBoxMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 });
     const hitBox = new THREE.Mesh(hitBoxGeo, hitBoxMat);
-    hitBox.position.set(0, 1.2, 0);
+    hitBox.position.set(0, 1.3, 0);
     hitBox.userData = { pcId: pcId };
     group.add(hitBox);
 
@@ -1099,7 +1095,7 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
         group: group,
         screenMesh: screenMesh,
         screenMat: screenMat,
-        sprite: sprite,
+        screenTexData: screenTexData,
         hitBox: hitBox,
         status: "free",
         pcData: null
@@ -1107,81 +1103,96 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY) {
 }
 
 /**
- * Generates high-DPI canvas texture for 3D floating sprite badge
+ * Generates High-DPI 1024x600 screen interface texture rendered directly on the monitor display panel
  */
-function createStatusSprite(pcId, statusText, isFree) {
+function createMonitorScreenTexture(pcId, isFree, studentName = null) {
     const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 200;
+    canvas.width = 1024;
+    canvas.height = 600;
     const ctx = canvas.getContext("2d");
 
-    drawSpriteCanvas(ctx, pcId, statusText, isFree);
+    drawScreenCanvas(ctx, pcId, isFree, studentName);
 
     const texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.LinearFilter;
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-    const sprite = new THREE.Sprite(spriteMat);
-    sprite.userData = { canvas: canvas, ctx: ctx, texture: texture };
-    return sprite;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    if (THREE.sRGBEncoding) texture.encoding = THREE.sRGBEncoding;
+    return { texture: texture, canvas: canvas, ctx: ctx };
 }
 
-function drawSpriteCanvas(ctx, pcId, statusText, isFree) {
-    ctx.clearRect(0, 0, 512, 200);
+function drawScreenCanvas(ctx, pcId, isFree, studentName = null) {
+    ctx.clearRect(0, 0, 1024, 600);
 
-    // Card background pill
-    const radius = 24;
-    const bgColor = isFree ? "rgba(16, 185, 129, 0.92)" : "rgba(239, 68, 68, 0.95)";
-    ctx.fillStyle = "rgba(15, 20, 28, 0.9)";
-    roundRect(ctx, 16, 16, 480, 168, radius);
+    // 1. Dark Futuristic Cyber Wallpaper
+    const bg = ctx.createLinearGradient(0, 0, 0, 600);
+    if (isFree) {
+        bg.addColorStop(0, "#032018");
+        bg.addColorStop(0.5, "#064e3b");
+        bg.addColorStop(1, "#021c15");
+    } else {
+        bg.addColorStop(0, "#380606");
+        bg.addColorStop(0.5, "#7f1d1d");
+        bg.addColorStop(1, "#280505");
+    }
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 1024, 600);
+
+    // 2. High-Tech Cyber Grid Background
+    ctx.strokeStyle = isFree ? "rgba(52, 211, 153, 0.22)" : "rgba(248, 113, 113, 0.22)";
+    ctx.lineWidth = 1.5;
+    for (let x = 32; x < 1024; x += 55) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 600);
+        ctx.stroke();
+    }
+    for (let y = 32; y < 600; y += 55) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(1024, y);
+        ctx.stroke();
+    }
+
+    // 3. Main Glass HUD Panel Card on Screen
+    ctx.fillStyle = isFree ? "rgba(6, 78, 59, 0.75)" : "rgba(127, 29, 29, 0.75)";
+    roundRect(ctx, 48, 40, 928, 520, 24);
     ctx.fill();
 
     ctx.strokeStyle = isFree ? "#10b981" : "#ef4444";
-    ctx.lineWidth = 6;
-    roundRect(ctx, 16, 16, 480, 168, radius);
+    ctx.lineWidth = 5;
+    roundRect(ctx, 48, 40, 928, 520, 24);
     ctx.stroke();
 
-    // PC Name (Top)
+    // 4. Header Tag Bar
+    ctx.fillStyle = isFree ? "#34d399" : "#fca5a5";
+    ctx.font = "bold 32px 'Inter', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`⚡ AI LAB WORKSTATION  •  NODE ID`, 512, 105);
+
+    // 5. Giant Bold High-Visibility PC Name
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 52px 'Inter', sans-serif";
+    ctx.font = "900 125px 'Inter', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`💻 ${pcId}`, 256, 70);
+    ctx.shadowColor = isFree ? "rgba(16, 185, 129, 0.8)" : "rgba(239, 68, 68, 0.8)";
+    ctx.shadowBlur = 30;
+    ctx.fillText(pcId, 512, 235);
+    ctx.shadowBlur = 0; // reset shadow
 
-    // Status Pill (Bottom)
-    ctx.fillStyle = bgColor;
-    roundRect(ctx, 60, 110, 392, 54, 16);
+    // 6. Prominent Glowing Status Banner
+    const pillColor = isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)";
+    ctx.fillStyle = pillColor;
+    roundRect(ctx, 160, 345, 704, 88, 20);
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 32px 'Inter', sans-serif";
-    const label = isFree ? "🟢 AVAILABLE" : `🔴 ${statusText}`;
-    ctx.fillText(label, 256, 138);
-}
+    ctx.font = "900 42px 'Inter', sans-serif";
+    const statusText = isFree ? "🟢 AVAILABLE (TAP TO OCCUPY)" : `🔴 OCCUPIED (${studentName || "IN USE"})`;
+    ctx.fillText(statusText, 512, 389);
 
-function createTextBadge(text, textColor, bgColor) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 160;
-    const ctx = canvas.getContext("2d");
-
-    ctx.fillStyle = bgColor;
-    roundRect(ctx, 10, 10, 492, 140, 24);
-    ctx.fill();
-
-    ctx.strokeStyle = textColor;
-    ctx.lineWidth = 4;
-    roundRect(ctx, 10, 10, 492, 140, 24);
-    ctx.stroke();
-
-    ctx.fillStyle = textColor;
-    ctx.font = "bold 44px 'Inter', sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, 256, 80);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
-    return new THREE.Sprite(mat);
+    // 7. Footer Hardware & Network Stats
+    ctx.fillStyle = isFree ? "#a7f3d0" : "#fecaca";
+    ctx.font = "bold 24px 'Inter', monospace";
+    ctx.fillText("⚡ NVIDIA RTX 4090 • CUDA ACTIVE • 10Gbps FIBER ⚡", 512, 495);
 }
 
 function roundRect(ctx, x, y, width, height, radius) {
@@ -1212,18 +1223,17 @@ function updatePCStatusIn3D(pcs) {
         item.status = isFree ? "free" : "occupied";
         item.pcData = pc;
 
-        // 1. Update Screen Material Color & Emissive
-        const targetColor = isFree ? PALETTE.screenFree : PALETTE.screenOccupied;
-        item.screenMat.color.setHex(targetColor);
-        item.screenMat.emissive.setHex(targetColor);
-        item.screenMat.emissiveIntensity = isFree ? 0.75 : 0.95;
-
-        // 2. Update Floating Sprite Canvas Texture
-        if (item.sprite && item.sprite.userData) {
-            const { ctx, texture } = item.sprite.userData;
-            const statusLabel = isFree ? "AVAILABLE" : (pc.occupied_by || "IN USE");
-            drawSpriteCanvas(ctx, pc.pc_id, statusLabel, isFree);
+        // Update Screen Material & Texture Directly on the Monitor Display
+        if (item.screenTexData) {
+            const { ctx, texture } = item.screenTexData;
+            const studentLabel = isFree ? null : (pc.occupied_by || "IN USE");
+            drawScreenCanvas(ctx, pc.pc_id, isFree, studentLabel);
             texture.needsUpdate = true;
+        }
+
+        if (item.screenMat) {
+            item.screenMat.emissive.setHex(isFree ? 0x052e16 : 0x450a0a);
+            item.screenMat.emissiveIntensity = isFree ? 0.8 : 1.0;
         }
     });
 }
