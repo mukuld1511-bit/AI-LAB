@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, Query
@@ -8,10 +9,24 @@ from pydantic import BaseModel
 
 import database
 
+# Root directory of lab attendance system
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UNKNOWN_FACES_DIR = os.path.join(BASE_DIR, "unknown_faces")
+os.makedirs(UNKNOWN_FACES_DIR, exist_ok=True)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database on startup."""
+    database.init_db()
+    yield
+
+
 app = FastAPI(
     title="AI/ML Lab Attendance & PC Occupancy System",
     description="Backend API for Richa Mam's AI Lab Attendance & PC Tracker",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Enable CORS for local network and web dashboards
@@ -22,11 +37,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Root directory of lab attendance system
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-UNKNOWN_FACES_DIR = os.path.join(BASE_DIR, "unknown_faces")
-os.makedirs(UNKNOWN_FACES_DIR, exist_ok=True)
 
 # Mount unknown faces for static image access
 app.mount("/unknown_faces_static", StaticFiles(directory=UNKNOWN_FACES_DIR), name="unknown_faces_static")
@@ -40,12 +50,6 @@ class OccupyRequest(BaseModel):
 
 class FreeRequest(BaseModel):
     pc_id: str
-
-
-@app.on_event("startup")
-def startup_event():
-    """Ensure database tables and initial PC status seed on startup."""
-    database.init_db()
 
 
 @app.get("/health")

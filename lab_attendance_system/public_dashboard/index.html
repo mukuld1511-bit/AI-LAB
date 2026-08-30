@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI/ML Lab - PC & Attendance Tracker</title>
+    <meta name="description" content="Live PC occupancy and face recognition attendance tracker for Richa Mam's AI/ML Lab">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🖥️</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2>⚙️ Backend Connection</h2>
+            <p>Enter your ngrok URL (or local backend URL) to connect:</p>
+            <input type="text" id="api-url-input" placeholder="https://abc123.ngrok-free.app" />
+            <div class="modal-actions">
+                <button id="save-url-btn" class="btn btn-primary">💾 Save & Connect</button>
+                <button id="close-modal-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+            <div id="connection-status"></div>
+        </div>
+    </div>
+
+    <!-- Top Header -->
+    <header class="top-header">
+        <div class="header-left">
+            <h1>🖥️ AI/ML Lab Monitor</h1>
+            <span class="header-sub">In-Charge: Richa Mam</span>
+        </div>
+        <div class="header-right">
+            <span id="connection-badge" class="badge badge-disconnected">● Disconnected</span>
+            <button id="settings-btn" class="btn btn-icon" title="Connection Settings">⚙️</button>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="pc-status">🖥️ PC Status</button>
+        <button class="tab-btn" data-tab="attendance">📋 Attendance</button>
+        <button class="tab-btn" data-tab="unknown-faces">📸 Unknown Faces</button>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB 1: PC STATUS                           -->
+    <!-- ═══════════════════════════════════════════ -->
+    <main id="tab-pc-status" class="tab-content active">
+        <div class="page-title">
+            <h2>PC Occupancy Tracker</h2>
+            <p>Live system status for Faculty & Students</p>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="metrics-row">
+            <div class="metric-card">
+                <div class="metric-value" id="total-pcs">10</div>
+                <div class="metric-label">Total Lab PCs</div>
+            </div>
+            <div class="metric-card metric-green">
+                <div class="metric-value" id="free-pcs">-</div>
+                <div class="metric-label">🟢 Free Systems</div>
+            </div>
+            <div class="metric-card metric-red">
+                <div class="metric-value" id="occupied-pcs">-</div>
+                <div class="metric-label">🔴 Occupied</div>
+            </div>
+        </div>
+
+        <!-- PC Grid -->
+        <h3 class="section-title">Lab Systems Overview</h3>
+        <div id="pc-grid" class="pc-grid">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Claim a PC -->
+        <hr class="divider">
+        <h3 class="section-title">📝 Claim a PC (Mark as Occupied)</h3>
+        <div id="claim-section" class="claim-form">
+            <div class="form-row">
+                <select id="pc-select" class="form-select">
+                    <option value="">Loading...</option>
+                </select>
+                <input type="text" id="claim-name" class="form-input" placeholder="Your Name / Faculty Name (e.g. Ayush, Dr. Sharma)">
+                <button id="claim-btn" class="btn btn-primary">✅ Mark Occupied</button>
+            </div>
+            <div id="claim-message"></div>
+        </div>
+
+        <!-- Quick Messages -->
+        <hr class="divider">
+        <h3 class="section-title">📋 Quick Messages</h3>
+        <p class="section-sub">One-click copy templates for WhatsApp / SMS announcements:</p>
+
+        <div class="msg-template">
+            <div class="msg-header"><strong>Template 1: Available PCs</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
+            <pre class="msg-body">Lab PC Availability Update:
+The following PCs are currently free — [EDIT: PC LIST]
+Please come to the AI Lab if you'd like to use one.
+
+- Richa Mam</pre>
+        </div>
+
+        <div class="msg-template">
+            <div class="msg-header"><strong>Template 2: All Occupied</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
+            <pre class="msg-body">Lab PC Availability Update:
+All PCs in the AI Lab are currently occupied.
+Will update once a system is free.
+
+- Richa Mam</pre>
+        </div>
+
+        <div class="msg-template">
+            <div class="msg-header"><strong>Template 3: Assign Specific PC</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
+            <pre class="msg-body">Hi [EDIT: Faculty Name],
+PC-[EDIT: X] is currently free in the AI Lab. You can come and use it.
+
+- Richa Mam</pre>
+        </div>
+
+        <div class="msg-template">
+            <div class="msg-header"><strong>Template 4: Reminder to Free PC</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
+            <pre class="msg-body">Reminder: If you're done using your PC in the AI Lab,
+please mark it as "Free" on the tracker so others can use it.
+
+- Richa Mam</pre>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB 2: ATTENDANCE LOGS                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <main id="tab-attendance" class="tab-content">
+        <div class="page-title">
+            <h2>📋 Lab Attendance Logs (Face Recognition)</h2>
+            <p>Real-time camera in/out event history</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-row">
+            <div class="filter-group">
+                <label>Filter by Date</label>
+                <input type="date" id="filter-date" class="form-input">
+            </div>
+            <div class="filter-group">
+                <label>Filter by Name</label>
+                <input type="text" id="filter-name" class="form-input" placeholder="Search by name...">
+            </div>
+            <div class="filter-group filter-actions">
+                <button id="apply-filter-btn" class="btn btn-primary">🔍 Search</button>
+                <button id="reset-filter-btn" class="btn btn-secondary">🗑️ Reset</button>
+            </div>
+        </div>
+
+        <div id="attendance-status"></div>
+        <div id="attendance-table-wrap">
+            <table id="attendance-table" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Known Face</th>
+                        <th>IN Time</th>
+                        <th>OUT Time</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="attendance-tbody">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TAB 3: UNKNOWN FACES                       -->
+    <!-- ═══════════════════════════════════════════ -->
+    <main id="tab-unknown-faces" class="tab-content">
+        <div class="page-title">
+            <h2>📸 Unknown Visitors & Face Snapshots</h2>
+            <p>Gallery of unrecognized individuals detected by the AI Lab webcam</p>
+        </div>
+
+        <div id="faces-status"></div>
+        <div id="faces-grid" class="faces-grid">
+            <!-- Populated by JS -->
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <p>AI/ML Lab Attendance System • Built for Richa Mam • Face Recognition + PC Tracker</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
