@@ -594,24 +594,6 @@ function build3DLabGate(xLeft, xRight, zPos, gateHeight) {
     scene.add(gateGroup);
 }
 
-    // 5. Access Scanner Pedestal on entrance side
-    const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.3 });
-    const scannerPedestal = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.1, 0.2), pedestalMat);
-    scannerPedestal.position.set(xRight + 0.25, 0.55, zPos + 0.65);
-    scannerPedestal.castShadow = true;
-    gateGroup.add(scannerPedestal);
-
-    const scannerBezel = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.16), new THREE.MeshStandardMaterial({
-        color: 0x3b82f6,
-        emissive: 0x3b82f6,
-        emissiveIntensity: 1.2
-    }));
-    scannerBezel.position.set(xRight + 0.25, 1.12, zPos + 0.65);
-    gateGroup.add(scannerBezel);
-
-    scene.add(gateGroup);
-}
-
 /**
  * Creates high-DPI White Plate texture with strictly "AI LAB" bold red text
  */
