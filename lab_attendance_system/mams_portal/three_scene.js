@@ -140,7 +140,7 @@ function init3DLabScene() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.3;
+    renderer.toneMappingExposure = 1.0; // Balanced exposure to preserve texture fidelity
 
     // 4. OrbitControls (Rotation Axis Fixed to Exact Center of Room)
     if (typeof THREE.OrbitControls !== "undefined") {
@@ -158,7 +158,7 @@ function init3DLabScene() {
         controls.target.set(0, 1.2, 0); // Exact center axis of the room
     }
 
-    // 5. Rich Warm Lighting Setup
+    // 5. Rich Warm Lighting Setup (Studio balanced, no texture washout)
     setupWarmLighting();
 
     // 6. Build Room Architecture (Scaled up room, black floor, 30% cream middle walls, glass walls, 4 pillars)
@@ -233,17 +233,17 @@ function rotateViewByAngle(rad) {
 }
 
 /**
- * Rich Warm Lighting Setup (Golden Sunlight, Amber Chandelier, Cozy Atmosphere)
+ * Rich Warm Lighting Setup (Balanced Golden Sunlight & Soft Amber Radiance)
  */
 function setupWarmLighting() {
-    ambientLightRef = new THREE.AmbientLight(0xffedd5, 0.85); // High warm ambient
+    ambientLightRef = new THREE.AmbientLight(0xfff7ed, 0.50); // Soft natural ambient
     scene.add(ambientLightRef);
 
-    hemiLightRef = new THREE.HemisphereLight(0xfff3e0, 0x241d17, 0.7);
+    hemiLightRef = new THREE.HemisphereLight(0xffffff, 0xdbeafe, 0.45); // Daylight sky bounce
     hemiLightRef.position.set(0, 20, 0);
     scene.add(hemiLightRef);
 
-    keyLightRef = new THREE.DirectionalLight(0xffc87a, 1.25); // Golden directional sun
+    keyLightRef = new THREE.DirectionalLight(0xfffae8, 0.85); // Gentle sunlight
     keyLightRef.position.set(12, 18, 10);
     keyLightRef.castShadow = true;
     keyLightRef.shadow.mapSize.width = 2048;
@@ -258,7 +258,7 @@ function setupWarmLighting() {
     keyLightRef.shadow.bias = -0.0004;
     scene.add(keyLightRef);
 
-    fillLightRef = new THREE.PointLight(0xff9d26, 1.1, 24, 1.2); // Warm center amber radiance
+    fillLightRef = new THREE.PointLight(0xffb84d, 0.40, 22, 1.4); // Subtle warm center fill
     fillLightRef.position.set(0, 3.4, 0);
     scene.add(fillLightRef);
 }
@@ -505,6 +505,9 @@ function buildRoomArchitecture() {
     createWallSegment(0.14, wallH, creamLen, pillarCenterX, wallH / 2, zMiddleCream, creamWallMat);
     createWallSegment(0.12, wallH, glassSideLen, pillarCenterX, wallH / 2, zFrontGlass, glassMat);
 
+    // ── Wall-Mounted AI LAB Poster on Right Side Wall (Facing Into Lab) ──
+    buildRightWallAIPoster(pillarCenterX, zMiddleCream);
+
     // ── Front Wall: Seals seamlessly to both front corner pillars with gate opening in between ──
     const gateLeftX = -4.6;
     const gateRightX = -1.8;
@@ -519,6 +522,164 @@ function buildRoomArchitecture() {
 
     // 4. Physical 3D Entrance Gate with Interactive Openable Single Glass Door & Red Signboard
     build3DLabGate(gateLeftX, gateRightX, pillarCenterZ, wallH);
+}
+
+/**
+ * Builds Wall-Mounted Illuminated AI LAB Poster on the Right Wall
+ */
+function buildRightWallAIPoster(wallX, wallZ) {
+    const posterW = 2.6;
+    const posterH = 1.5;
+    const posterGroup = new THREE.Group();
+    posterGroup.position.set(wallX - 0.10, 2.35, wallZ); // Mounted on interior face of right wall
+    posterGroup.rotation.y = -Math.PI / 2; // Face towards left (-X into the room)
+
+    // Dark sleek aluminium frame
+    const posterFrameMat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        roughness: 0.25,
+        metalness: 0.8
+    });
+    const posterFrame = new THREE.Mesh(new THREE.BoxGeometry(posterW + 0.12, posterH + 0.12, 0.04), posterFrameMat);
+    posterGroup.add(posterFrame);
+
+    // Canvas Artwork Inset
+    const posterArtTexture = createAILabPosterTexture();
+    const posterArtMat = new THREE.MeshStandardMaterial({
+        map: posterArtTexture,
+        roughness: 0.35,
+        metalness: 0.05
+    });
+    const posterArt = new THREE.Mesh(new THREE.BoxGeometry(posterW, posterH, 0.02), posterArtMat);
+    posterArt.position.set(0, 0, 0.022);
+    posterGroup.add(posterArt);
+
+    // Subtle soft gallery spotlight above poster
+    const posterSpot = new THREE.PointLight(0x38bdf8, 0.35, 6, 1.5);
+    posterSpot.position.set(0, posterH / 2 + 0.2, 0.25);
+    posterGroup.add(posterSpot);
+
+    scene.add(posterGroup);
+}
+
+/**
+ * Creates High-DPI Procedural Futuristic "AI LAB" Poster Artwork Texture
+ */
+function createAILabPosterTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 600;
+    const ctx = canvas.getContext("2d");
+
+    // 1. Dark Futuristic Deep Slate Gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 1024, 600);
+    bgGrad.addColorStop(0, "#080c16");
+    bgGrad.addColorStop(0.5, "#0f172a");
+    bgGrad.addColorStop(1, "#030712");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 1024, 600);
+
+    // 2. Subtle Cyber Grid Traces
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.10)";
+    ctx.lineWidth = 1.5;
+    for (let x = 40; x < 1024; x += 55) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 600);
+        ctx.stroke();
+    }
+    for (let y = 40; y < 600; y += 55) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(1024, y);
+        ctx.stroke();
+    }
+
+    // 3. Neural Synapse Network Nodes & Connections
+    const nodes = [
+        [160, 130], [280, 90], [512, 140], [740, 90], [860, 130],
+        [200, 470], [360, 510], [512, 450], [660, 510], [820, 470],
+        [120, 300], [900, 300]
+    ];
+
+    ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+            const dx = nodes[i][0] - nodes[j][0];
+            const dy = nodes[i][1] - nodes[j][1];
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 260) {
+                ctx.beginPath();
+                ctx.moveTo(nodes[i][0], nodes[i][1]);
+                ctx.lineTo(nodes[j][0], nodes[j][1]);
+                ctx.stroke();
+            }
+        }
+    }
+
+    nodes.forEach(([nx, ny], idx) => {
+        ctx.fillStyle = idx % 2 === 0 ? "rgba(56, 189, 248, 0.85)" : "rgba(244, 63, 94, 0.85)";
+        ctx.beginPath();
+        ctx.arc(nx, ny, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(nx, ny, 3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // 4. Futuristic Double Poster Border
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 4;
+    roundRect(ctx, 30, 30, 964, 540, 18);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(251, 191, 36, 0.6)";
+    ctx.lineWidth = 2;
+    roundRect(ctx, 42, 42, 940, 516, 12);
+    ctx.stroke();
+
+    // 5. Header
+    ctx.fillStyle = "#38bdf8";
+    ctx.font = "bold 26px 'Inter', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("CENTER FOR ADVANCED RESEARCH & COMPUTING", 512, 100);
+
+    // 6. Glowing "AI LAB" Main Title
+    const titleGrad = ctx.createLinearGradient(200, 0, 800, 0);
+    titleGrad.addColorStop(0.0, "#38bdf8");
+    titleGrad.addColorStop(0.5, "#ffffff");
+    titleGrad.addColorStop(1.0, "#f59e0b");
+
+    ctx.fillStyle = titleGrad;
+    ctx.font = "900 120px 'Inter', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(56, 189, 248, 0.8)";
+    ctx.shadowBlur = 24;
+    ctx.fillText("AI LAB", 512, 260);
+    ctx.shadowBlur = 0;
+
+    // 7. Subtitle
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "bold 28px 'Inter', sans-serif";
+    ctx.fillText("ARTIFICIAL INTELLIGENCE & MACHINE LEARNING", 512, 370);
+
+    // 8. Footer Tech Specs
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "600 20px 'Inter', sans-serif";
+    ctx.fillText("NEURAL NETWORKS • COMPUTER VISION • DEEP LEARNING", 512, 425);
+
+    ctx.fillStyle = "rgba(56, 189, 248, 0.95)";
+    ctx.font = "bold 18px 'Inter', sans-serif";
+    ctx.fillText("⚡ HIGH-THROUGHPUT GPU COMPUTE CLUSTER • ACTIVE WORKSTATIONS ⚡", 512, 500);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    if (THREE.sRGBEncoding) texture.encoding = THREE.sRGBEncoding;
+    return texture;
 }
 
 /**
@@ -681,7 +842,7 @@ function buildInfinityChandelier() {
     const tubeMat = new THREE.MeshStandardMaterial({
         color: PALETTE.infinityGlow,
         emissive: PALETTE.infinityGlow,
-        emissiveIntensity: 2.2,
+        emissiveIntensity: 1.8,
         roughness: 0.1
     });
     infinityTubeMatRef = tubeMat;
@@ -706,12 +867,12 @@ function buildInfinityChandelier() {
         scene.add(cord);
     });
 
-    // Warm Spotlights under the raised infinity loops
-    spotLeftRef = new THREE.PointLight(PALETTE.infinityGlow, 1.8, 16, 1.4);
+    // Soft Warm Studio Spotlights under the raised infinity loops (Gentle intensity, no texture blowout)
+    spotLeftRef = new THREE.PointLight(PALETTE.infinityGlow, 0.50, 14, 1.6);
     spotLeftRef.position.set(-2.4, 4.2, 0);
     scene.add(spotLeftRef);
 
-    spotRightRef = new THREE.PointLight(PALETTE.infinityGlow, 1.8, 16, 1.4);
+    spotRightRef = new THREE.PointLight(PALETTE.infinityGlow, 0.50, 14, 1.6);
     spotRightRef.position.set(2.4, 4.2, 0);
     scene.add(spotRightRef);
 }
@@ -728,18 +889,20 @@ function buildAllLabWorkstations() {
     const slabH = 0.08;
     const tablePosY = 1.0;
 
-    // Wood Grain Texture for Tables & Workstation Slabs
+    // Wood Grain Texture for Tables & Workstation Slabs (Accurate sRGB Color Rendering)
     const textureLoader = new THREE.TextureLoader();
     const woodTableTex = textureLoader.load("wood_texture.jpg");
+    woodTableTex.colorSpace = THREE.SRGBColorSpace;
+    if (THREE.sRGBEncoding) woodTableTex.encoding = THREE.sRGBEncoding;
     woodTableTex.wrapS = THREE.RepeatWrapping;
     woodTableTex.wrapT = THREE.RepeatWrapping;
     woodTableTex.repeat.set(1.5, 4.0);
 
     const woodMat = new THREE.MeshStandardMaterial({
         map: woodTableTex,
-        color: 0xffffff, // Natural blonde ash wood texture
-        roughness: 0.4,
-        metalness: 0.05
+        color: 0xfaf5ee, // Warm natural blonde wood tone
+        roughness: 0.55,
+        metalness: 0.02
     });
     const metalLegMat = new THREE.MeshStandardMaterial({ color: PALETTE.metalFrame, roughness: 0.35 });
 
@@ -1180,20 +1343,20 @@ function toggleLabLights() {
     isLightOn = !isLightOn;
 
     if (isLightOn) {
-        ambientLightRef.intensity = 0.85;
-        hemiLightRef.intensity = 0.7;
-        keyLightRef.intensity = 1.25;
-        fillLightRef.intensity = 1.1;
-        if (spotLeftRef) spotLeftRef.intensity = 1.8;
-        if (spotRightRef) spotRightRef.intensity = 1.8;
-        if (infinityTubeMatRef) infinityTubeMatRef.emissiveIntensity = 2.4;
+        ambientLightRef.intensity = 0.50;
+        hemiLightRef.intensity = 0.45;
+        keyLightRef.intensity = 0.85;
+        fillLightRef.intensity = 0.40;
+        if (spotLeftRef) spotLeftRef.intensity = 0.50;
+        if (spotRightRef) spotRightRef.intensity = 0.50;
+        if (infinityTubeMatRef) infinityTubeMatRef.emissiveIntensity = 1.8;
         if (switchPanelRef.lightBtnMat) switchPanelRef.lightBtnMat.emissiveIntensity = 1.4;
-        showToast("💡 AI LAB Lights: ON (Warm Golden Ambiance)");
+        showToast("💡 AI LAB Lights: ON (Balanced Golden Ambiance)");
     } else {
-        ambientLightRef.intensity = 0.08;
-        hemiLightRef.intensity = 0.08;
-        keyLightRef.intensity = 0.15;
-        fillLightRef.intensity = 0.1;
+        ambientLightRef.intensity = 0.12;
+        hemiLightRef.intensity = 0.10;
+        keyLightRef.intensity = 0.18;
+        fillLightRef.intensity = 0.05;
         if (spotLeftRef) spotLeftRef.intensity = 0.0;
         if (spotRightRef) spotRightRef.intensity = 0.0;
         if (infinityTubeMatRef) infinityTubeMatRef.emissiveIntensity = 0.1;
