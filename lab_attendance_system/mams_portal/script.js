@@ -121,7 +121,7 @@ async function loadPCStatus() {
             const badgeText = isFree ? "🟢 AVAILABLE" : "🔴 IN USE";
             
             return `
-                <div class="pc-card ${cardClass}" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div class="pc-card ${cardClass}" onclick="handlePCClick('${pc.pc_id}', ${isFree})" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                     <div class="status-badge ${badgeClass}" style="position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 4px 8px;">${badgeText}</div>
                     <div style="font-size: 32px; margin-bottom: 8px; margin-top: 10px;">💻</div>
                     <div class="pc-title" style="font-size: 24px; white-space: nowrap;">${pc.pc_id}</div>
@@ -136,6 +136,39 @@ async function loadPCStatus() {
         }).join("");
     } catch(e) {
         console.error("PC load failed", e);
+    }
+}
+
+// Handle PC Click
+async function handlePCClick(pcId, isFree) {
+    if (!BASE_URL) return;
+    
+    if (isFree) {
+        const name = prompt(`Enter student name to assign to ${pcId}:`);
+        if (!name) return; // Cancelled or empty
+        
+        try {
+            await apiFetch("/pc/occupy", {
+                method: "POST",
+                body: JSON.stringify({ pc_id: pcId, name: name })
+            });
+            loadPCStatus(); // Refresh grid
+        } catch(e) {
+            alert("Error occupying PC: " + e.message);
+        }
+    } else {
+        const confirmFree = confirm(`Are you sure you want to mark ${pcId} as FREE?`);
+        if (!confirmFree) return;
+        
+        try {
+            await apiFetch("/pc/free", {
+                method: "POST",
+                body: JSON.stringify({ pc_id: pcId })
+            });
+            loadPCStatus(); // Refresh grid
+        } catch(e) {
+            alert("Error freeing PC: " + e.message);
+        }
     }
 }
 
