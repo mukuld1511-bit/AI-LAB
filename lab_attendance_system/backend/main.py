@@ -69,6 +69,7 @@ class OccupyRequest(BaseModel):
     email: Optional[str] = None
     send_email: Optional[bool] = False
     notes: Optional[str] = None
+    user_role: Optional[str] = "Student"
 
 
 class FreeRequest(BaseModel):
@@ -129,7 +130,7 @@ def get_pc_status() -> List[Dict[str, Any]]:
 @app.post("/pc/occupy")
 def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks):
     """
-    Allocates a PC with optional time duration, end_time, and automated student email.
+    Allocates a PC with optional time duration, end_time, user role (Student/Faculty/Guest), and automated email.
     """
     pc_id = payload.pc_id.strip()
     name = payload.name.strip()
@@ -137,11 +138,12 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
     duration_mins = payload.duration_mins
     end_time = payload.end_time.strip() if payload.end_time else None
     send_email_flag = payload.send_email
+    user_role = payload.user_role or "Student"
 
     if not pc_id:
         raise HTTPException(status_code=400, detail="pc_id is required.")
     if not name:
-        raise HTTPException(status_code=400, detail="Student name is required to occupy a PC.")
+        raise HTTPException(status_code=400, detail="Name is required to occupy a PC.")
 
     # Calculate end_time if duration provided without explicit end_time
     now_dt = datetime.now()
@@ -157,7 +159,8 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
         name=name,
         duration_mins=duration_mins,
         end_time=end_time,
-        user_email=email
+        user_email=email,
+        user_role=user_role
     )
 
     if not success:
@@ -173,16 +176,18 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
                 start_time=start_time_str,
                 end_time=end_time,
                 duration_mins=duration_mins,
-                notes=payload.notes
+                notes=payload.notes,
+                user_role=user_role
             )
         except Exception as e:
             email_response = {"success": False, "error": str(e)}
 
     return {
         "status": "success",
-        "message": f"{pc_id} marked occupied by {name}",
+        "message": f"{pc_id} marked occupied by {name} ({user_role})",
         "pc_id": pc_id,
         "occupied_by": name,
+        "user_role": user_role,
         "since_time": start_time_str,
         "end_time": end_time,
         "duration_mins": duration_mins,
@@ -497,7 +502,65 @@ def enroll_face(payload: EnrollRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── Standalone Email Notification ──
+# ── Standalone Email Notification & Settings ──
+
+class EmailSettingsUpdate(BaseModel):
+    smtp_user: str
+    smtp_password: str
+    smtp_host: Optional[str] = "smtp.gmail.com"
+    smtp_port: Optional[int] = 587
+    sender_name: Optional[str] = "Prof. Richa (AI/ML Lab)"
+    sender_email: Optional[str] = ""
+
+
+class TestEmailRequest(BaseModel):
+    test_email: str
+
+
+@app.get("/api/email_settings")
+def get_email_settings():
+    """Returns current SMTP configuration status (with password masked)."""
+    cfg = mailer.get_smtp_config()
+    is_conf = mailer.is_smtp_configured()
+    return {
+        "smtp_user": cfg["user"],
+        "smtp_host": cfg["host"],
+        "smtp_port": cfg["port"],
+        "sender_name": cfg["sender_name"],
+        "sender_email": cfg["sender_email"],
+        "is_configured": is_conf,
+        "password_masked": "••••••••••••" if is_conf else ""
+    }
+
+
+@app.post("/api/email_settings")
+def save_email_settings(payload: EmailSettingsUpdate):
+    """Saves SMTP credentials into database."""
+    database.set_setting("SMTP_USER", payload.smtp_user.strip())
+    database.set_setting("SMTP_PASSWORD", payload.smtp_password.strip().replace(" ", ""))
+    database.set_setting("SMTP_HOST", payload.smtp_host.strip() if payload.smtp_host else "smtp.gmail.com")
+    database.set_setting("SMTP_PORT", str(payload.smtp_port or 587))
+    database.set_setting("SENDER_NAME", payload.sender_name.strip() if payload.sender_name else "Prof. Richa (AI/ML Lab)")
+    database.set_setting("SENDER_EMAIL", payload.sender_email.strip() if payload.sender_email else payload.smtp_user.strip())
+    return {"status": "success", "message": "Email settings saved successfully!"}
+
+
+@app.post("/api/email_settings/test")
+def test_email_endpoint(payload: TestEmailRequest):
+    """Sends a live test email to verify credentials."""
+    if not payload.test_email.strip() or "@" not in payload.test_email:
+        raise HTTPException(status_code=400, detail="Invalid email address.")
+    
+    result = mailer.send_custom_email(
+        to_email=payload.test_email.strip(),
+        subject="AI/ML Lab System - SMTP Email Verification",
+        message="This is a test notification confirming that live email dispatch from Prof. Richa Mam's AI/ML Lab Management System is configured and working perfectly!",
+        recipient_name="Faculty / Admin"
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("message", "Test email failed."))
+    return result
+
 
 @app.post("/api/send_email")
 def send_email_endpoint(payload: SendEmailRequest):

@@ -214,6 +214,18 @@ function render2DGrid() {
             `;
         }
 
+        let roleBadge = "";
+        if (!isFree && pc.occupied_by) {
+            const role = (pc.user_role || "Student").toLowerCase();
+            if (role === "faculty") {
+                roleBadge = `<span class="role-badge role-badge-faculty">👨‍🏫 Faculty</span>`;
+            } else if (role === "guest") {
+                roleBadge = `<span class="role-badge role-badge-guest">👤 Guest</span>`;
+            } else {
+                roleBadge = `<span class="role-badge role-badge-student">🎓 Student</span>`;
+            }
+        }
+
         return `
             <div class="pc-card ${cardClass}" 
                  id="grid-pc-${pc.pc_id}"
@@ -223,7 +235,10 @@ function render2DGrid() {
                 
                 <div class="pc-header-row">
                     <div class="pc-title">💻 ${pc.pc_id}</div>
-                    <div class="status-badge ${badgeClass}">${badgeText}</div>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        ${roleBadge}
+                        <div class="status-badge ${badgeClass}">${badgeText}</div>
+                    </div>
                 </div>
 
                 <div class="pc-body">
@@ -232,12 +247,13 @@ function render2DGrid() {
                             <span>👤</span> <strong>${pc.occupied_by}</strong>
                         </div>
                         ${pc.user_email ? `<div class="pc-email-info">✉️ ${pc.user_email}</div>` : ''}
-                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
-                            Since: ${pc.since_time ? pc.since_time.split(" ")[1] : "N/A"}
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px; display: flex; justify-content: space-between;">
+                            <span>📅 ${pc.since_time ? pc.since_time.split(" ")[0] : "Today"}</span>
+                            <span>⏰ Since: ${pc.since_time ? pc.since_time.split(" ")[1] : "N/A"}</span>
                         </div>
                     ` : `
                         <div style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 4px;">
-                            No student currently assigned
+                            No user currently assigned
                         </div>
                     `}
                 </div>
@@ -362,10 +378,17 @@ function handlePCClick(pcId, isFree) {
         actionBtn.className = "btn btn-primary";
 
         // Reset form inputs
+        selectUserRole("Student");
         document.getElementById("modal-student-name").value = "";
         document.getElementById("modal-student-email").value = "";
         document.getElementById("modal-faculty-notes").value = "";
         document.getElementById("modal-student-select").value = "";
+        
+        const dateInput = document.getElementById("modal-allotment-date");
+        if (dateInput) {
+            const todayStr = new Date().toISOString().split("T")[0];
+            dateInput.value = todayStr;
+        }
         
         // Select 30 mins by default
         selectDurationChip(30);
@@ -425,15 +448,17 @@ function selectDurationChip(mins) {
         if (customWrap) customWrap.style.display = "none";
         const target = new Date(now.getTime() + parseInt(mins) * 60 * 1000);
         const timeStr = target.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        if (previewSpan) previewSpan.innerText = `${timeStr} (${mins} Minutes from now)`;
+        const dateStr = document.getElementById("modal-allotment-date")?.value || "Today";
+        if (previewSpan) previewSpan.innerText = `${dateStr} at ${timeStr} (${mins} Minutes from now)`;
     }
 }
 
 function updateCustomExpiryPreview() {
     const customInput = document.getElementById("modal-custom-time");
     const previewSpan = document.getElementById("preview-expiry-time");
+    const dateStr = document.getElementById("modal-allotment-date")?.value || "Today";
     if (customInput && previewSpan && customInput.value) {
-        previewSpan.innerText = `Today at ${customInput.value}`;
+        previewSpan.innerText = `${dateStr} at ${customInput.value}`;
     }
 }
 
@@ -462,6 +487,38 @@ function onStudentSelectChange() {
     }
 }
 
+let selectedUserRole = "Student";
+
+function selectUserRole(role) {
+    selectedUserRole = role || "Student";
+    const chips = document.querySelectorAll(".role-chip-btn");
+    chips.forEach(c => {
+        if (c.dataset.role === selectedUserRole) {
+            c.classList.add("active");
+        } else {
+            c.classList.remove("active");
+        }
+    });
+
+    const regGroup = document.getElementById("reg-student-group");
+    const nameLabel = document.getElementById("modal-name-label");
+    const nameInput = document.getElementById("modal-student-name");
+
+    if (selectedUserRole === "Student") {
+        if (regGroup) regGroup.style.display = "block";
+        if (nameLabel) nameLabel.innerText = "Student Name:";
+        if (nameInput) nameInput.placeholder = "e.g. Ayush, Priya (or pick from above list)";
+    } else if (selectedUserRole === "Faculty") {
+        if (regGroup) regGroup.style.display = "none";
+        if (nameLabel) nameLabel.innerText = "Faculty Member Name & Title:";
+        if (nameInput) nameInput.placeholder = "e.g. Dr. Sharma, Prof. Verma";
+    } else if (selectedUserRole === "Guest") {
+        if (regGroup) regGroup.style.display = "none";
+        if (nameLabel) nameLabel.innerText = "Guest / Unregistered User Name:";
+        if (nameInput) nameInput.placeholder = "e.g. Rahul (Visiting Guest), External Researcher";
+    }
+}
+
 // Handle Allot / Free Submit
 async function handleModalActionSubmit() {
     if (!currentPCId) return;
@@ -478,7 +535,7 @@ async function handleModalActionSubmit() {
             const notes = document.getElementById("modal-faculty-notes").value.trim();
 
             if (!name) {
-                showToast("Please enter or select a student name.", "error");
+                showToast("Please enter or select a name.", "error");
                 actionBtn.disabled = false;
                 actionBtn.innerText = "Confirm & Assign Slot";
                 return;
@@ -486,6 +543,8 @@ async function handleModalActionSubmit() {
 
             let durationMins = null;
             let explicitEndTime = null;
+
+            const selectedDateVal = document.getElementById("modal-allotment-date")?.value || new Date().toISOString().split("T")[0];
 
             if (currentSelectedDuration === "custom") {
                 const timeVal = document.getElementById("modal-custom-time").value;
@@ -496,12 +555,10 @@ async function handleModalActionSubmit() {
                     return;
                 }
                 const now = new Date();
+                const [yyyy, MM, dd] = selectedDateVal.split("-");
                 const [hh, mm] = timeVal.split(":");
-                const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hh), parseInt(mm), 0);
+                const target = new Date(parseInt(yyyy), parseInt(MM) - 1, parseInt(dd), parseInt(hh), parseInt(mm), 0);
                 
-                const yyyy = target.getFullYear();
-                const MM = String(target.getMonth() + 1).padStart(2, '0');
-                const dd = String(target.getDate()).padStart(2, '0');
                 const HH = String(target.getHours()).padStart(2, '0');
                 const MIN = String(target.getMinutes()).padStart(2, '0');
                 const SS = "00";
@@ -521,11 +578,12 @@ async function handleModalActionSubmit() {
                     duration_mins: durationMins,
                     end_time: explicitEndTime,
                     send_email: sendEmail && !!email,
-                    notes: notes
+                    notes: notes,
+                    user_role: selectedUserRole
                 })
             });
 
-            let toastMsg = `💻 ${currentPCId} assigned to ${name} (${durationMins} mins)`;
+            let toastMsg = `💻 ${currentPCId} assigned to ${name} (${selectedUserRole}) for ${durationMins} mins`;
             if (sendEmail && email) {
                 toastMsg += ` • ✉️ Email Sent`;
             }
@@ -909,6 +967,95 @@ async function submitNewStudent() {
         showToast("Failed to add student: " + e.message, "error");
         btn.disabled = false;
         btn.innerText = "Save Student";
+    }
+}
+
+// ── Email Settings Modal ──
+
+async function openEmailSettingsModal() {
+    const modal = document.getElementById("email-settings-modal");
+    if (!modal) return;
+
+    modal.style.display = "flex";
+
+    if (BASE_URL) {
+        try {
+            const data = await apiFetch("/api/email_settings");
+            document.getElementById("smtp-user-input").value = data.smtp_user || "";
+            document.getElementById("smtp-sender-name-input").value = data.sender_name || "";
+            document.getElementById("smtp-host-input").value = data.smtp_host || "smtp.gmail.com";
+            document.getElementById("smtp-port-input").value = data.smtp_port || 587;
+            
+            if (data.is_configured) {
+                document.getElementById("smtp-pass-input").placeholder = "•••••••••••• (Password configured)";
+            }
+        } catch (e) {
+            console.error("Failed to load email settings", e);
+        }
+    }
+}
+
+function closeEmailSettingsModal() {
+    const modal = document.getElementById("email-settings-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function saveEmailSettings() {
+    const user = document.getElementById("smtp-user-input").value.trim();
+    const pass = document.getElementById("smtp-pass-input").value.trim();
+    const name = document.getElementById("smtp-sender-name-input").value.trim();
+    const host = document.getElementById("smtp-host-input").value.trim();
+    const port = parseInt(document.getElementById("smtp-port-input").value) || 587;
+    const btn = document.getElementById("save-smtp-btn");
+
+    if (!user || !pass) {
+        showToast("Please provide your Gmail address and App Password.", "error");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Saving...";
+
+    try {
+        await apiFetch("/api/email_settings", {
+            method: "POST",
+            body: JSON.stringify({
+                smtp_user: user,
+                smtp_password: pass,
+                smtp_host: host,
+                smtp_port: port,
+                sender_name: name,
+                sender_email: user
+            })
+        });
+
+        showToast("Email settings saved! Live emails are now enabled.", "success");
+        closeEmailSettingsModal();
+    } catch (e) {
+        showToast("Failed to save settings: " + e.message, "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Save Settings";
+    }
+}
+
+async function sendTestEmail() {
+    const testEmail = document.getElementById("smtp-test-email-input").value.trim();
+    if (!testEmail || !testEmail.includes("@")) {
+        showToast("Please enter a valid recipient email to test.", "error");
+        return;
+    }
+
+    showToast("Sending test email...", "info");
+
+    try {
+        const result = await apiFetch("/api/email_settings/test", {
+            method: "POST",
+            body: JSON.stringify({ test_email: testEmail })
+        });
+        showToast("Test email sent! Please check your inbox / spam folder.", "success");
+    } catch (e) {
+        showToast("Test failed: " + e.message, "error");
     }
 }
 

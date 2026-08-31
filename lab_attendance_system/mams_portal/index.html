@@ -44,6 +44,11 @@
                 ✉️ Send Email
             </button>
 
+            <!-- Email Settings Button -->
+            <button class="btn btn-secondary" onclick="openEmailSettingsModal()" title="Configure Gmail / SMTP Credentials">
+                ⚙️ Mail Config
+            </button>
+
             <!-- Ngrok URL Input (Shows if disconnected) -->
             <div id="connection-ui" style="display: none; display: flex; gap: 6px;">
                 <input type="text" id="ngrok-url" class="form-input" placeholder="Enter Backend / Ngrok URL" style="min-width: 200px; font-size: 12px; padding: 6px 10px;">
@@ -216,19 +221,40 @@
             </div>
             
             <div id="modal-occupy-form">
-                <!-- Select from registered students or custom name -->
+                <!-- User Category / Role Selection -->
                 <div class="form-group">
-                    <label class="form-label">Select Registered Student (or type name):</label>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="modal-student-select" class="form-select" onchange="onStudentSelectChange()">
-                            <option value="">-- Choose Registered Student --</option>
-                        </select>
+                    <label class="form-label">Who is using this Workstation?</label>
+                    <div class="role-selector-chips">
+                        <button type="button" class="role-chip-btn active" data-role="Student" onclick="selectUserRole('Student')">
+                            🎓 Registered Student
+                        </button>
+                        <button type="button" class="role-chip-btn" data-role="Faculty" onclick="selectUserRole('Faculty')">
+                            👨‍🏫 Faculty Member
+                        </button>
+                        <button type="button" class="role-chip-btn" data-role="Guest" onclick="selectUserRole('Guest')">
+                            👤 Unregistered / Guest
+                        </button>
                     </div>
                 </div>
 
+                <!-- Section A: Registered Student Dropdown -->
+                <div class="form-group" id="reg-student-group">
+                    <label class="form-label">Select Registered Student:</label>
+                    <select id="modal-student-select" class="form-select" onchange="onStudentSelectChange()">
+                        <option value="">-- Choose from Registered Database --</option>
+                    </select>
+                </div>
+
+                <!-- Section B: Name Input (Dynamic label & placeholder based on Role) -->
                 <div class="form-group">
-                    <label class="form-label">Student Name:</label>
-                    <input type="text" id="modal-student-name" class="form-input" placeholder="e.g. Ayush, Priya, Dr. Sharma">
+                    <label class="form-label" id="modal-name-label">Student / User Name:</label>
+                    <input type="text" id="modal-student-name" class="form-input" placeholder="e.g. Ayush, Dr. Sharma, Prof. Verma">
+                </div>
+
+                <!-- Section C: Allotment Date Picker -->
+                <div class="form-group">
+                    <label class="form-label">📅 Allotment Date:</label>
+                    <input type="date" id="modal-allotment-date" class="form-input" style="max-width: 220px;">
                 </div>
 
                 <!-- Duration Selection Chips -->
@@ -381,6 +407,67 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeAddStudentModal()">Cancel</button>
                 <button id="save-student-btn" class="btn btn-primary" onclick="submitNewStudent()">Save Student</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- MODAL 5: EMAIL / SMTP CONFIGURATION                -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div id="email-settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 18px;">⚙️ Email / SMTP Settings</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--on-surface-variant);">Configure your Gmail / SMTP account for sending live student emails</p>
+                </div>
+                <button class="modal-close-btn" onclick="closeEmailSettingsModal()">✕</button>
+            </div>
+
+            <div class="alert-box alert-warning" style="margin-bottom: 16px; font-size: 12px; line-height: 1.5;">
+                <div>💡</div>
+                <div>
+                    <strong>Gmail Setup Tip:</strong> Use your Gmail address and a <strong>16-character Google App Password</strong> (from Google Account &gt; Security &gt; 2-Step Verification &gt; App Passwords).
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Gmail / SMTP Username (Your Email):</label>
+                <input type="email" id="smtp-user-input" class="form-input" placeholder="prof.richa@gmail.com">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">App Password (16 characters):</label>
+                <input type="password" id="smtp-pass-input" class="form-input" placeholder="xxxx xxxx xxxx xxxx">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Sender Name:</label>
+                <input type="text" id="smtp-sender-name-input" class="form-input" placeholder="Prof. Richa (AI/ML Lab)">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label class="form-label">SMTP Host:</label>
+                    <input type="text" id="smtp-host-input" class="form-input" value="smtp.gmail.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Port:</label>
+                    <input type="number" id="smtp-port-input" class="form-input" value="587">
+                </div>
+            </div>
+
+            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);">
+                <label class="form-label">Test Email Dispatch:</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="email" id="smtp-test-email-input" class="form-input" placeholder="Enter test recipient email...">
+                    <button class="btn btn-secondary" onclick="sendTestEmail()" style="white-space: nowrap;">⚡ Test Send</button>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEmailSettingsModal()">Cancel</button>
+                <button id="save-smtp-btn" class="btn btn-primary" onclick="saveEmailSettings()">Save Settings</button>
             </div>
         </div>
     </div>

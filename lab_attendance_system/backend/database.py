@@ -44,7 +44,8 @@ def init_db() -> None:
             since_time TEXT,
             end_time TEXT,
             duration_mins INTEGER,
-            user_email TEXT
+            user_email TEXT,
+            user_role TEXT DEFAULT 'Student'
         )
     """)
 
@@ -67,10 +68,19 @@ def init_db() -> None:
             pc_id TEXT,
             student_name TEXT,
             user_email TEXT,
+            user_role TEXT,
             start_time TEXT,
             end_time TEXT,
             duration_mins INTEGER,
             created_date TEXT
+        )
+    """)
+
+    # Table 5: system_settings
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
         )
     """)
 
@@ -83,6 +93,14 @@ def init_db() -> None:
         cursor.execute("ALTER TABLE pc_status ADD COLUMN duration_mins INTEGER")
     if "user_email" not in columns:
         cursor.execute("ALTER TABLE pc_status ADD COLUMN user_email TEXT")
+    if "user_role" not in columns:
+        cursor.execute("ALTER TABLE pc_status ADD COLUMN user_role TEXT DEFAULT 'Student'")
+
+    # Migrations for pc_allotment_history
+    cursor.execute("PRAGMA table_info(pc_allotment_history)")
+    hist_columns = [row["name"] for row in cursor.fetchall()]
+    if "user_role" not in hist_columns:
+        cursor.execute("ALTER TABLE pc_allotment_history ADD COLUMN user_role TEXT DEFAULT 'Student'")
 
     # Seed PC-1 to PC-10 if table empty
     cursor.execute("SELECT COUNT(*) AS cnt FROM pc_status")
@@ -138,7 +156,7 @@ def check_and_expire_pc_allocations() -> int:
             print(f"[AUTO-EXPIRE] Workstation {p['pc_id']} allotted to {p['occupied_by']} expired at {p['end_time']}. Marking FREE.")
             cursor.execute("""
                 UPDATE pc_status 
-                SET status = 'free', occupied_by = NULL, since_time = NULL, end_time = NULL, duration_mins = NULL, user_email = NULL 
+                SET status = 'free', occupied_by = NULL, since_time = NULL, end_time = NULL, duration_mins = NULL, user_email = NULL, user_role = NULL 
                 WHERE UPPER(pc_id) = UPPER(?)
             """, (p["pc_id"],))
         conn.commit()
@@ -155,7 +173,7 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT pc_id, status, occupied_by, since_time, end_time, duration_mins, user_email FROM pc_status")
+    cursor.execute("SELECT pc_id, status, occupied_by, since_time, end_time, duration_mins, user_email, user_role FROM pc_status")
     rows = cursor.fetchall()
     conn.close()
 
@@ -174,9 +192,10 @@ def occupy_pc(
     name: str,
     duration_mins: Optional[int] = None,
     end_time: Optional[str] = None,
-    user_email: Optional[str] = None
+    user_email: Optional[str] = None,
+    user_role: Optional[str] = "Student"
 ) -> bool:
-    """Marks a PC as occupied with optional time duration and user email."""
+    """Marks a PC as occupied with optional time duration, user email, and user role (Student, Faculty, Guest)."""
     conn = get_db_connection()
     cursor = conn.cursor()
     now_dt = datetime.now()
@@ -188,6 +207,8 @@ def occupy_pc(
         end_dt = now_dt + dt_module.timedelta(minutes=duration_mins)
         end_time = end_dt.strftime("%Y-%m-%d %H:%M:%S")
 
+    role_val = user_role.strip().capitalize() if user_role else "Student"
+
     cursor.execute("""
         UPDATE pc_status 
         SET status = 'occupied', 
@@ -195,20 +216,21 @@ def occupy_pc(
             since_time = ?, 
             end_time = ?, 
             duration_mins = ?, 
-            user_email = ? 
+            user_email = ?,
+            user_role = ? 
         WHERE UPPER(pc_id) = UPPER(?)
-    """, (name.strip(), now_str, end_time, duration_mins, user_email, pc_id.strip()))
+    """, (name.strip(), now_str, end_time, duration_mins, user_email, role_val, pc_id.strip()))
     affected = cursor.rowcount > 0
     
     # Also log into pc_allotment_history
     cursor.execute("""
         INSERT INTO pc_allotment_history 
-        (pc_id, student_name, user_email, start_time, end_time, duration_mins, created_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (pc_id.strip(), name.strip(), user_email, now_str, end_time, duration_mins, now_dt.strftime("%Y-%m-%d")))
+        (pc_id, student_name, user_email, user_role, start_time, end_time, duration_mins, created_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (pc_id.strip(), name.strip(), user_email, role_val, now_str, end_time, duration_mins, now_dt.strftime("%Y-%m-%d")))
 
     # Update or add registered user's email if provided
-    if user_email and name.strip():
+    if user_email and name.strip() and role_val.lower() == "student":
         cursor.execute("UPDATE registered_users SET email = ? WHERE UPPER(name) = UPPER(?)", (user_email.strip(), name.strip()))
 
     conn.commit()
@@ -217,7 +239,7 @@ def occupy_pc(
 
 
 def free_pc(pc_id: str) -> bool:
-    """Marks a PC as free and clears occupied_by, since_time, end_time, etc."""
+    """Marks a PC as free and clears occupied_by, since_time, end_time, user_role, etc."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -227,7 +249,8 @@ def free_pc(pc_id: str) -> bool:
             since_time = NULL, 
             end_time = NULL, 
             duration_mins = NULL, 
-            user_email = NULL 
+            user_email = NULL,
+            user_role = NULL 
         WHERE UPPER(pc_id) = UPPER(?)
     """, (pc_id.strip(),))
     conn.commit()
@@ -379,6 +402,56 @@ def get_allotment_history() -> List[Dict[str, Any]]:
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+# ── System Settings (SMTP / Email Config) ──
+
+def get_setting(key: str, default: str = "") -> str:
+    """Fetches a setting value from SQLite system_settings."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM system_settings WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        conn.close()
+        if row and row["value"]:
+            return row["value"]
+    except Exception:
+        pass
+    return default
+
+
+def set_setting(key: str, value: str) -> bool:
+    """Saves a setting value into SQLite system_settings."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO system_settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        """, (key, value))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"[ERROR] Failed to save setting {key}: {e}")
+        return False
+
+
+def get_all_settings() -> Dict[str, str]:
+    """Returns all settings as a key-value dictionary."""
+    settings = {}
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT key, value FROM system_settings")
+        rows = cursor.fetchall()
+        conn.close()
+        for r in rows:
+            settings[r["key"]] = r["value"]
+    except Exception:
+        pass
+    return settings
 
 
 # Auto-initialize on import
