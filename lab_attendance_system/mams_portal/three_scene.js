@@ -1136,9 +1136,9 @@ function drawSpriteCanvas(ctx, pcId, statusText, isFree) {
     roundRect(ctx, 60, 110, 392, 54, 16);
     ctx.fill();
 
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 32px 'Inter', sans-serif";
     const label = isFree ? "🟢 AVAILABLE" : `🔴 ${statusText}`;
+    const fontSize = label.length > 18 ? 24 : label.length > 14 ? 28 : 32;
+    ctx.font = `bold ${fontSize}px 'Inter', sans-serif`;
     ctx.fillText(label, 256, 138);
 }
 

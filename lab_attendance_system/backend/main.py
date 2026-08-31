@@ -9,8 +9,9 @@ import face_recognition
 import pickle
 import csv
 import io
+import shutil
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -18,12 +19,16 @@ from pydantic import BaseModel
 
 import database
 import camera
+import mailer
 
 # Root directory of lab attendance system
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNKNOWN_FACES_DIR = os.path.join(BASE_DIR, "unknown_faces")
 os.makedirs(UNKNOWN_FACES_DIR, exist_ok=True)
 STATIC_DIR = os.path.join(BASE_DIR, "backend", "static")
+AVATARS_DIR = os.path.join(STATIC_DIR, "avatars")
+os.makedirs(AVATARS_DIR, exist_ok=True)
+ENCODINGS_FILE = os.path.join(BASE_DIR, "face_recognition_module", "known_encodings.pkl")
 
 
 @asynccontextmanager
@@ -36,11 +41,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="AI/ML Lab Attendance & PC Occupancy System",
     description="Backend API for Richa Mam's AI Lab Attendance & PC Tracker",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
-# Enable CORS for local network and web dashboards
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -49,80 +54,145 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Remove old unknown faces mount since we'll serve it differently if needed, 
-# or keep it as /unknown_faces_static
+# Mount unknown faces and static directories
 app.mount("/unknown_faces_static", StaticFiles(directory=UNKNOWN_FACES_DIR), name="unknown_faces_static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_dir")
 
 
-# Pydantic Request Models
+# ── Pydantic Models ──
+
 class OccupyRequest(BaseModel):
     pc_id: str
     name: str
+    duration_mins: Optional[int] = None
+    end_time: Optional[str] = None
+    email: Optional[str] = None
+    send_email: Optional[bool] = False
+    notes: Optional[str] = None
 
 
 class FreeRequest(BaseModel):
     pc_id: str
 
 
+class SendEmailRequest(BaseModel):
+    to_email: str
+    subject: str
+    message: str
+    recipient_name: Optional[str] = None
+
+
+class RegisteredUserCreate(BaseModel):
+    name: str
+    email: Optional[str] = ""
+    roll_no: Optional[str] = ""
+
+
+class UpdateEmailRequest(BaseModel):
+    email: str
+
+
+class ManualAttendanceRequest(BaseModel):
+    name: str
+    action: str
+
+
+class EnrollRequest(BaseModel):
+    name: str
+    email: Optional[str] = ""
+    image_base64: str
+
+
+# ── Health & Core Endpoints ──
+
 @app.get("/health")
 def health_check():
     """Simple health check endpoint for connectivity testing."""
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "ok",
+        "timestamp": datetime.now().isoformat(),
+        "smtp_configured": mailer.is_smtp_configured()
+    }
 
 
-@app.get("/attendance/logs")
-def get_attendance_logs(
-    date: Optional[str] = Query(None, description="Format YYYY-MM-DD"),
-    name: Optional[str] = Query(None, description="Filter by person's name")
-) -> List[Dict[str, Any]]:
-    """
-    Returns all matching rows from attendance_logs as JSON list.
-    Optional query params: date (YYYY-MM-DD), name
-    """
-    return database.get_attendance_logs(date=date, name=name)
-
+# ── PC Status & Time-based Allotment ──
 
 @app.get("/pc/status")
 def get_pc_status() -> List[Dict[str, Any]]:
     """
-    Returns all 10 rows from pc_status as JSON list:
-    (pc_id, status, occupied_by, since_time)
+    Returns all PC status records.
+    Automatically checks and expires any session whose end_time has lapsed.
     """
     return database.get_all_pc_status()
 
 
 @app.post("/pc/occupy")
-def occupy_pc_endpoint(payload: OccupyRequest):
+def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks):
     """
-    Request body: {"pc_id": "PC-3", "name": "Ayush"}
-    UPDATE pc_status SET status='occupied', occupied_by=<name>, since_time=<now> WHERE pc_id=<pc_id>
+    Allocates a PC with optional time duration, end_time, and automated student email.
     """
     pc_id = payload.pc_id.strip()
     name = payload.name.strip()
+    email = payload.email.strip() if payload.email else None
+    duration_mins = payload.duration_mins
+    end_time = payload.end_time.strip() if payload.end_time else None
+    send_email_flag = payload.send_email
 
     if not pc_id:
         raise HTTPException(status_code=400, detail="pc_id is required.")
     if not name:
-        raise HTTPException(status_code=400, detail="name is required to occupy a PC.")
+        raise HTTPException(status_code=400, detail="Student name is required to occupy a PC.")
 
-    success = database.occupy_pc(pc_id=pc_id, name=name)
+    # Calculate end_time if duration provided without explicit end_time
+    now_dt = datetime.now()
+    start_time_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    if not end_time and duration_mins and duration_mins > 0:
+        import datetime as dt_module
+        end_dt = now_dt + dt_module.timedelta(minutes=duration_mins)
+        end_time = end_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    success = database.occupy_pc(
+        pc_id=pc_id,
+        name=name,
+        duration_mins=duration_mins,
+        end_time=end_time,
+        user_email=email
+    )
+
     if not success:
         raise HTTPException(status_code=404, detail=f"PC {pc_id} not found.")
+
+    email_response = None
+    if send_email_flag and email:
+        try:
+            email_response = mailer.send_allotment_email(
+                to_email=email,
+                student_name=name,
+                pc_id=pc_id,
+                start_time=start_time_str,
+                end_time=end_time,
+                duration_mins=duration_mins,
+                notes=payload.notes
+            )
+        except Exception as e:
+            email_response = {"success": False, "error": str(e)}
 
     return {
         "status": "success",
         "message": f"{pc_id} marked occupied by {name}",
         "pc_id": pc_id,
-        "occupied_by": name
+        "occupied_by": name,
+        "since_time": start_time_str,
+        "end_time": end_time,
+        "duration_mins": duration_mins,
+        "email_result": email_response
     }
 
 
 @app.post("/pc/free")
 def free_pc_endpoint(payload: FreeRequest):
-    """
-    Request body: {"pc_id": "PC-3"}
-    UPDATE pc_status SET status='free', occupied_by=NULL, since_time=NULL WHERE pc_id=<pc_id>
-    """
+    """Marks a PC as free and clears student allocation."""
     pc_id = payload.pc_id.strip()
     if not pc_id:
         raise HTTPException(status_code=400, detail="pc_id is required.")
@@ -133,76 +203,21 @@ def free_pc_endpoint(payload: FreeRequest):
 
     return {
         "status": "success",
-        "message": f"{pc_id} marked as free",
+        "message": f"{pc_id} marked as available",
         "pc_id": pc_id
     }
 
 
-@app.get("/unknown_faces")
-def get_unknown_faces() -> List[Dict[str, str]]:
-    """
-    Scans unknown_faces/ folder recursively, returns list of
-    {image_path, url, date, timestamp, filename} for all saved images.
-    The 'url' field is a path relative to the API root that can be used
-    to fetch the image via the static mount.
-    """
-    images_list = []
-    if not os.path.exists(UNKNOWN_FACES_DIR):
-        return []
+# ── Attendance Logs ──
 
-    for root, _, files in os.walk(UNKNOWN_FACES_DIR):
-        for file in sorted(files, reverse=True):
-            if file.lower().endswith((".jpg", ".jpeg", ".png")):
-                full_path = os.path.join(root, file)
-                rel_path = os.path.relpath(full_path, BASE_DIR)
-                # Build a URL-safe path relative to the UNKNOWN_FACES_DIR mount
-                static_rel = os.path.relpath(full_path, UNKNOWN_FACES_DIR).replace("\\", "/")
-                
-                # Derive date and timestamp
-                parent_dir = os.path.basename(root)
-                # If the parent folder matches YYYY-MM-DD
-                date_val = parent_dir if len(parent_dir) == 10 and parent_dir.count("-") == 2 else "Unknown"
-                
-                filename_no_ext = os.path.splitext(file)[0]
-                # Format timestamp human-readable if file name is timestamp like 10-30-00
-                timestamp_val = filename_no_ext.replace("_", " ").replace("-", ":")
+@app.get("/attendance/logs")
+def get_attendance_logs(
+    date: Optional[str] = Query(None, description="Format YYYY-MM-DD"),
+    name: Optional[str] = Query(None, description="Filter by person's name")
+) -> List[Dict[str, Any]]:
+    """Returns all matching rows from attendance_logs."""
+    return database.get_attendance_logs(date=date, name=name)
 
-                images_list.append({
-                    "image_path": rel_path.replace("\\", "/"),
-                    "url": f"/unknown_faces_static/{static_rel}",
-                    "date": date_val,
-                    "timestamp": timestamp_val,
-                    "filename": file
-                })
-
-    return images_list
-
-@app.post("/api/scan_entry")
-def scan_entry():
-    """Opens camera, scans face, and logs IN."""
-    result = camera.scan_face_for_entry()
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=result["message"])
-    return result
-
-@app.get("/api/capture_photo")
-def capture_photo():
-    """Captures a photo from webcam for registration."""
-    result = camera.capture_face_photo()
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=result["message"])
-    return result
-
-@app.get("/api/registered_faces")
-def get_registered_faces():
-    """Returns a list of all enrolled known names."""
-    known_data = camera.load_known_encodings()
-    return {"faces": list(known_data.keys())}
-
-
-class ManualAttendanceRequest(BaseModel):
-    name: str
-    action: str
 
 @app.post("/api/manual_attendance")
 def manual_attendance(payload: ManualAttendanceRequest):
@@ -239,15 +254,183 @@ def manual_attendance(payload: ManualAttendanceRequest):
     raise HTTPException(status_code=400, detail="Invalid action. Must be IN or OUT.")
 
 
-class EnrollRequest(BaseModel):
-    name: str
-    image_base64: str
+# ── Unknown Faces (Intruders / Unwanted Photos) ──
+
+@app.get("/unknown_faces")
+def get_unknown_faces() -> List[Dict[str, str]]:
+    """
+    Scans unknown_faces/ folder recursively, returns list of
+    {image_path, url, date, timestamp, filename} for all saved images.
+    """
+    images_list = []
+    if not os.path.exists(UNKNOWN_FACES_DIR):
+        return []
+
+    for root, _, files in os.walk(UNKNOWN_FACES_DIR):
+        for file in sorted(files, reverse=True):
+            if file.lower().endswith((".jpg", ".jpeg", ".png")):
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, BASE_DIR)
+                static_rel = os.path.relpath(full_path, UNKNOWN_FACES_DIR).replace("\\", "/")
+                
+                parent_dir = os.path.basename(root)
+                date_val = parent_dir if len(parent_dir) == 10 and parent_dir.count("-") == 2 else "Unknown"
+                
+                filename_no_ext = os.path.splitext(file)[0]
+                timestamp_val = filename_no_ext.replace("_", " ").replace("-", ":")
+
+                images_list.append({
+                    "image_path": rel_path.replace("\\", "/"),
+                    "url": f"/unknown_faces_static/{static_rel}",
+                    "date": date_val,
+                    "timestamp": timestamp_val,
+                    "filename": file,
+                    "rel_file": static_rel
+                })
+
+    return images_list
+
+
+@app.delete("/unknown_faces/{filename}")
+def delete_unknown_face(filename: str):
+    """Deletes a specific unknown face image by filename or relative path."""
+    deleted = False
+    clean_filename = os.path.basename(filename)
+    
+    for root, _, files in os.walk(UNKNOWN_FACES_DIR):
+        if clean_filename in files:
+            target_path = os.path.join(root, clean_filename)
+            try:
+                os.remove(target_path)
+                deleted = True
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to delete photo: {str(e)}")
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Image {filename} not found.")
+
+    return {"status": "success", "message": f"Photo {clean_filename} deleted."}
+
+
+@app.delete("/api/unknown_faces/clear_all")
+def clear_all_unknown_faces():
+    """Deletes all unknown face photos."""
+    try:
+        count = 0
+        for root, dirs, files in os.walk(UNKNOWN_FACES_DIR, topdown=False):
+            for file in files:
+                if file.lower().endswith((".jpg", ".jpeg", ".png")):
+                    os.remove(os.path.join(root, file))
+                    count += 1
+            for d in dirs:
+                shutil.rmtree(os.path.join(root, d), ignore_errors=True)
+        return {"status": "success", "message": f"Cleared {count} unwanted face captures."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear unknown faces: {str(e)}")
+
+
+# ── Registered Users ──
+
+@app.get("/api/registered_users")
+def get_registered_users():
+    """Returns complete list of enrolled students from database."""
+    users = database.get_registered_users()
+    return {"users": users, "count": len(users)}
+
+
+@app.get("/api/registered_faces")
+def get_registered_faces():
+    """Legacy compatibility endpoint returning list of known face names."""
+    known_data = camera.load_known_encodings()
+    return {"faces": list(known_data.keys())}
+
+
+@app.post("/api/registered_users")
+def create_or_update_user(payload: RegisteredUserCreate):
+    """Adds or updates a student record in registered_users."""
+    if not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Name is required.")
+    
+    clean_name = payload.name.strip()
+    safe_name = "".join([c for c in clean_name if c.isalnum() or c == " "]).rstrip().replace(" ", "_")
+    avatar_url = f"/static/avatars/{safe_name}.jpg"
+
+    database.add_or_update_registered_user(
+        name=clean_name,
+        email=payload.email.strip() if payload.email else "",
+        roll_no=payload.roll_no.strip() if payload.roll_no else "",
+        avatar_url=avatar_url
+    )
+    return {"status": "success", "message": f"Student '{clean_name}' saved."}
+
+
+@app.put("/api/registered_users/{name}/email")
+def update_student_email(name: str, payload: UpdateEmailRequest):
+    """Updates a student's email address."""
+    clean_name = name.strip()
+    clean_email = payload.email.strip()
+    success = database.update_user_email(name=clean_name, email=clean_email)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Student '{clean_name}' not found.")
+    return {"status": "success", "message": f"Email updated for {clean_name}"}
+
+
+@app.delete("/api/registered_users/{name}")
+def delete_registered_user_endpoint(name: str):
+    """Removes a registered user from both database and facial recognition pickle."""
+    clean_name = name.strip()
+    
+    # 1. Remove from SQLite
+    database.delete_registered_user(clean_name)
+    
+    # 2. Remove from known_encodings.pkl
+    if os.path.exists(ENCODINGS_FILE):
+        try:
+            with open(ENCODINGS_FILE, "rb") as f:
+                data = pickle.load(f)
+            if isinstance(data, dict) and clean_name in data:
+                del data[clean_name]
+                with open(ENCODINGS_FILE, "wb") as f:
+                    pickle.dump(data, f)
+        except Exception as e:
+            print(f"[WARN] Failed to delete encoding for {clean_name}: {e}")
+
+    # 3. Remove avatar file if exists
+    safe_name = "".join([c for c in clean_name if c.isalnum() or c == " "]).rstrip().replace(" ", "_")
+    avatar_file = os.path.join(AVATARS_DIR, f"{safe_name}.jpg")
+    if os.path.exists(avatar_file):
+        try:
+            os.remove(avatar_file)
+        except Exception:
+            pass
+
+    return {"status": "success", "message": f"Student '{clean_name}' unregistered successfully."}
+
+
+# ── Face Recognition & Enrollment ──
+
+@app.post("/api/scan_entry")
+def scan_entry():
+    """Opens camera, scans face, and logs IN."""
+    result = camera.scan_face_for_entry()
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
+
+@app.get("/api/capture_photo")
+def capture_photo():
+    """Captures a photo from webcam for registration."""
+    result = camera.capture_face_photo()
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
 
 @app.post("/enroll")
 def enroll_face(payload: EnrollRequest):
     """Enroll a new face via base64 encoded image."""
     try:
-        # Decode base64
         image_data = payload.image_base64
         if "," in image_data:
             image_data = image_data.split(",")[1]
@@ -283,25 +466,29 @@ def enroll_face(payload: EnrollRequest):
         pad_right = min(w, right + pad)
         face_crop = img[pad_top:pad_bottom, pad_left:pad_right]
         
-        avatars_dir = os.path.join(STATIC_DIR, "avatars")
-        os.makedirs(avatars_dir, exist_ok=True)
-        safe_name = "".join([c for c in payload.name if c.isalpha() or c.isdigit() or c==' ']).rstrip()
+        safe_name = "".join([c for c in payload.name if c.isalpha() or c.isdigit() or c == " "]).rstrip()
         avatar_filename = f"{safe_name.replace(' ', '_')}.jpg"
-        cv2.imwrite(os.path.join(avatars_dir, avatar_filename), face_crop)
+        cv2.imwrite(os.path.join(AVATARS_DIR, avatar_filename), face_crop)
         
         # Save to known_encodings.pkl
-        encodings_file = os.path.join(BASE_DIR, "face_recognition_module", "known_encodings.pkl")
         known_data = {}
-        if os.path.exists(encodings_file):
+        if os.path.exists(ENCODINGS_FILE):
             try:
-                with open(encodings_file, "rb") as f:
+                with open(ENCODINGS_FILE, "rb") as f:
                     known_data = pickle.load(f)
             except Exception:
                 pass
                 
         known_data[payload.name.strip()] = new_encoding
-        with open(encodings_file, "wb") as f:
+        with open(ENCODINGS_FILE, "wb") as f:
             pickle.dump(known_data, f)
+
+        # Save to SQLite registered_users
+        database.add_or_update_registered_user(
+            name=payload.name.strip(),
+            email=payload.email.strip() if payload.email else "",
+            avatar_url=f"/static/avatars/{avatar_filename}"
+        )
             
         return {"status": "success", "message": f"Successfully registered '{payload.name}'"}
     except HTTPException:
@@ -309,22 +496,38 @@ def enroll_face(payload: EnrollRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── Standalone Email Notification ──
+
+@app.post("/api/send_email")
+def send_email_endpoint(payload: SendEmailRequest):
+    """Allows Prof. Richa Mam to send an email notice directly from the portal."""
+    result = mailer.send_custom_email(
+        to_email=payload.to_email,
+        subject=payload.subject,
+        message=payload.message,
+        recipient_name=payload.recipient_name
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("message", "Failed to send email."))
+    return result
+
+
+# ── Database Export & Download ──
+
 @app.get("/db/download")
-def download_db():
-    """Download the SQLite database as CSV."""
+@app.get("/db/download/csv")
+def download_attendance_csv():
+    """Download attendance logs as a styled CSV report."""
     conn = database.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM attendance_logs ORDER BY id DESC")
     rows = cursor.fetchall()
     conn.close()
 
-    if not rows:
-        raise HTTPException(status_code=404, detail="No logs found.")
-
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Write styled header
     writer.writerow([
         "Log ID", 
         "Student Name", 
@@ -332,10 +535,9 @@ def download_db():
         "Entry Time", 
         "Exit Time", 
         "Date",
-        "Image Path"
+        "Image Snapshot Path"
     ])
     
-    # Write data
     for row in rows:
         user_type = "Registered User" if row["is_known"] else "Unknown Face"
         writer.writerow([
@@ -349,16 +551,70 @@ def download_db():
         ])
         
     csv_data = output.getvalue()
+    today_str = datetime.now().strftime("%Y%m%d_%H%M")
     
     return Response(
         content=csv_data,
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=attendance_logs_{datetime.now().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=AI_Lab_Attendance_{today_str}.csv"}
     )
+
+
+@app.get("/db/download/sqlite")
+def download_sqlite_file():
+    """Download the complete raw SQLite database file."""
+    if not os.path.exists(database.DB_PATH):
+        raise HTTPException(status_code=404, detail="Database file not found.")
+    
+    today_str = datetime.now().strftime("%Y%m%d_%H%M")
+    return FileResponse(
+        path=database.DB_PATH,
+        filename=f"lab_attendance_backup_{today_str}.db",
+        media_type="application/x-sqlite3"
+    )
+
+
+@app.get("/db/download/allotments")
+def download_allotments_csv():
+    """Download workstation allotment history as CSV."""
+    allotments = database.get_allotment_history()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    writer.writerow([
+        "ID",
+        "Workstation",
+        "Student Name",
+        "Student Email",
+        "Start Time",
+        "End Time",
+        "Duration (Mins)",
+        "Date"
+    ])
+    
+    for a in allotments:
+        writer.writerow([
+            a["id"],
+            a["pc_id"],
+            a["student_name"],
+            a["user_email"] or "N/A",
+            a["start_time"],
+            a["end_time"] or "N/A",
+            a["duration_mins"] or "N/A",
+            a["created_date"]
+        ])
+        
+    today_str = datetime.now().strftime("%Y%m%d_%H%M")
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=AI_Lab_PC_Allotments_{today_str}.csv"}
+    )
+
 
 @app.post("/db/clear")
 def clear_db():
-    """Clear all attendance logs (for admin)."""
+    """Clear all attendance logs."""
     try:
         conn = database.get_db_connection()
         cursor = conn.cursor()
@@ -370,10 +626,10 @@ def clear_db():
         raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
 
 
-# Mount the frontend at the root (must be placed AFTER all API routes)
-app.mount("/", StaticFiles(directory=os.path.join(BASE_DIR, "backend", "static"), html=True), name="static")
+# Mount static frontend
+app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static_frontend")
+
 
 if __name__ == "__main__":
     import uvicorn
-    # Bind with host="0.0.0.0" so it's reachable from other devices on WiFi
     uvicorn.run(app, host="0.0.0.0", port=8000)

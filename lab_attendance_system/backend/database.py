@@ -1,9 +1,13 @@
 import sqlite3
 import os
+import pickle
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lab_attendance.db")
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+DB_PATH = os.path.join(CURRENT_DIR, "lab_attendance.db")
+ENCODINGS_FILE = os.path.join(PROJECT_ROOT, "face_recognition_module", "known_encodings.pkl")
 
 
 def get_db_connection() -> sqlite3.Connection:
@@ -14,11 +18,11 @@ def get_db_connection() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """Creates tables if they do not exist and seeds initial PC status records (PC-1 to PC-10)."""
+    """Creates tables if they do not exist, runs migrations, and seeds initial data."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Table: attendance_logs
+    # Table 1: attendance_logs
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS attendance_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,40 +35,130 @@ def init_db() -> None:
         )
     """)
 
-    # Table: pc_status
+    # Table 2: pc_status
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pc_status (
             pc_id TEXT PRIMARY KEY,
             status TEXT,
             occupied_by TEXT,
-            since_time TEXT
+            since_time TEXT,
+            end_time TEXT,
+            duration_mins INTEGER,
+            user_email TEXT
         )
     """)
 
-    # Check if pc_status table is empty, seed PC-1 to PC-10 with status 'free'
+    # Table 3: registered_users
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS registered_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            email TEXT,
+            roll_no TEXT,
+            avatar_url TEXT,
+            created_at TEXT
+        )
+    """)
+
+    # Table 4: pc_allotment_history
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pc_allotment_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pc_id TEXT,
+            student_name TEXT,
+            user_email TEXT,
+            start_time TEXT,
+            end_time TEXT,
+            duration_mins INTEGER,
+            created_date TEXT
+        )
+    """)
+
+    # Migrations for existing pc_status table if missing columns
+    cursor.execute("PRAGMA table_info(pc_status)")
+    columns = [row["name"] for row in cursor.fetchall()]
+    if "end_time" not in columns:
+        cursor.execute("ALTER TABLE pc_status ADD COLUMN end_time TEXT")
+    if "duration_mins" not in columns:
+        cursor.execute("ALTER TABLE pc_status ADD COLUMN duration_mins INTEGER")
+    if "user_email" not in columns:
+        cursor.execute("ALTER TABLE pc_status ADD COLUMN user_email TEXT")
+
+    # Seed PC-1 to PC-10 if table empty
     cursor.execute("SELECT COUNT(*) AS cnt FROM pc_status")
     row = cursor.fetchone()
     if row and row["cnt"] == 0:
-        seed_pcs = [(f"PC-{i}", "free", None, None) for i in range(1, 11)]
+        seed_pcs = [(f"PC-{i}", "free", None, None, None, None, None) for i in range(1, 11)]
         cursor.executemany(
-            "INSERT INTO pc_status (pc_id, status, occupied_by, since_time) VALUES (?, ?, ?, ?)",
+            "INSERT INTO pc_status (pc_id, status, occupied_by, since_time, end_time, duration_mins, user_email) VALUES (?, ?, ?, ?, ?, ?, ?)",
             seed_pcs
         )
-        conn.commit()
+
+    # Sync registered_users from known_encodings.pkl if available
+    if os.path.exists(ENCODINGS_FILE):
+        try:
+            with open(ENCODINGS_FILE, "rb") as f:
+                known_dict = pickle.load(f)
+                if isinstance(known_dict, dict):
+                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    for name in known_dict.keys():
+                        clean_name = name.strip()
+                        safe_name = "".join([c for c in clean_name if c.isalnum() or c == " "]).rstrip().replace(" ", "_")
+                        avatar_path = f"/static/avatars/{safe_name}.jpg"
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO registered_users (name, email, roll_no, avatar_url, created_at)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (clean_name, "", "", avatar_path, now_str))
+        except Exception as e:
+            print(f"[WARN] Error syncing registered users from pkl: {e}")
 
     conn.commit()
     conn.close()
 
 
-def get_all_pc_status() -> List[Dict[str, Any]]:
-    """Fetch all PC status rows sorted by pc_id numerical order."""
+def check_and_expire_pc_allocations() -> int:
+    """
+    Checks for any occupied PC whose end_time has passed.
+    Automatically frees the workstation.
+    Returns the number of slots auto-freed.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT pc_id, status, occupied_by, since_time FROM pc_status")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Find PCs that have passed end_time
+    cursor.execute("""
+        SELECT pc_id, occupied_by, end_time FROM pc_status 
+        WHERE status = 'occupied' AND end_time IS NOT NULL AND end_time != '' AND end_time <= ?
+    """, (now_str,))
+    expired_pcs = cursor.fetchall()
+
+    if expired_pcs:
+        for p in expired_pcs:
+            print(f"[AUTO-EXPIRE] Workstation {p['pc_id']} allotted to {p['occupied_by']} expired at {p['end_time']}. Marking FREE.")
+            cursor.execute("""
+                UPDATE pc_status 
+                SET status = 'free', occupied_by = NULL, since_time = NULL, end_time = NULL, duration_mins = NULL, user_email = NULL 
+                WHERE UPPER(pc_id) = UPPER(?)
+            """, (p["pc_id"],))
+        conn.commit()
+
+    freed_count = len(expired_pcs)
+    conn.close()
+    return freed_count
+
+
+def get_all_pc_status() -> List[Dict[str, Any]]:
+    """Fetch all PC status rows sorted by pc_id numerical order with auto-expiry check."""
+    # First auto-expire any lapsed slots
+    check_and_expire_pc_allocations()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT pc_id, status, occupied_by, since_time, end_time, duration_mins, user_email FROM pc_status")
     rows = cursor.fetchall()
     conn.close()
-    
-    # Sort PC-1 through PC-10 in natural numerical order
+
     results = [dict(row) for row in rows]
     def sort_key(item):
         try:
@@ -75,29 +169,67 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
     return results
 
 
-def occupy_pc(pc_id: str, name: str) -> bool:
-    """Marks a PC as occupied by a user."""
+def occupy_pc(
+    pc_id: str,
+    name: str,
+    duration_mins: Optional[int] = None,
+    end_time: Optional[str] = None,
+    user_email: Optional[str] = None
+) -> bool:
+    """Marks a PC as occupied with optional time duration and user email."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute(
-        "UPDATE pc_status SET status = 'occupied', occupied_by = ?, since_time = ? WHERE UPPER(pc_id) = UPPER(?)",
-        (name, now_str, pc_id.strip())
-    )
-    conn.commit()
+    now_dt = datetime.now()
+    now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    # If end_time is not explicitly passed but duration_mins is provided, calculate end_time
+    if not end_time and duration_mins and duration_mins > 0:
+        import datetime as dt_module
+        end_dt = now_dt + dt_module.timedelta(minutes=duration_mins)
+        end_time = end_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor.execute("""
+        UPDATE pc_status 
+        SET status = 'occupied', 
+            occupied_by = ?, 
+            since_time = ?, 
+            end_time = ?, 
+            duration_mins = ?, 
+            user_email = ? 
+        WHERE UPPER(pc_id) = UPPER(?)
+    """, (name.strip(), now_str, end_time, duration_mins, user_email, pc_id.strip()))
     affected = cursor.rowcount > 0
+    
+    # Also log into pc_allotment_history
+    cursor.execute("""
+        INSERT INTO pc_allotment_history 
+        (pc_id, student_name, user_email, start_time, end_time, duration_mins, created_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (pc_id.strip(), name.strip(), user_email, now_str, end_time, duration_mins, now_dt.strftime("%Y-%m-%d")))
+
+    # Update or add registered user's email if provided
+    if user_email and name.strip():
+        cursor.execute("UPDATE registered_users SET email = ? WHERE UPPER(name) = UPPER(?)", (user_email.strip(), name.strip()))
+
+    conn.commit()
     conn.close()
     return affected
 
 
 def free_pc(pc_id: str) -> bool:
-    """Marks a PC as free and clears occupied_by and since_time."""
+    """Marks a PC as free and clears occupied_by, since_time, end_time, etc."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE pc_status SET status = 'free', occupied_by = NULL, since_time = NULL WHERE UPPER(pc_id) = UPPER(?)",
-        (pc_id.strip(),)
-    )
+    cursor.execute("""
+        UPDATE pc_status 
+        SET status = 'free', 
+            occupied_by = NULL, 
+            since_time = NULL, 
+            end_time = NULL, 
+            duration_mins = NULL, 
+            user_email = NULL 
+        WHERE UPPER(pc_id) = UPPER(?)
+    """, (pc_id.strip(),))
     conn.commit()
     affected = cursor.rowcount > 0
     conn.close()
@@ -120,7 +252,7 @@ def get_attendance_logs(date: Optional[str] = None, name: Optional[str] = None) 
         query += " AND name LIKE ?"
         params.append(f"%{name}%")
 
-    query += " ORDER BY in_time DESC"
+    query += " ORDER BY id DESC"
 
     cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
@@ -186,5 +318,68 @@ def get_unknown_counter(today_date: str) -> int:
     return (row["cnt"] if row else 0) + 1
 
 
-# Auto-initialize on import/first run
+# ── Registered Users Helpers ──
+
+def get_registered_users() -> List[Dict[str, Any]]:
+    """Returns all registered users sorted by name."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, email, roll_no, avatar_url, created_at FROM registered_users ORDER BY name ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def add_or_update_registered_user(name: str, email: Optional[str] = "", roll_no: Optional[str] = "", avatar_url: Optional[str] = "") -> bool:
+    """Adds a new registered user or updates existing user's details."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO registered_users (name, email, roll_no, avatar_url, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(name) DO UPDATE SET 
+            email = COALESCE(NULLIF(excluded.email, ''), registered_users.email),
+            roll_no = COALESCE(NULLIF(excluded.roll_no, ''), registered_users.roll_no),
+            avatar_url = COALESCE(NULLIF(excluded.avatar_url, ''), registered_users.avatar_url)
+    """, (name.strip(), email.strip() if email else "", roll_no.strip() if roll_no else "", avatar_url or "", now_str))
+    conn.commit()
+    affected = cursor.rowcount > 0
+    conn.close()
+    return affected
+
+
+def update_user_email(name: str, email: str) -> bool:
+    """Updates only the email for a registered student."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE registered_users SET email = ? WHERE UPPER(name) = UPPER(?)", (email.strip(), name.strip()))
+    conn.commit()
+    affected = cursor.rowcount > 0
+    conn.close()
+    return affected
+
+
+def delete_registered_user(name: str) -> bool:
+    """Deletes a registered user from SQLite registered_users table."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM registered_users WHERE UPPER(name) = UPPER(?)", (name.strip(),))
+    conn.commit()
+    affected = cursor.rowcount > 0
+    conn.close()
+    return affected
+
+
+def get_allotment_history() -> List[Dict[str, Any]]:
+    """Returns workstation allotment history logs."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, pc_id, student_name, user_email, start_time, end_time, duration_mins, created_date FROM pc_allotment_history ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+# Auto-initialize on import
 init_db()
