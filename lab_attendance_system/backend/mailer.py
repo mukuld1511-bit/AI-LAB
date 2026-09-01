@@ -278,8 +278,8 @@ Prof. Richa (AI/ML Lab In-Charge)"""
         msg["From"] = f"{cfg['sender_name']} <{cfg['sender_email']}>"
         msg["To"] = to_email
 
-        msg.attach(MIMEText(plain_content, "plain"))
-        msg.attach(MIMEText(html_content, "html"))
+        msg.attach(MIMEText(plain_content, "plain", "utf-8"))
+        msg.attach(MIMEText(html_content, "html", "utf-8"))
 
         with smtplib.SMTP(cfg["host"], cfg["port"], timeout=12) as server:
             server.starttls()
@@ -353,8 +353,8 @@ def send_custom_email(
         msg["From"] = f"{cfg['sender_name']} <{cfg['sender_email']}>"
         msg["To"] = to_email
 
-        msg.attach(MIMEText(message, "plain"))
-        msg.attach(html_content, "html")
+        msg.attach(MIMEText(message, "plain", "utf-8"))
+        msg.attach(MIMEText(html_content, "html", "utf-8"))
 
         with smtplib.SMTP(cfg["host"], cfg["port"], timeout=12) as server:
             server.starttls()
