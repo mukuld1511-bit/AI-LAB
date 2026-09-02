@@ -57,6 +57,8 @@ def init_db() -> None:
             email TEXT,
             roll_no TEXT,
             avatar_url TEXT,
+            role TEXT DEFAULT 'Student',
+            department TEXT DEFAULT '',
             created_at TEXT
         )
     """)
@@ -83,6 +85,14 @@ def init_db() -> None:
             value TEXT
         )
     """)
+
+    # Migrations for registered_users table
+    cursor.execute("PRAGMA table_info(registered_users)")
+    reg_columns = [row["name"] for row in cursor.fetchall()]
+    if "role" not in reg_columns:
+        cursor.execute("ALTER TABLE registered_users ADD COLUMN role TEXT DEFAULT 'Student'")
+    if "department" not in reg_columns:
+        cursor.execute("ALTER TABLE registered_users ADD COLUMN department TEXT DEFAULT ''")
 
     # Migrations for existing pc_status table if missing columns
     cursor.execute("PRAGMA table_info(pc_status)")
@@ -193,18 +203,24 @@ def occupy_pc(
     duration_mins: Optional[int] = None,
     end_time: Optional[str] = None,
     user_email: Optional[str] = None,
-    user_role: Optional[str] = "Student"
+    user_role: Optional[str] = "Student",
+    start_time: Optional[str] = None
 ) -> bool:
-    """Marks a PC as occupied with optional time duration, user email, and user role (Student, Faculty, Guest)."""
+    """Marks a PC as occupied with optional time duration, user email, role, and explicit start_time."""
     conn = get_db_connection()
     cursor = conn.cursor()
     now_dt = datetime.now()
     now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    effective_start = start_time.strip() if (start_time and start_time.strip()) else now_str
 
     # If end_time is not explicitly passed but duration_mins is provided, calculate end_time
     if not end_time and duration_mins and duration_mins > 0:
         import datetime as dt_module
-        end_dt = now_dt + dt_module.timedelta(minutes=duration_mins)
+        try:
+            parsed_start = datetime.strptime(effective_start, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            parsed_start = now_dt
+        end_dt = parsed_start + dt_module.timedelta(minutes=duration_mins)
         end_time = end_dt.strftime("%Y-%m-%d %H:%M:%S")
 
     role_val = user_role.strip().capitalize() if user_role else "Student"
@@ -219,7 +235,7 @@ def occupy_pc(
             user_email = ?,
             user_role = ? 
         WHERE UPPER(pc_id) = UPPER(?)
-    """, (name.strip(), now_str, end_time, duration_mins, user_email, role_val, pc_id.strip()))
+    """, (name.strip(), effective_start, end_time, duration_mins, user_email, role_val, pc_id.strip()))
     affected = cursor.rowcount > 0
     
     # Also log into pc_allotment_history
@@ -227,7 +243,7 @@ def occupy_pc(
         INSERT INTO pc_allotment_history 
         (pc_id, student_name, user_email, user_role, start_time, end_time, duration_mins, created_date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (pc_id.strip(), name.strip(), user_email, role_val, now_str, end_time, duration_mins, now_dt.strftime("%Y-%m-%d")))
+    """, (pc_id.strip(), name.strip(), user_email, role_val, effective_start, end_time, duration_mins, now_dt.strftime("%Y-%m-%d")))
 
     # Update or add registered user's email if provided
     if user_email and name.strip() and role_val.lower() == "student":
@@ -344,28 +360,48 @@ def get_unknown_counter(today_date: str) -> int:
 # ── Registered Users Helpers ──
 
 def get_registered_users() -> List[Dict[str, Any]]:
-    """Returns all registered users sorted by name."""
+    """Returns all registered users sorted by name, including role and department."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, email, roll_no, avatar_url, created_at FROM registered_users ORDER BY name ASC")
+    cursor.execute("""
+        SELECT id, name, email, roll_no, avatar_url, 
+               COALESCE(role, 'Student') AS role, 
+               COALESCE(department, '') AS department, 
+               created_at 
+        FROM registered_users 
+        ORDER BY name ASC
+    """)
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
 
 
-def add_or_update_registered_user(name: str, email: Optional[str] = "", roll_no: Optional[str] = "", avatar_url: Optional[str] = "") -> bool:
-    """Adds a new registered user or updates existing user's details."""
+def add_or_update_registered_user(
+    name: str, 
+    email: Optional[str] = "", 
+    roll_no: Optional[str] = "", 
+    avatar_url: Optional[str] = "",
+    role: Optional[str] = "Student",
+    department: Optional[str] = ""
+) -> bool:
+    """Adds a new registered user or updates existing user's details including role and department."""
     conn = get_db_connection()
     cursor = conn.cursor()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    clean_role = (role or "Student").strip().capitalize()
+    if clean_role not in ["Student", "Faculty", "Guest"]:
+        clean_role = "Student"
+
     cursor.execute("""
-        INSERT INTO registered_users (name, email, roll_no, avatar_url, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO registered_users (name, email, roll_no, avatar_url, role, department, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(name) DO UPDATE SET 
             email = COALESCE(NULLIF(excluded.email, ''), registered_users.email),
             roll_no = COALESCE(NULLIF(excluded.roll_no, ''), registered_users.roll_no),
-            avatar_url = COALESCE(NULLIF(excluded.avatar_url, ''), registered_users.avatar_url)
-    """, (name.strip(), email.strip() if email else "", roll_no.strip() if roll_no else "", avatar_url or "", now_str))
+            avatar_url = COALESCE(NULLIF(excluded.avatar_url, ''), registered_users.avatar_url),
+            role = COALESCE(NULLIF(excluded.role, ''), registered_users.role),
+            department = COALESCE(NULLIF(excluded.department, ''), registered_users.department)
+    """, (name.strip(), email.strip() if email else "", roll_no.strip() if roll_no else "", avatar_url or "", clean_role, department.strip() if department else "", now_str))
     conn.commit()
     affected = cursor.rowcount > 0
     conn.close()

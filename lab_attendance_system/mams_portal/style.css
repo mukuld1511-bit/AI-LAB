@@ -997,3 +997,229 @@ body {
         height: 340px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════
+   CATEGORY FILTER CHIPS (STUDENTS, FACULTY, GUESTS)
+   ═══════════════════════════════════════════════════════ */
+.category-filter-chips {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.cat-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 9999px;
+    background: #ffffff;
+    color: var(--on-surface-variant);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cat-chip-btn:hover {
+    background: var(--surface-variant);
+    border-color: var(--border-hover);
+    color: var(--on-surface);
+}
+
+.cat-chip-btn.active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.cat-pill {
+    display: inline-block;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.08);
+    color: inherit;
+}
+
+.cat-chip-btn.active .cat-pill {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ROLE BADGES ON MEMBER CARDS
+   ═══════════════════════════════════════════════════════ */
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.badge-role-student {
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+}
+
+.badge-role-faculty {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.badge-role-guest {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DYNAMIC ALLOTMENT RANGE BOX (FROM-TO DATE & TIME)
+   ═══════════════════════════════════════════════════════ */
+.allotment-range-box {
+    background: var(--surface-variant);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.range-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.quick-preset-row {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+}
+
+.preset-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    margin-bottom: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CIRCULAR LIVE WEBCAM VIEWFINDER & REGISTRATION
+   ═══════════════════════════════════════════════════ */
+.modal-register {
+    max-width: 520px;
+}
+
+.camera-register-section {
+    background: #f8fafc;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.camera-circle-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 14px 0;
+}
+
+.camera-circle-viewfinder {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #0f172a;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25), 0 0 0 4px #ffffff, 0 0 0 7px var(--primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.camera-circle-viewfinder video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror view for intuitive user framing */
+}
+
+.camera-circle-viewfinder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.camera-scan-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px dashed rgba(99, 102, 241, 0.7);
+    pointer-events: none;
+    animation: rotateScan 8s linear infinite;
+}
+
+@keyframes rotateScan {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.camera-face-outline {
+    position: absolute;
+    width: 110px;
+    height: 140px;
+    border: 1.5px dotted rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.camera-status-pill {
+    position: absolute;
+    bottom: 8px;
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+    color: #ffffff;
+    border-radius: 9999px;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+}
+
+.camera-actions-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-text-link {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px;
+    text-decoration: underline;
+    font-family: inherit;
+}
+
+.btn-text-link:hover {
+    color: var(--primary-hover);
+}

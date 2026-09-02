@@ -1,9 +1,13 @@
-// ── HARDCODE YOUR PERMANENT NGROK DOMAIN OR BACKEND URL HERE ──
-let BASE_URL = "https://amaretto-confess-subtract.ngrok-free.dev";
-
-// Fallback to localStorage or localhost
-if (!BASE_URL || BASE_URL.includes("ngrok-free.dev") && !localStorage.getItem("ngrok_url")) {
-    BASE_URL = localStorage.getItem("ngrok_url") || "http://localhost:8000";
+// ── DYNAMIC BACKEND URL (DGX Spark / Remote / Localhost) ──
+let BASE_URL = localStorage.getItem("lab_backend_url") || "";
+if (!BASE_URL) {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+        BASE_URL = "http://localhost:8000";
+    } else if (window.location.protocol.startsWith("http") && !window.location.hostname.includes("vercel.app")) {
+        BASE_URL = window.location.origin;
+    } else {
+        BASE_URL = "http://localhost:8000";
+    }
 }
 
 // Global cached states
@@ -13,6 +17,12 @@ let currentSelectedDuration = 30; // default 30 mins
 let currentPCId = null;
 let currentAction = "occupy"; // "occupy" | "free"
 let countdownInterval = null;
+let currentCategoryFilter = "all";
+
+// Live Webcam Registration State
+let webcamStream = null;
+let capturedSnapshotBase64 = null;
+let selectedRegRole = "Student";
 
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
@@ -23,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
         init3DLabScene();
     }
     
-    // Connection UI setup
+    // Connection UI setup (Supports DGX Spark, Remote IP, or Tunnel)
     const urlInput = document.getElementById("ngrok-url");
     if (urlInput) {
         urlInput.value = BASE_URL;
@@ -33,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let url = (urlInput.value || "").trim();
         if (url.endsWith("/")) url = url.slice(0, -1);
         BASE_URL = url;
-        localStorage.setItem("ngrok_url", BASE_URL);
+        localStorage.setItem("lab_backend_url", BASE_URL);
         checkConnection();
     });
 
@@ -172,6 +182,62 @@ async function loadPCStatus(silent = false) {
     }
 }
 
+function formatFriendlyDateTime(dtStr) {
+    if (!dtStr) return "Until released";
+    try {
+        const clean = dtStr.replace("T", " ").split(".")[0].trim();
+        const [dPart, tPart] = clean.split(" ");
+        const [yyyy, mm, dd] = dPart.split("-");
+        const [hh, min] = (tPart || "00:00").split(":");
+        
+        const d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd), parseInt(hh), parseInt(min));
+        const today = new Date();
+        const isToday = d.toDateString() === today.toDateString();
+        
+        const tomorrow = new Date();
+        tomorrow.setDate(today.getDate() + 1);
+        const isTomorrow = d.toDateString() === tomorrow.toDateString();
+        
+        const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        
+        if (isToday) {
+            return `Today at ${timeStr}`;
+        } else if (isTomorrow) {
+            return `Tomorrow at ${timeStr}`;
+        } else {
+            const dateStr = d.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
+            return `${dateStr} at ${timeStr}`;
+        }
+    } catch (e) {
+        return dtStr;
+    }
+}
+
+function formatFriendlyDate(dtStr) {
+    if (!dtStr) return "Today";
+    try {
+        const clean = dtStr.replace("T", " ").split(" ")[0].trim();
+        const [yyyy, mm, dd] = clean.split("-");
+        const d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+        return d.toLocaleDateString([], { day: '2-digit', month: 'short' });
+    } catch (e) {
+        return dtStr.split(" ")[0] || dtStr;
+    }
+}
+
+function formatFriendlyTime(dtStr) {
+    if (!dtStr) return "N/A";
+    try {
+        const timePart = dtStr.includes(" ") ? dtStr.split(" ")[1] : dtStr;
+        const [hh, min] = timePart.split(":");
+        const d = new Date();
+        d.setHours(parseInt(hh), parseInt(min), 0);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch (e) {
+        return dtStr.split(" ")[1] || dtStr;
+    }
+}
+
 function render2DGrid() {
     const grid = document.getElementById("pc-grid");
     if (!grid) return;
@@ -189,13 +255,14 @@ function render2DGrid() {
             if (pc.end_time) {
                 const diff = calculateTimeRemaining(pc.end_time);
                 timeRemainingStr = diff.formatted;
+                const formattedValidUntil = formatFriendlyDateTime(pc.end_time);
                 countdownHtml = `
                     <div class="countdown-box" id="timer-${pc.pc_id}">
                         <span>⏳ Time Left:</span>
                         <strong style="color: #b91c1c;">${timeRemainingStr}</strong>
                     </div>
                     <div style="font-size: 11px; color: var(--on-surface-variant); margin-top: 4px;">
-                        Valid Until: <strong>${pc.end_time.split(" ")[1] || pc.end_time}</strong>
+                        Valid Until: <strong style="color: #4338ca;">${formattedValidUntil}</strong>
                     </div>
                 `;
             } else {
@@ -248,8 +315,8 @@ function render2DGrid() {
                         </div>
                         ${pc.user_email ? `<div class="pc-email-info">✉️ ${pc.user_email}</div>` : ''}
                         <div style="font-size: 11px; color: #64748b; margin-top: 4px; display: flex; justify-content: space-between;">
-                            <span>📅 ${pc.since_time ? pc.since_time.split(" ")[0] : "Today"}</span>
-                            <span>⏰ Since: ${pc.since_time ? pc.since_time.split(" ")[1] : "N/A"}</span>
+                            <span>📅 ${formatFriendlyDate(pc.since_time)}</span>
+                            <span>⏰ Since: ${formatFriendlyTime(pc.since_time)}</span>
                         </div>
                     ` : `
                         <div style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 4px;">
@@ -384,14 +451,8 @@ function handlePCClick(pcId, isFree) {
         document.getElementById("modal-faculty-notes").value = "";
         document.getElementById("modal-student-select").value = "";
         
-        const dateInput = document.getElementById("modal-allotment-date");
-        if (dateInput) {
-            const todayStr = new Date().toISOString().split("T")[0];
-            dateInput.value = todayStr;
-        }
-        
-        // Select 30 mins by default
-        selectDurationChip(30);
+        // Initialize Date From-To & Time From-To Range with current dynamic times
+        initAllotmentRangeDefaults();
     } else {
         // PC is occupied - Allow Free or Extend
         currentAction = "free";
@@ -402,7 +463,7 @@ function handlePCClick(pcId, isFree) {
         freeSection.style.display = "block";
 
         document.getElementById("modal-free-pc-title").innerText = `${currentPCId} is Allocated to ${pcData.occupied_by}`;
-        document.getElementById("modal-free-pc-desc").innerText = `Started at: ${pcData.since_time || 'N/A'}. Valid until: ${pcData.end_time || 'Manual Release'}`;
+        document.getElementById("modal-free-pc-desc").innerText = `Started: ${formatFriendlyDateTime(pcData.since_time)} • Valid until: ${formatFriendlyDateTime(pcData.end_time)}`;
         
         actionBtn.innerText = "❌ Free / Deselect Workstation";
         actionBtn.className = "btn btn-danger";
@@ -415,64 +476,122 @@ function closePCModal() {
     currentPCId = null;
 }
 
-// Duration Chip Selection
-function selectDurationChip(mins) {
-    currentSelectedDuration = mins;
-    const chips = document.querySelectorAll(".chip-btn");
-    chips.forEach(c => {
-        if (c.dataset.mins == mins) {
-            c.classList.add("active");
-        } else {
-            c.classList.remove("active");
-        }
-    });
+// ── Dynamic Allotment Date & Time Range Math (From-To) ──
 
-    const customWrap = document.getElementById("custom-time-wrap");
-    const previewSpan = document.getElementById("preview-expiry-time");
-    
+function initAllotmentRangeDefaults() {
     const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    
+    const dateFromInput = document.getElementById("modal-date-from");
+    const dateToInput = document.getElementById("modal-date-to");
+    const timeFromInput = document.getElementById("modal-time-from");
+    const timeToInput = document.getElementById("modal-time-to");
 
-    if (mins === "custom") {
-        if (customWrap) customWrap.style.display = "block";
-        const customInput = document.getElementById("modal-custom-time");
-        if (customInput && !customInput.value) {
-            // Default 1 hour ahead
-            const future = new Date(now.getTime() + 60 * 60 * 1000);
-            const hh = String(future.getHours()).padStart(2, '0');
-            const mm = String(future.getMinutes()).padStart(2, '0');
-            customInput.value = `${hh}:${mm}`;
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const timeFromStr = `${hh}:${mm}`;
+
+    // Default +30 minutes
+    const future = new Date(now.getTime() + 30 * 60 * 1000);
+    const futHh = String(future.getHours()).padStart(2, '0');
+    const futMm = String(future.getMinutes()).padStart(2, '0');
+    const futDateStr = future.toISOString().split("T")[0];
+    const timeToStr = `${futHh}:${futMm}`;
+
+    if (dateFromInput) dateFromInput.value = todayStr;
+    if (dateToInput) dateToInput.value = futDateStr;
+    if (timeFromInput) timeFromInput.value = timeFromStr;
+    if (timeToInput) timeToInput.value = timeToStr;
+
+    onAllotmentRangeChange();
+}
+
+function onAllotmentRangeChange() {
+    const dateFrom = document.getElementById("modal-date-from")?.value;
+    const dateTo = document.getElementById("modal-date-to")?.value;
+    const timeFrom = document.getElementById("modal-time-from")?.value;
+    const timeTo = document.getElementById("modal-time-to")?.value;
+
+    const durationText = document.getElementById("calc-duration-text");
+    const expiryText = document.getElementById("calc-expiry-text");
+
+    if (!dateFrom || !dateTo || !timeFrom || !timeTo) return;
+
+    const startDt = new Date(`${dateFrom}T${timeFrom}:00`);
+    const endDt = new Date(`${dateTo}T${timeTo}:00`);
+
+    const diffMs = endDt - startDt;
+    if (diffMs <= 0) {
+        if (durationText) {
+            durationText.innerText = "Invalid Range (End before Start)";
+            durationText.style.color = "#ef4444";
         }
-        updateCustomExpiryPreview();
-        customInput?.addEventListener("input", updateCustomExpiryPreview);
+        if (expiryText) expiryText.innerText = "End time must be after Start time";
+        return;
+    }
+
+    const totalMins = Math.round(diffMs / 60000);
+    const hours = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    let durStr = "";
+    if (hours > 0) {
+        durStr = `${hours} hr${hours > 1 ? 's' : ''}${mins > 0 ? ` ${mins} min` : ''}`;
     } else {
-        if (customWrap) customWrap.style.display = "none";
-        const target = new Date(now.getTime() + parseInt(mins) * 60 * 1000);
-        const timeStr = target.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        const dateStr = document.getElementById("modal-allotment-date")?.value || "Today";
-        if (previewSpan) previewSpan.innerText = `${dateStr} at ${timeStr} (${mins} Minutes from now)`;
+        durStr = `${mins} Mins`;
+    }
+
+    if (durationText) {
+        durationText.innerText = durStr;
+        durationText.style.color = "#4338ca";
+    }
+    if (expiryText) {
+        const timeFmt = endDt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        expiryText.innerText = `${dateTo} at ${timeFmt}`;
     }
 }
 
-function updateCustomExpiryPreview() {
-    const customInput = document.getElementById("modal-custom-time");
-    const previewSpan = document.getElementById("preview-expiry-time");
-    const dateStr = document.getElementById("modal-allotment-date")?.value || "Today";
-    if (customInput && previewSpan && customInput.value) {
-        previewSpan.innerText = `${dateStr} at ${customInput.value}`;
+function applyQuickTimePreset(mins) {
+    const dateFrom = document.getElementById("modal-date-from")?.value || new Date().toISOString().split("T")[0];
+    const timeFrom = document.getElementById("modal-time-from")?.value || "12:00";
+    const startDt = new Date(`${dateFrom}T${timeFrom}:00`);
+
+    let targetDt;
+    if (mins === 'eod') {
+        targetDt = new Date(`${dateFrom}T18:00:00`);
+        if (targetDt <= startDt) {
+            targetDt.setDate(targetDt.getDate() + 1);
+        }
+    } else {
+        targetDt = new Date(startDt.getTime() + parseInt(mins) * 60 * 1000);
     }
+
+    const targetDateStr = targetDt.toISOString().split("T")[0];
+    const targetHh = String(targetDt.getHours()).padStart(2, '0');
+    const targetMm = String(targetDt.getMinutes()).padStart(2, '0');
+
+    const dateToInput = document.getElementById("modal-date-to");
+    const timeToInput = document.getElementById("modal-time-to");
+
+    if (dateToInput) dateToInput.value = targetDateStr;
+    if (timeToInput) timeToInput.value = `${targetHh}:${targetMm}`;
+
+    onAllotmentRangeChange();
 }
 
-// Populate Registered Students Dropdown
+// Populate Registered Members Dropdown for Allotment
 function populateStudentSelect() {
     const select = document.getElementById("modal-student-select");
     if (!select) return;
 
-    select.innerHTML = '<option value="">-- Choose Registered Student --</option>';
+    select.innerHTML = '<option value="">-- Choose Registered Lab Member --</option>';
     registeredUsersList.forEach(user => {
         const opt = document.createElement("option");
         opt.value = user.name;
-        opt.innerText = `${user.name}${user.email ? ` (${user.email})` : ''}`;
+        const role = user.role || "Student";
+        const icon = role.toLowerCase() === "faculty" ? "👨‍🏫" : role.toLowerCase() === "guest" ? "👤" : "🎓";
+        opt.innerText = `${icon} [${role}] ${user.name}${user.email ? ` (${user.email})` : ''}`;
         opt.dataset.email = user.email || "";
+        opt.dataset.role = role;
         select.appendChild(opt);
     });
 }
@@ -484,6 +603,8 @@ function onStudentSelectChange() {
         document.getElementById("modal-student-name").value = selectedOpt.value;
         const email = selectedOpt.dataset.email || "";
         document.getElementById("modal-student-email").value = email;
+        const role = selectedOpt.dataset.role || "Student";
+        selectUserRole(role);
     }
 }
 
@@ -506,15 +627,15 @@ function selectUserRole(role) {
 
     if (selectedUserRole === "Student") {
         if (regGroup) regGroup.style.display = "block";
-        if (nameLabel) nameLabel.innerText = "Student Name:";
+        if (nameLabel) nameLabel.innerText = "Student Full Name:";
         if (nameInput) nameInput.placeholder = "e.g. Ayush, Priya (or pick from above list)";
     } else if (selectedUserRole === "Faculty") {
-        if (regGroup) regGroup.style.display = "none";
+        if (regGroup) regGroup.style.display = "block";
         if (nameLabel) nameLabel.innerText = "Faculty Member Name & Title:";
         if (nameInput) nameInput.placeholder = "e.g. Dr. Sharma, Prof. Verma";
     } else if (selectedUserRole === "Guest") {
-        if (regGroup) regGroup.style.display = "none";
-        if (nameLabel) nameLabel.innerText = "Guest / Unregistered User Name:";
+        if (regGroup) regGroup.style.display = "block";
+        if (nameLabel) nameLabel.innerText = "Guest / Visitor Name:";
         if (nameInput) nameInput.placeholder = "e.g. Rahul (Visiting Guest), External Researcher";
     }
 }
@@ -541,33 +662,31 @@ async function handleModalActionSubmit() {
                 return;
             }
 
-            let durationMins = null;
-            let explicitEndTime = null;
+            const dateFrom = document.getElementById("modal-date-from")?.value;
+            const dateTo = document.getElementById("modal-date-to")?.value;
+            const timeFrom = document.getElementById("modal-time-from")?.value;
+            const timeTo = document.getElementById("modal-time-to")?.value;
 
-            const selectedDateVal = document.getElementById("modal-allotment-date")?.value || new Date().toISOString().split("T")[0];
-
-            if (currentSelectedDuration === "custom") {
-                const timeVal = document.getElementById("modal-custom-time").value;
-                if (!timeVal) {
-                    showToast("Please select a valid custom time.", "error");
-                    actionBtn.disabled = false;
-                    actionBtn.innerText = "Confirm & Assign Slot";
-                    return;
-                }
-                const now = new Date();
-                const [yyyy, MM, dd] = selectedDateVal.split("-");
-                const [hh, mm] = timeVal.split(":");
-                const target = new Date(parseInt(yyyy), parseInt(MM) - 1, parseInt(dd), parseInt(hh), parseInt(mm), 0);
-                
-                const HH = String(target.getHours()).padStart(2, '0');
-                const MIN = String(target.getMinutes()).padStart(2, '0');
-                const SS = "00";
-                
-                explicitEndTime = `${yyyy}-${MM}-${dd} ${HH}:${MIN}:${SS}`;
-                durationMins = Math.max(1, Math.round((target - now) / 60000));
-            } else {
-                durationMins = parseInt(currentSelectedDuration) || 30;
+            if (!dateFrom || !dateTo || !timeFrom || !timeTo) {
+                showToast("Please provide both Date From/To and Time From/To ranges.", "error");
+                actionBtn.disabled = false;
+                actionBtn.innerText = "Confirm & Assign Slot";
+                return;
             }
+
+            const startDt = new Date(`${dateFrom}T${timeFrom}:00`);
+            const endDt = new Date(`${dateTo}T${timeTo}:00`);
+
+            if (endDt <= startDt) {
+                showToast("End Time must be after Start Time.", "error");
+                actionBtn.disabled = false;
+                actionBtn.innerText = "Confirm & Assign Slot";
+                return;
+            }
+
+            const durationMins = Math.max(1, Math.round((endDt - startDt) / 60000));
+            const explicitStartTime = `${dateFrom} ${timeFrom}:00`;
+            const explicitEndTime = `${dateTo} ${timeTo}:00`;
 
             const response = await apiFetch("/pc/occupy", {
                 method: "POST",
@@ -576,6 +695,7 @@ async function handleModalActionSubmit() {
                     name: name,
                     email: email,
                     duration_mins: durationMins,
+                    start_time: explicitStartTime,
                     end_time: explicitEndTime,
                     send_email: sendEmail && !!email,
                     notes: notes,
@@ -583,11 +703,19 @@ async function handleModalActionSubmit() {
                 })
             });
 
-            let toastMsg = `💻 ${currentPCId} assigned to ${name} (${selectedUserRole}) for ${durationMins} mins`;
+            let toastMsg = `💻 ${currentPCId} assigned to ${name} (${selectedUserRole}) until ${timeTo}`;
             if (sendEmail && email) {
-                toastMsg += ` • ✉️ Email Sent`;
+                if (response && response.email_result) {
+                    if (response.email_result.success) {
+                        toastMsg += ` • ✉️ Email Delivered`;
+                    } else {
+                        toastMsg += ` • ⚠️ Email Failed: ${response.email_result.message || response.email_result.error || 'Check Mail Config'}`;
+                    }
+                } else {
+                    toastMsg += ` • ✉️ Email Triggered`;
+                }
             }
-            showToast(toastMsg, "success");
+            showToast(toastMsg, response?.email_result?.success === false ? "info" : "success");
 
         } else if (currentAction === "free") {
             await apiFetch("/pc/free", {
@@ -655,11 +783,10 @@ async function loadAttendance() {
     }
 }
 
-// ── Registered Users Tab ──
+// ── Registered Users Directory & Categorized Filtering ──
 
 async function loadRegisteredFaces() {
     if (!BASE_URL) return;
-    const grid = document.getElementById("registered-grid");
     const countBadge = document.getElementById("nav-reg-count");
 
     try {
@@ -667,47 +794,87 @@ async function loadRegisteredFaces() {
         registeredUsersList = data.users || [];
         
         if (countBadge) countBadge.innerText = registeredUsersList.length;
-
-        if (!grid) return;
+        updateCategoryCounts(registeredUsersList);
         renderRegisteredUsersGrid(registeredUsersList);
     } catch(e) {
         console.error("Failed to load registered users", e);
     }
 }
 
+function updateCategoryCounts(users) {
+    const total = users.length;
+    const students = users.filter(u => (u.role || "Student").toLowerCase() === "student").length;
+    const faculty = users.filter(u => (u.role || "").toLowerCase() === "faculty").length;
+    const guests = users.filter(u => (u.role || "").toLowerCase() === "guest").length;
+
+    const countAll = document.getElementById("cat-count-all");
+    const countStud = document.getElementById("cat-count-students");
+    const countFac = document.getElementById("cat-count-faculty");
+    const countGst = document.getElementById("cat-count-guests");
+
+    if (countAll) countAll.innerText = total;
+    if (countStud) countStud.innerText = students;
+    if (countFac) countFac.innerText = faculty;
+    if (countGst) countGst.innerText = guests;
+}
+
+function selectUserCategory(cat) {
+    currentCategoryFilter = cat;
+    document.querySelectorAll(".cat-chip-btn").forEach(btn => {
+        if (btn.dataset.cat === cat) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+    filterRegisteredUsers();
+}
+
 function renderRegisteredUsersGrid(users) {
     const grid = document.getElementById("registered-grid");
     if (!grid) return;
 
-    if (users.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No students registered yet. Click "Add Student" to register!</div>`;
+    let filtered = users;
+    if (currentCategoryFilter !== "all") {
+        filtered = users.filter(u => (u.role || "Student").toLowerCase() === currentCategoryFilter.toLowerCase());
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No ${currentCategoryFilter === 'all' ? 'members' : currentCategoryFilter + 's'} enrolled yet. Click "Register Member" to add!</div>`;
         return;
     }
 
-    grid.innerHTML = users.map(user => {
+    grid.innerHTML = filtered.map(user => {
         const avatarUrl = user.avatar_url ? `${BASE_URL}${user.avatar_url}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff`;
+        const role = (user.role || "Student").capitalize ? user.role.capitalize() : user.role || "Student";
+        const roleBadgeClass = role.toLowerCase() === "faculty" ? "badge-role-faculty" : role.toLowerCase() === "guest" ? "badge-role-guest" : "badge-role-student";
+        const roleIcon = role.toLowerCase() === "faculty" ? "👨‍🏫" : role.toLowerCase() === "guest" ? "👤" : "🎓";
 
         return `
             <div class="student-card">
                 <div class="student-card-top">
                     <img src="${avatarUrl}" class="student-avatar" alt="${user.name}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff'">
                     <div class="student-info">
-                        <h4>${user.name}</h4>
-                        <p>${user.email ? `✉️ ${user.email}` : '<span style="color: #94a3b8;">No email saved</span>'}</p>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
+                            <h4 style="margin: 0; font-size: 15px;">${user.name}</h4>
+                            <span class="role-badge ${roleBadgeClass}">${roleIcon} ${role}</span>
+                        </div>
+                        ${user.roll_no ? `<p style="font-weight: 600; color: #475569; font-size: 11px; margin-top: 2px;">🆔 ${user.roll_no}</p>` : ''}
+                        <p style="margin-top: 2px;">${user.email ? `✉️ ${user.email}` : '<span style="color: #94a3b8;">No email saved</span>'}</p>
                         <small style="color: #94a3b8; font-size: 11px;">Enrolled: ${user.created_at ? user.created_at.split(" ")[0] : 'Yes'}</small>
                     </div>
                 </div>
                 
                 <div class="student-actions">
-                    <button class="btn btn-primary" style="flex: 1; font-size: 12px; padding: 6px 8px;" onclick="allotPCToStudent('${user.name}', '${user.email || ''}')">
+                    <button class="btn btn-primary" style="flex: 1; font-size: 12px; padding: 6px 8px;" onclick="allotPCToStudent('${user.name}', '${user.email || ''}', '${role}')">
                         💻 Allot PC
                     </button>
                     ${user.email ? `
-                        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="openDirectEmailModal('${user.email}', '${user.name}')" title="Email Student">
+                        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="openDirectEmailModal('${user.email}', '${user.name}')" title="Email Member">
                             ✉️
                         </button>
                     ` : ''}
-                    <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 8px; color: var(--error);" onclick="deleteStudent('${user.name}')" title="Unregister Student">
+                    <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 8px; color: var(--error);" onclick="deleteStudent('${user.name}')" title="Unregister Member">
                         🗑️
                     </button>
                 </div>
@@ -718,19 +885,26 @@ function renderRegisteredUsersGrid(users) {
 
 function filterRegisteredUsers() {
     const q = (document.getElementById("search-reg-input")?.value || "").toLowerCase();
-    const filtered = registeredUsersList.filter(u => u.name.toLowerCase().includes(q) || (u.email && u.email.toLowerCase().includes(q)));
+    const filtered = registeredUsersList.filter(u => {
+        const matchesQuery = u.name.toLowerCase().includes(q) || 
+                             (u.email && u.email.toLowerCase().includes(q)) ||
+                             (u.roll_no && u.roll_no.toLowerCase().includes(q)) ||
+                             (u.role && u.role.toLowerCase().includes(q));
+        return matchesQuery;
+    });
     renderRegisteredUsersGrid(filtered);
 }
 
-function allotPCToStudent(name, email) {
+function allotPCToStudent(name, email, role = "Student") {
     // Find first available PC
     const firstFree = allPCsState.find(p => p.status.toLowerCase() === "free");
     const targetPC = firstFree ? firstFree.pc_id : "PC-1";
     
     handlePCClick(targetPC, true);
     
-    // Auto-fill student info
+    // Auto-fill member info and select their role
     setTimeout(() => {
+        selectUserRole(role);
         const nameInput = document.getElementById("modal-student-name");
         const emailInput = document.getElementById("modal-student-email");
         if (nameInput) nameInput.value = name;
@@ -739,13 +913,13 @@ function allotPCToStudent(name, email) {
 }
 
 async function deleteStudent(name) {
-    if (!confirm(`Are you sure you want to unregister ${name}? This will remove facial encodings as well.`)) return;
+    if (!confirm(`Are you sure you want to unregister ${name}? This will remove facial recognition biometric data as well.`)) return;
     try {
         await apiFetch(`/api/registered_users/${encodeURIComponent(name)}`, { method: "DELETE" });
-        showToast(`Student '${name}' unregistered.`, "success");
+        showToast(`Member '${name}' unregistered.`, "success");
         await loadRegisteredFaces();
     } catch (e) {
-        showToast("Error deleting student: " + e.message, "error");
+        showToast("Error deleting member: " + e.message, "error");
     }
 }
 
@@ -900,73 +1074,299 @@ async function submitDirectEmail() {
     }
 }
 
-// ── Add Student Modal ──
+// ── Live Circular Webcam Face Registration Module ──
 
-function openAddStudentModal() {
+function openAddUserModal(prefillData = {}) {
     const modal = document.getElementById("add-student-modal");
-    if (modal) modal.style.display = "flex";
+    if (!modal) return;
+    modal.style.display = "flex";
+
+    selectRegRole(prefillData.role || "Student");
+    capturedSnapshotBase64 = null;
+
+    document.getElementById("new-student-name").value = prefillData.name || "";
+    document.getElementById("new-student-email").value = prefillData.email || "";
+    document.getElementById("new-user-roll-dept").value = prefillData.roll_no || "";
+
+    // Reset camera preview & snapshot elements
+    const video = document.getElementById("reg-webcam-video");
+    const previewImg = document.getElementById("reg-snapshot-preview");
+    const captureBtn = document.getElementById("btn-capture-snapshot");
+    const retakeBtn = document.getElementById("btn-retake-snapshot");
+    const scanRing = document.getElementById("camera-scan-ring");
+    const statusPill = document.getElementById("camera-status-pill");
+
+    if (video) video.style.display = "block";
+    if (previewImg) {
+        previewImg.style.display = "none";
+        previewImg.src = "";
+    }
+    if (captureBtn) captureBtn.style.display = "inline-flex";
+    if (retakeBtn) retakeBtn.style.display = "none";
+    if (scanRing) scanRing.style.display = "block";
+    if (statusPill) statusPill.innerText = "🟢 Initializing Camera...";
+
+    startRegistrationCamera();
+}
+
+// Alias for legacy calls
+function openAddStudentModal() {
+    openAddUserModal();
+}
+
+function closeAddUserModal() {
+    const modal = document.getElementById("add-student-modal");
+    if (modal) modal.style.display = "none";
+    stopRegistrationCamera();
+    capturedSnapshotBase64 = null;
 }
 
 function closeAddStudentModal() {
-    const modal = document.getElementById("add-student-modal");
-    if (modal) modal.style.display = "none";
+    closeAddUserModal();
+}
+
+function selectRegRole(role) {
+    selectedRegRole = role || "Student";
+    const chips = document.querySelectorAll("[data-regrole]");
+    chips.forEach(c => {
+        if (c.dataset.regrole === selectedRegRole) {
+            c.classList.add("active");
+        } else {
+            c.classList.remove("active");
+        }
+    });
+
+    const idLabel = document.getElementById("new-user-id-label");
+    const idInput = document.getElementById("new-user-roll-dept");
+    const nameLabel = document.getElementById("new-user-name-label");
+    const nameInput = document.getElementById("new-student-name");
+
+    if (selectedRegRole === "Student") {
+        if (nameLabel) nameLabel.innerText = "Student Full Name:";
+        if (nameInput) nameInput.placeholder = "e.g. Ayush Sharma";
+        if (idLabel) idLabel.innerText = "Roll Number / Batch:";
+        if (idInput) idInput.placeholder = "e.g. 21BCSE101";
+    } else if (selectedRegRole === "Faculty") {
+        if (nameLabel) nameLabel.innerText = "Faculty Name & Title:";
+        if (nameInput) nameInput.placeholder = "e.g. Dr. Sharma, Prof. Verma";
+        if (idLabel) idLabel.innerText = "Designation / Department:";
+        if (idInput) idInput.placeholder = "e.g. Associate Professor (CSE)";
+    } else if (selectedRegRole === "Guest") {
+        if (nameLabel) nameLabel.innerText = "Guest / Visitor Name:";
+        if (nameInput) nameInput.placeholder = "e.g. Rahul Verma (External Researcher)";
+        if (idLabel) idLabel.innerText = "Organization / Purpose:";
+        if (idInput) idInput.placeholder = "e.g. Visiting Scholar / Workshop";
+    }
+}
+
+async function startRegistrationCamera() {
+    const video = document.getElementById("reg-webcam-video");
+    const statusPill = document.getElementById("camera-status-pill");
+    if (!video) return;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (statusPill) statusPill.innerText = "⚠️ Camera not supported";
+        showToast("Camera API not available in this browser. You can use the photo upload option.", "info");
+        toggleUploadFallback(true);
+        return;
+    }
+
+    try {
+        stopRegistrationCamera();
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: "user",
+                width: { ideal: 640 },
+                height: { ideal: 640 }
+            },
+            audio: false
+        });
+        video.srcObject = webcamStream;
+        video.onloadedmetadata = () => {
+            video.play().catch(() => {});
+            if (statusPill) statusPill.innerText = "🟢 Live Face Frame";
+        };
+    } catch (err) {
+        console.warn("Webcam access error:", err);
+        if (statusPill) statusPill.innerText = "⚠️ Camera Access Denied";
+        showToast("Camera access was blocked or unavailable. Falling back to file upload.", "info");
+        toggleUploadFallback(true);
+    }
+}
+
+function stopRegistrationCamera() {
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+    }
+    const video = document.getElementById("reg-webcam-video");
+    if (video) video.srcObject = null;
+}
+
+function captureWebcamSnapshot() {
+    const video = document.getElementById("reg-webcam-video");
+    const canvas = document.getElementById("reg-webcam-canvas");
+    const previewImg = document.getElementById("reg-snapshot-preview");
+    const captureBtn = document.getElementById("btn-capture-snapshot");
+    const retakeBtn = document.getElementById("btn-retake-snapshot");
+    const scanRing = document.getElementById("camera-scan-ring");
+    const statusPill = document.getElementById("camera-status-pill");
+
+    if (!video || !canvas || !previewImg) return;
+    if (!video.videoWidth || !video.videoHeight) {
+        showToast("Camera is still warming up. Please wait a moment.", "info");
+        return;
+    }
+
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+
+    // Center crop square from video frame with mirror flip for intuitive matching
+    const startX = (video.videoWidth - size) / 2;
+    const startY = (video.videoHeight - size) / 2;
+
+    ctx.save();
+    ctx.translate(size, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, startX, startY, size, size, 0, 0, size, size);
+    ctx.restore();
+
+    capturedSnapshotBase64 = canvas.toDataURL("image/jpeg", 0.92);
+    previewImg.src = capturedSnapshotBase64;
+
+    video.style.display = "none";
+    previewImg.style.display = "block";
+    if (captureBtn) captureBtn.style.display = "none";
+    if (retakeBtn) retakeBtn.style.display = "inline-flex";
+    if (scanRing) scanRing.style.display = "none";
+    if (statusPill) statusPill.innerText = "✨ Snapshot Captured";
+
+    showToast("📸 Face snapshot captured! Ready to enroll.", "success");
+}
+
+function retakeWebcamSnapshot() {
+    const video = document.getElementById("reg-webcam-video");
+    const previewImg = document.getElementById("reg-snapshot-preview");
+    const captureBtn = document.getElementById("btn-capture-snapshot");
+    const retakeBtn = document.getElementById("btn-retake-snapshot");
+    const scanRing = document.getElementById("camera-scan-ring");
+    const statusPill = document.getElementById("camera-status-pill");
+
+    capturedSnapshotBase64 = null;
+    if (previewImg) previewImg.style.display = "none";
+    if (video) video.style.display = "block";
+    if (captureBtn) captureBtn.style.display = "inline-flex";
+    if (retakeBtn) retakeBtn.style.display = "none";
+    if (scanRing) scanRing.style.display = "block";
+    if (statusPill) statusPill.innerText = "🟢 Live Face Frame";
+
+    if (!webcamStream || !webcamStream.active) {
+        startRegistrationCamera();
+    }
+}
+
+function toggleUploadFallback(forceOpen = false) {
+    const wrap = document.getElementById("file-upload-fallback-wrap");
+    if (!wrap) return;
+    if (forceOpen) {
+        wrap.style.display = "block";
+    } else {
+        wrap.style.display = wrap.style.display === "none" ? "block" : "none";
+    }
+}
+
+function handleFallbackFileSelected(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        capturedSnapshotBase64 = e.target.result;
+        const video = document.getElementById("reg-webcam-video");
+        const previewImg = document.getElementById("reg-snapshot-preview");
+        const statusPill = document.getElementById("camera-status-pill");
+
+        if (video) video.style.display = "none";
+        if (previewImg) {
+            previewImg.src = capturedSnapshotBase64;
+            previewImg.style.display = "block";
+        }
+        if (statusPill) statusPill.innerText = "📁 File Uploaded";
+        showToast("Photo loaded into preview circle.", "success");
+    };
+    reader.readAsDataURL(file);
+}
+
+function toggleServerConfigBar() {
+    const connUI = document.getElementById("connection-ui");
+    if (connUI) {
+        connUI.style.display = connUI.style.display === "none" ? "flex" : "none";
+    }
 }
 
 async function submitNewStudent() {
     const name = document.getElementById("new-student-name").value.trim();
     const email = document.getElementById("new-student-email").value.trim();
+    const rollNo = document.getElementById("new-user-roll-dept")?.value.trim() || "";
     const fileInput = document.getElementById("new-student-photo");
     const btn = document.getElementById("save-student-btn");
 
     if (!name) {
-        showToast("Please enter student name.", "error");
+        showToast("Please enter the member's full name.", "error");
         return;
     }
 
     btn.disabled = true;
-    btn.innerText = "Registering...";
+    btn.innerText = "Enrolling...";
 
     try {
-        if (fileInput && fileInput.files && fileInput.files[0]) {
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const b64 = e.target.result;
-                try {
-                    await apiFetch("/enroll", {
-                        method: "POST",
-                        body: JSON.stringify({
-                            name: name,
-                            email: email,
-                            image_base64: b64
-                        })
-                    });
-                    showToast(`Student '${name}' registered with facial profile!`, "success");
-                    closeAddStudentModal();
-                    await loadRegisteredFaces();
-                } catch(err) {
-                    showToast("Enrollment failed: " + err.message, "error");
-                } finally {
-                    btn.disabled = false;
-                    btn.innerText = "Save Student";
-                }
-            };
-            reader.readAsDataURL(fileInput.files[0]);
+        let finalImageBase64 = capturedSnapshotBase64;
+
+        if (!finalImageBase64 && fileInput && fileInput.files && fileInput.files[0]) {
+            finalImageBase64 = await new Promise((resolve) => {
+                const r = new FileReader();
+                r.onload = (e) => resolve(e.target.result);
+                r.readAsDataURL(fileInput.files[0]);
+            });
+        }
+
+        if (finalImageBase64) {
+            await apiFetch("/enroll", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    role: selectedRegRole,
+                    roll_no: rollNo,
+                    department: rollNo,
+                    image_base64: finalImageBase64
+                })
+            });
+            showToast(`✅ ${selectedRegRole} '${name}' registered with biometric facial profile!`, "success");
         } else {
-            // Register student record without photo
+            // Register member record without face embedding
             await apiFetch("/api/registered_users", {
                 method: "POST",
-                body: JSON.stringify({ name, email })
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    role: selectedRegRole,
+                    roll_no: rollNo,
+                    department: rollNo
+                })
             });
-            showToast(`Student '${name}' registered.`, "success");
-            closeAddStudentModal();
-            await loadRegisteredFaces();
-            btn.disabled = false;
-            btn.innerText = "Save Student";
+            showToast(`✅ ${selectedRegRole} '${name}' registered in directory.`, "success");
         }
+
+        closeAddUserModal();
+        await loadRegisteredFaces();
     } catch (e) {
-        showToast("Failed to add student: " + e.message, "error");
+        showToast("Registration failed: " + e.message, "error");
+    } finally {
         btn.disabled = false;
-        btn.innerText = "Save Student";
+        btn.innerText = "Save & Enroll Member";
     }
 }
 

@@ -65,6 +65,7 @@ class OccupyRequest(BaseModel):
     pc_id: str
     name: str
     duration_mins: Optional[int] = None
+    start_time: Optional[str] = None
     end_time: Optional[str] = None
     email: Optional[str] = None
     send_email: Optional[bool] = False
@@ -87,6 +88,8 @@ class RegisteredUserCreate(BaseModel):
     name: str
     email: Optional[str] = ""
     roll_no: Optional[str] = ""
+    role: Optional[str] = "Student"
+    department: Optional[str] = ""
 
 
 class UpdateEmailRequest(BaseModel):
@@ -101,6 +104,9 @@ class ManualAttendanceRequest(BaseModel):
 class EnrollRequest(BaseModel):
     name: str
     email: Optional[str] = ""
+    role: Optional[str] = "Student"
+    roll_no: Optional[str] = ""
+    department: Optional[str] = ""
     image_base64: str
 
 
@@ -130,12 +136,13 @@ def get_pc_status() -> List[Dict[str, Any]]:
 @app.post("/pc/occupy")
 def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks):
     """
-    Allocates a PC with optional time duration, end_time, user role (Student/Faculty/Guest), and automated email.
+    Allocates a PC with optional time range (start_time, end_time, duration), user role (Student/Faculty/Guest), and automated email.
     """
     pc_id = payload.pc_id.strip()
     name = payload.name.strip()
     email = payload.email.strip() if payload.email else None
     duration_mins = payload.duration_mins
+    start_time_req = payload.start_time.strip() if payload.start_time else None
     end_time = payload.end_time.strip() if payload.end_time else None
     send_email_flag = payload.send_email
     user_role = payload.user_role or "Student"
@@ -145,14 +152,30 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
     if not name:
         raise HTTPException(status_code=400, detail="Name is required to occupy a PC.")
 
-    # Calculate end_time if duration provided without explicit end_time
     now_dt = datetime.now()
-    start_time_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    start_time_str = start_time_req if start_time_req else now_str
 
+    # Calculate end_time if duration provided without explicit end_time
     if not end_time and duration_mins and duration_mins > 0:
         import datetime as dt_module
-        end_dt = now_dt + dt_module.timedelta(minutes=duration_mins)
+        try:
+            parsed_start = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            parsed_start = now_dt
+        end_dt = parsed_start + dt_module.timedelta(minutes=duration_mins)
         end_time = end_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    # If both start and end time provided but not duration, compute duration
+    if start_time_str and end_time and (not duration_mins or duration_mins <= 0):
+        try:
+            p_start = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
+            p_end = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+            diff = (p_end - p_start).total_seconds()
+            if diff > 0:
+                duration_mins = int(diff // 60)
+        except Exception:
+            pass
 
     success = database.occupy_pc(
         pc_id=pc_id,
@@ -160,7 +183,8 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
         duration_mins=duration_mins,
         end_time=end_time,
         user_email=email,
-        user_role=user_role
+        user_role=user_role,
+        start_time=start_time_str
     )
 
     if not success:
@@ -352,7 +376,7 @@ def get_registered_faces():
 
 @app.post("/api/registered_users")
 def create_or_update_user(payload: RegisteredUserCreate):
-    """Adds or updates a student record in registered_users."""
+    """Adds or updates a student, faculty, or guest record in registered_users."""
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Name is required.")
     
@@ -364,9 +388,11 @@ def create_or_update_user(payload: RegisteredUserCreate):
         name=clean_name,
         email=payload.email.strip() if payload.email else "",
         roll_no=payload.roll_no.strip() if payload.roll_no else "",
-        avatar_url=avatar_url
+        avatar_url=avatar_url,
+        role=payload.role or "Student",
+        department=payload.department or ""
     )
-    return {"status": "success", "message": f"Student '{clean_name}' saved."}
+    return {"status": "success", "message": f"{payload.role or 'User'} '{clean_name}' saved."}
 
 
 @app.put("/api/registered_users/{name}/email")
@@ -488,14 +514,17 @@ def enroll_face(payload: EnrollRequest):
         with open(ENCODINGS_FILE, "wb") as f:
             pickle.dump(known_data, f)
 
-        # Save to SQLite registered_users
+        # Save to SQLite registered_users with role and roll_no
         database.add_or_update_registered_user(
             name=payload.name.strip(),
             email=payload.email.strip() if payload.email else "",
-            avatar_url=f"/static/avatars/{avatar_filename}"
+            roll_no=payload.roll_no.strip() if payload.roll_no else "",
+            avatar_url=f"/static/avatars/{avatar_filename}",
+            role=payload.role or "Student",
+            department=payload.department or ""
         )
             
-        return {"status": "success", "message": f"Successfully registered '{payload.name}'"}
+        return {"status": "success", "message": f"Successfully registered {payload.role or 'Member'} '{payload.name}'"}
     except HTTPException:
         raise
     except Exception as e:
