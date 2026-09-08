@@ -1223,3 +1223,37 @@ body {
 .btn-text-link:hover {
     color: var(--primary-hover);
 }
+
+/* ── Offline Persistence & Unupdated Badge ── */
+.corner-unupdated-badge {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #fffbeb;
+    color: #92400e;
+    border: 1.5px solid #fcd34d;
+    box-shadow: 0 10px 25px rgba(217, 119, 6, 0.25);
+    border-radius: 9999px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    z-index: 99999;
+    backdrop-filter: blur(8px);
+    animation: pulseWarning 2s infinite ease-in-out;
+}
+
+@keyframes pulseWarning {
+    0%, 100% { box-shadow: 0 4px 14px rgba(217, 119, 6, 0.2); transform: scale(1); }
+    50% { box-shadow: 0 8px 24px rgba(217, 119, 6, 0.38); transform: scale(1.03); }
+}
+
+.badge-unupdated {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1.5px solid #f59e0b !important;
+    font-weight: 700 !important;
+}
+

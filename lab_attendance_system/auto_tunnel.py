@@ -89,8 +89,8 @@ def main():
     # Success!
     print()
     print("=" * 60)
-    print(f"  ✅ TUNNEL ACTIVE!")
-    print(f"  🔗 Public URL: {url}")
+    print(f"  [SUCCESS] TUNNEL ACTIVE!")
+    print(f"  >> Public URL: {url}")
     print("=" * 60)
     print()
 
@@ -106,7 +106,7 @@ def main():
         print("[INFO] Could not copy to clipboard. Copy the URL manually.")
 
     print()
-    print("[INFO] Paste this URL in the Vercel dashboard ⚙️ Settings.")
+    print("[INFO] Paste this URL in the dashboard Settings.")
     print("[INFO] ngrok is running. Press Ctrl+C to stop.")
     print()
 

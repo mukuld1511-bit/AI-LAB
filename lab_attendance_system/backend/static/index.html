@@ -3,62 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI/ML Lab - PC & Attendance Tracker</title>
-    <meta name="description" content="Live PC occupancy and face recognition attendance tracker for Richa Mam's AI/ML Lab">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🖥️</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>AI/ML Lab — Master Operations & Gate Security Center</title>
+    <meta name="description" content="Master Operations Dashboard, Live Gate Camera Detection, PC Allocation, and Attendance Control Center for AI/ML Lab">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🔬</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal-overlay">
-        <div class="modal-card">
-            <h2>⚙️ Backend Connection</h2>
-            <p>You can now simply use localhost:8000. Settings modal is no longer required as the dashboard is unified!</p>
-            <div class="modal-actions">
-                <button id="close-modal-btn" class="btn btn-secondary">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Top Header -->
+    <!-- Top Master Header -->
     <header class="top-header">
         <div class="header-left">
-            <h1>🖥️ AI/ML Lab Monitor</h1>
-            <span class="header-sub">In-Charge: Richa Mam</span>
+            <div class="logo-circle">🔬</div>
+            <div>
+                <h1>AI/ML LAB MASTER CONTROL HUB</h1>
+                <span class="header-sub">Root Operations Center • In-Charge: <strong>Prof. Richa Choudhary</strong></span>
+            </div>
         </div>
         <div class="header-right">
-            <span id="connection-badge" class="badge badge-disconnected">● Disconnected</span>
-            <button id="settings-btn" class="btn btn-icon" title="Connection Settings">⚙️</button>
+            <span id="gate-status-badge" class="badge badge-camera">📹 Gate Camera Live</span>
+            <span id="connection-badge" class="badge badge-connected">🟢 Backend Active</span>
+            <button class="btn btn-secondary" onclick="openEmailSettingsModal()" title="Configure SMTP Email Alerts">
+                ⚙️ Mail Config
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" onclick="toggleExportMenu()">
+                    📥 Export Data
+                </button>
+                <div class="dropdown-menu" id="export-menu">
+                    <a href="/db/download/csv" target="_blank" class="dropdown-item">📄 Attendance Logs (CSV)</a>
+                    <a href="/db/download/allotments" target="_blank" class="dropdown-item">💻 Workstation Allotments (CSV)</a>
+                    <a href="/db/download/sqlite" target="_blank" class="dropdown-item">🗄️ Full SQLite Database (.db)</a>
+                </div>
+            </div>
         </div>
     </header>
 
-    <!-- Tab Navigation -->
+    <!-- Master Navigation Tabs -->
     <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="pc-status">🖥️ PC Status</button>
-        <button class="tab-btn" data-tab="attendance">📋 Attendance</button>
-        <button class="tab-btn" data-tab="kiosk-entry">📸 Kiosk Entry</button>
-        <button class="tab-btn" data-tab="unknown-faces">📸 Unknown Faces</button>
-        <button class="tab-btn" data-tab="face-registration">👤 Face Reg</button>
-        <button class="tab-btn" data-tab="registered-faces">👥 Registered</button>
-        <button class="tab-btn" data-tab="db-admin">🗄️ Admin</button>
+        <button class="tab-btn active" data-tab="gate-cam">📹 Live Gate Camera & Detection</button>
+        <button class="tab-btn" data-tab="pc-status">🖥️ Workstation Tracker</button>
+        <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
+        <button class="tab-btn" data-tab="unknown-faces">⚠️ Intruders & Unknowns <span id="nav-unknown-count" class="pill-count">0</span></button>
+        <button class="tab-btn" data-tab="face-registration">👤 Register Member</button>
+        <button class="tab-btn" data-tab="registered-faces">👥 Registered Directory <span id="nav-reg-count" class="pill-count">0</span></button>
+        <button class="tab-btn" data-tab="db-admin">🗄️ System Administration</button>
     </nav>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- TAB 1: PC STATUS                           -->
-    <!-- ═══════════════════════════════════════════ -->
-    <main id="tab-pc-status" class="tab-content active">
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 1: LIVE GATE CAMERA & INTRUDER DETECTION FEED   -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-gate-cam" class="tab-content active">
         <div class="page-title">
-            <h2>PC Occupancy Tracker</h2>
-            <p>Live system status for Faculty & Students</p>
+            <div>
+                <h2>📹 Entrance Gate Camera & Real-Time Security Detection</h2>
+                <p>Live stream from the lab entrance webcam with AI facial recognition and unauthorized intruder tracking</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" onclick="triggerKioskScan()">📸 1-Click Kiosk Scan & Log IN</button>
+                <button class="btn btn-secondary" onclick="reloadCameraFeed()">🔄 Refresh Feed</button>
+            </div>
+        </div>
+
+        <div class="gate-monitor-layout">
+            <!-- Live Video Stream Player -->
+            <div class="video-stream-card">
+                <div class="stream-header-bar">
+                    <div class="stream-rec-indicator">
+                        <span class="rec-dot"></span>
+                        <strong>LIVE GATE SURVEILLANCE</strong>
+                    </div>
+                    <span id="stream-clock" class="stream-clock">--:--:--</span>
+                </div>
+                
+                <div class="stream-viewport">
+                    <img id="gate-video-stream" src="/video_feed" alt="Live Gate Video Stream" onerror="handleStreamError(this)">
+                    <div id="stream-fallback-msg" class="stream-fallback" style="display: none;">
+                        <div class="fallback-icon">📷</div>
+                        <h3>Gate Camera Standby</h3>
+                        <p>Webcam is either initializing or accessed by another task. Click below to reconnect.</p>
+                        <button class="btn btn-primary" onclick="reloadCameraFeed()">🔄 Reconnect Stream</button>
+                    </div>
+                </div>
+
+                <div class="stream-footer-bar">
+                    <div class="stream-legend">
+                        <span class="legend-item"><span class="legend-box legend-green"></span> Recognized Member (Access Granted)</span>
+                        <span class="legend-item"><span class="legend-box legend-red"></span> Unknown Face / Intruder (Alert Logged)</span>
+                    </div>
+                    <div id="kiosk-status-message" class="kiosk-quick-msg"></div>
+                </div>
+            </div>
+
+            <!-- Gate Security Sidebar -->
+            <div class="gate-sidebar">
+                <div class="security-card">
+                    <h3>🛡️ Real-Time Lab Security Status</h3>
+                    <div class="stat-badge-group">
+                        <div class="sec-stat-item">
+                            <span class="sec-stat-val" id="gate-active-count">0</span>
+                            <span class="sec-stat-lbl">Active Attendees</span>
+                        </div>
+                        <div class="sec-stat-item sec-alert">
+                            <span class="sec-stat-val" id="gate-intruder-count">0</span>
+                            <span class="sec-stat-lbl">Intruders Today</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-intruders-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0; font-size: 14px;">⚠️ Recent Intruder Snapshots</h4>
+                        <button class="btn-text" onclick="switchTab('unknown-faces')">View All &rarr;</button>
+                    </div>
+                    <div id="gate-recent-intruders" class="intruder-thumb-strip">
+                        <p style="font-size: 12px; color: var(--on-surface-variant); padding: 10px 0;">No unauthorized intruders detected today. 🎉</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 2: PC STATUS & TIME-BASED ALLOTMENT             -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-pc-status" class="tab-content">
+        <div class="page-title">
+            <div>
+                <h2>🖥️ Lab Workstations Overview</h2>
+                <p>Real-time status, active durations, and flexible From-To time range scheduling</p>
+            </div>
+            <button class="btn btn-secondary" onclick="loadPCStatus()">🔄 Refresh Status</button>
         </div>
 
         <!-- Metrics Row -->
         <div class="metrics-row">
             <div class="metric-card">
                 <div class="metric-value" id="total-pcs">10</div>
-                <div class="metric-label">Total Lab PCs</div>
+                <div class="metric-label">Total Workstations</div>
             </div>
             <div class="metric-card metric-green">
                 <div class="metric-value" id="free-pcs">-</div>
@@ -66,118 +148,195 @@
             </div>
             <div class="metric-card metric-red">
                 <div class="metric-value" id="occupied-pcs">-</div>
-                <div class="metric-label">🔴 Occupied</div>
+                <div class="metric-label">🔴 Occupied Systems</div>
             </div>
         </div>
 
         <!-- PC Grid -->
-        <h3 class="section-title">Lab Systems Overview</h3>
+        <h3 class="section-title">Workstations (PC-1 to PC-10)</h3>
         <div id="pc-grid" class="pc-grid">
             <!-- Populated by JS -->
         </div>
 
-        <!-- Claim a PC -->
-        <hr class="divider">
-        <h3 class="section-title">📝 Claim a PC (Mark as Occupied)</h3>
-        <div id="claim-section" class="claim-form">
-            <div class="form-row">
-                <select id="pc-select" class="form-select">
-                    <option value="">Loading...</option>
-                </select>
-                <input type="text" id="claim-name" class="form-input" placeholder="Your Name / Faculty Name (e.g. Ayush, Dr. Sharma)">
-                <button id="claim-btn" class="btn btn-primary">✅ Mark Occupied</button>
+        <!-- Allot / Free Workstation Section -->
+        <div class="allotment-panel">
+            <h3 class="section-title">⏱️ Workstation Allotment & Range Management</h3>
+            <p class="section-sub">Assign workstations to Students, Faculty, or Guests with custom From-To Date & Time range</p>
+
+            <div class="allotment-form-card">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <!-- Choose PC -->
+                    <div class="form-group">
+                        <label class="form-label">Select Workstation:</label>
+                        <select id="pc-select" class="form-select" onchange="onPCSelectChanged()">
+                            <option value="">Loading Workstations...</option>
+                        </select>
+                    </div>
+
+                    <!-- Member Role Selector -->
+                    <div class="form-group">
+                        <label class="form-label">User Category / Role:</label>
+                        <div class="role-selector-chips">
+                            <button type="button" class="role-chip-btn active" data-allotrole="Student" onclick="selectAllotRole('Student')">🎓 Student</button>
+                            <button type="button" class="role-chip-btn" data-allotrole="Faculty" onclick="selectAllotRole('Faculty')">👨‍🏫 Faculty</button>
+                            <button type="button" class="role-chip-btn" data-allotrole="Guest" onclick="selectAllotRole('Guest')">👤 Guest</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <!-- Pick from Registered -->
+                    <div class="form-group" id="reg-member-select-group">
+                        <label class="form-label">Pick Registered Member (Optional):</label>
+                        <select id="allot-registered-select" class="form-select" onchange="onAllotRegisteredSelectChange()">
+                            <option value="">-- Choose Registered Member --</option>
+                        </select>
+                    </div>
+
+                    <!-- Direct Name Input -->
+                    <div class="form-group">
+                        <label class="form-label" id="allot-name-label">Student / Member Name:</label>
+                        <input type="text" id="allot-name" class="form-input" placeholder="e.g. Ayush, Dr. Sharma">
+                    </div>
+                </div>
+
+                <!-- Email Input -->
+                <div class="form-group">
+                    <div class="toggle-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="allot-send-email" checked>
+                            <span>📧 Send Automated Confirmation Email to Member</span>
+                        </label>
+                    </div>
+                    <input type="email" id="allot-email" class="form-input" placeholder="member.email@example.com" style="margin-top: 6px;">
+                </div>
+
+                <!-- Date & Time Range Form -->
+                <div class="range-box">
+                    <label class="form-label">📅 Allotment Date & Time Range (From ➔ To):</label>
+                    <div class="range-grid">
+                        <div class="form-group">
+                            <label class="sub-label">Start Date:</label>
+                            <input type="date" id="allot-date-from" class="form-input" onchange="calcAllotRange()">
+                        </div>
+                        <div class="form-group">
+                            <label class="sub-label">End Date:</label>
+                            <input type="date" id="allot-date-to" class="form-input" onchange="calcAllotRange()">
+                        </div>
+                        <div class="form-group">
+                            <label class="sub-label">Start Time:</label>
+                            <input type="time" id="allot-time-from" class="form-input" onchange="calcAllotRange()">
+                        </div>
+                        <div class="form-group">
+                            <label class="sub-label">End Time:</label>
+                            <input type="time" id="allot-time-to" class="form-input" onchange="calcAllotRange()">
+                        </div>
+                    </div>
+
+                    <!-- Quick Preset Buttons -->
+                    <div class="quick-preset-row">
+                        <span class="preset-label">Quick End Time Presets:</span>
+                        <div class="duration-chips">
+                            <button type="button" class="chip-btn" onclick="applyPreset(15)">+15m</button>
+                            <button type="button" class="chip-btn active" onclick="applyPreset(30)">+30m</button>
+                            <button type="button" class="chip-btn" onclick="applyPreset(60)">+1h</button>
+                            <button type="button" class="chip-btn" onclick="applyPreset(120)">+2h</button>
+                            <button type="button" class="chip-btn" onclick="applyPreset(240)">+4h</button>
+                            <button type="button" class="chip-btn" onclick="applyPreset('eod')">Full Day (6 PM)</button>
+                        </div>
+                    </div>
+
+                    <div class="preview-banner" style="margin-top: 10px;">
+                        ⏳ <strong>Duration:</strong> <span id="calc-duration-badge" style="color: var(--primary); font-weight: 700;">30 Mins</span>
+                        &bull; Auto-frees at: <span id="calc-expiry-badge" style="font-weight: 600;">--:--</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 10px; margin-top: 16px;">
+                    <button id="allot-confirm-btn" class="btn btn-primary" onclick="submitWorkstationAllot()">
+                        ✅ Confirm & Allot Workstation
+                    </button>
+                    <button id="allot-free-btn" class="btn btn-danger" onclick="submitWorkstationFree()">
+                        ❌ Mark PC Free / Release
+                    </button>
+                </div>
+                <div id="allot-status-msg" style="margin-top: 10px;"></div>
             </div>
-            <div id="claim-message"></div>
         </div>
 
-        <!-- Quick Messages -->
+        <!-- Quick Announcements -->
         <hr class="divider">
-        <h3 class="section-title">📋 Quick Messages</h3>
-        <p class="section-sub">One-click copy templates for WhatsApp / SMS announcements:</p>
+        <h3 class="section-title">📋 Broadcast & WhatsApp Announcement Templates</h3>
+        <div class="template-grid">
+            <div class="msg-template">
+                <div class="msg-header"><strong>Template 1: Available Systems</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
+                <pre class="msg-body">Lab Workstations Update:
+The following systems are currently free in the AI Lab: [PC-1, PC-2...]
+Please drop by if you would like to work.
 
-        <div class="msg-template">
-            <div class="msg-header"><strong>Template 1: Available PCs</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
-            <pre class="msg-body">Lab PC Availability Update:
-The following PCs are currently free — [EDIT: PC LIST]
-Please come to the AI Lab if you'd like to use one.
+- Prof. Richa Choudhary</pre>
+            </div>
+            <div class="msg-template">
+                <div class="msg-header"><strong>Template 2: All Systems Full</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
+                <pre class="msg-body">Lab Workstations Update:
+All 10 systems in the AI Lab are currently occupied.
+We will notify as soon as a slot frees up.
 
-- Richa Mam</pre>
-        </div>
-
-        <div class="msg-template">
-            <div class="msg-header"><strong>Template 2: All Occupied</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
-            <pre class="msg-body">Lab PC Availability Update:
-All PCs in the AI Lab are currently occupied.
-Will update once a system is free.
-
-- Richa Mam</pre>
-        </div>
-
-        <div class="msg-template">
-            <div class="msg-header"><strong>Template 3: Assign Specific PC</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
-            <pre class="msg-body">Hi [EDIT: Faculty Name],
-PC-[EDIT: X] is currently free in the AI Lab. You can come and use it.
-
-- Richa Mam</pre>
-        </div>
-
-        <div class="msg-template">
-            <div class="msg-header"><strong>Template 4: Reminder to Free PC</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
-            <pre class="msg-body">Reminder: If you're done using your PC in the AI Lab,
-please mark it as "Free" on the tracker so others can use it.
-
-- Richa Mam</pre>
+- Prof. Richa Choudhary</pre>
+            </div>
         </div>
     </main>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- TAB 2: ATTENDANCE LOGS                     -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 3: ATTENDANCE LOGS                             -->
+    <!-- ═══════════════════════════════════════════════════ -->
     <main id="tab-attendance" class="tab-content">
         <div class="page-title">
-            <h2>📋 Lab Attendance Logs</h2>
-            <p>Automatic IN/OUT records captured by AI</p>
+            <div>
+                <h2>📋 Lab Attendance Logs</h2>
+                <p>Live biometric and manual entry logs recorded with exact timestamps</p>
+            </div>
+            <button class="btn btn-secondary" onclick="exportAttendanceCSV()">📥 Export CSV</button>
         </div>
 
         <div class="filter-bar">
             <div class="filter-group">
-                <label>Date:</label>
+                <label>Date Filter:</label>
                 <input type="date" id="filter-date" class="form-input">
             </div>
             <div class="filter-group">
-                <label>Name:</label>
-                <input type="text" id="filter-name" class="form-input" placeholder="Search by name...">
+                <label>Search Name / Roll No:</label>
+                <input type="text" id="filter-name" class="form-input" placeholder="Search attendee...">
             </div>
             <div class="filter-group filter-actions">
-                <button id="apply-filter-btn" class="btn btn-primary">🔍 Search</button>
-                <button id="reset-filter-btn" class="btn btn-secondary">🗑️ Reset</button>
+                <button id="apply-filter-btn" class="btn btn-primary" onclick="loadAttendance()">🔍 Search</button>
+                <button id="reset-filter-btn" class="btn btn-secondary" onclick="resetAttendanceFilter()">🗑️ Reset</button>
             </div>
         </div>
 
-        <!-- Manual Attendance Entry -->
-        <hr class="divider">
-        <h3 class="section-title">✍️ Manual Entry</h3>
-        <div class="claim-form" style="margin-bottom: 20px;">
+        <!-- Manual Attendance Entry Form -->
+        <div class="manual-entry-card">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px;">✍️ Manual Attendance Override</h4>
             <div class="form-row">
-                <input type="text" id="manual-name" class="form-input" placeholder="Name (e.g. Ayush)">
-                <select id="manual-action" class="form-select">
-                    <option value="IN">IN</option>
-                    <option value="OUT">OUT</option>
+                <input type="text" id="manual-name" class="form-input" placeholder="Member Name (e.g. Ayush, Dr. Sharma)">
+                <select id="manual-action" class="form-select" style="max-width: 120px;">
+                    <option value="IN">IN (Entry)</option>
+                    <option value="OUT">OUT (Exit)</option>
                 </select>
-                <button id="manual-btn" class="btn btn-primary">📝 Add Log</button>
+                <button id="manual-btn" class="btn btn-primary" onclick="submitManualAttendance()">📝 Add Attendance Record</button>
             </div>
-            <div id="manual-message" style="margin-top: 10px;"></div>
+            <div id="manual-message" style="margin-top: 8px;"></div>
         </div>
 
-        <div id="attendance-status"></div>
         <div id="attendance-table-wrap">
             <table id="attendance-table" class="data-table">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Known Face</th>
-                        <th>IN Time</th>
-                        <th>OUT Time</th>
+                        <th>Attendee Name</th>
+                        <th>Face Verified</th>
+                        <th>IN Timestamp</th>
+                        <th>OUT Timestamp</th>
                         <th>Date</th>
                     </tr>
                 </thead>
@@ -188,13 +347,16 @@ please mark it as "Free" on the tracker so others can use it.
         </div>
     </main>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- TAB 3: UNKNOWN FACES                       -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 4: INTRUDERS & UNKNOWN FACES GALLERY           -->
+    <!-- ═══════════════════════════════════════════════════ -->
     <main id="tab-unknown-faces" class="tab-content">
         <div class="page-title">
-            <h2>📸 Unknown Visitors & Face Snapshots</h2>
-            <p>Gallery of unrecognized individuals detected by the AI Lab webcam</p>
+            <div>
+                <h2>⚠️ Unauthorized Visitors & Intruder Captures</h2>
+                <p>Biometric camera captures of unrecognized individuals detected at the entrance</p>
+            </div>
+            <button class="btn btn-danger" onclick="clearAllUnknownPhotos()">🗑️ Clear All Photos</button>
         </div>
 
         <div id="faces-status"></div>
@@ -203,85 +365,195 @@ please mark it as "Free" on the tracker so others can use it.
         </div>
     </main>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- TAB: KIOSK ENTRY                           -->
-    <!-- ═══════════════════════════════════════════ -->
-    <main id="tab-kiosk-entry" class="tab-content">
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 5: REGISTER MEMBER (FACE BIOMETRICS)           -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-face-registration" class="tab-content">
         <div class="page-title">
-            <h2>📸 1-Click Kiosk Entry</h2>
-            <p>Click the button below to turn on the camera for 1 second and automatically log IN</p>
+            <div>
+                <h2>👤 Biometric Face Enrollment & Registration</h2>
+                <p>Enroll Students, Faculty, and Guests into facial recognition pickle database</p>
+            </div>
         </div>
-        <div style="text-align: center; margin-top: 50px;">
-            <button id="kiosk-scan-btn" class="btn btn-primary" style="font-size: 2em; padding: 20px 40px; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">
-                📷 Scan Face & Enter
-            </button>
-            <div id="kiosk-message" style="margin-top: 30px; font-size: 1.5em;"></div>
+        
+        <div class="enroll-form-box">
+            <!-- Role Selection -->
+            <div class="form-group">
+                <label class="form-label">Member Role:</label>
+                <div class="role-selector-chips">
+                    <button type="button" class="role-chip-btn active" data-regrole="Student" onclick="selectRegRole('Student')">🎓 Student</button>
+                    <button type="button" class="role-chip-btn" data-regrole="Faculty" onclick="selectRegRole('Faculty')">👨‍🏫 Faculty</button>
+                    <button type="button" class="role-chip-btn" data-regrole="Guest" onclick="selectRegRole('Guest')">👤 Guest</button>
+                </div>
+            </div>
+
+            <!-- Full Name -->
+            <div class="form-group">
+                <label class="form-label" id="reg-name-label">Full Name:</label>
+                <input type="text" id="enroll-name" class="form-input" placeholder="e.g. Ayush Sharma">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <!-- Email -->
+                <div class="form-group">
+                    <label class="form-label">Email Address:</label>
+                    <input type="email" id="enroll-email" class="form-input" placeholder="member@example.com">
+                </div>
+                <!-- Roll No / ID -->
+                <div class="form-group">
+                    <label class="form-label" id="reg-id-label">Roll Number / Batch:</label>
+                    <input type="text" id="enroll-roll-dept" class="form-input" placeholder="e.g. 21BCSE101">
+                </div>
+            </div>
+
+            <!-- Photo Capture Option 1: Live Hardware Webcam -->
+            <div class="form-group" style="margin-top: 10px; background: #f1f5f9; padding: 14px; border-radius: var(--radius-md);">
+                <label class="form-label">Method 1: Capture Directly from Gate Webcam</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button id="capture-photo-btn" class="btn btn-secondary" onclick="captureWebcamPhoto()">📷 Capture Snapshot Now</button>
+                    <span id="capture-status" style="font-size: 13px; font-weight: 600;"></span>
+                </div>
+                <div id="captured-preview-wrap" style="margin-top: 10px; display: none;">
+                    <img id="captured-img-preview" src="" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid var(--primary);" alt="Snapshot Preview">
+                </div>
+            </div>
+
+            <!-- Photo Capture Option 2: Upload File -->
+            <div class="form-group" style="margin-top: 10px;">
+                <label class="form-label">Method 2: Or Upload Member Photo File</label>
+                <input type="file" id="enroll-image" accept="image/*" class="form-input" style="padding-top: 8px;" onchange="handleFileUploadPreview(event)">
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button id="enroll-btn" class="btn btn-primary" style="padding: 12px 24px; font-size: 15px;" onclick="submitEnrollment()">
+                    📤 Register Face & Save to Database
+                </button>
+            </div>
+            <div id="enroll-message" style="margin-top: 12px;"></div>
         </div>
     </main>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- TAB: REGISTERED FACES                      -->
-    <!-- ═══════════════════════════════════════════ -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 6: REGISTERED DIRECTORY                        -->
+    <!-- ═══════════════════════════════════════════════════ -->
     <main id="tab-registered-faces" class="tab-content">
         <div class="page-title">
-            <h2>👥 Registered People</h2>
-            <p>List of all people currently recognized by the AI</p>
+            <div>
+                <h2>👥 Registered Lab Members Directory</h2>
+                <p>All recognized Students, Faculty, and Guests currently registered in facial biometric database</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="search-reg-input" class="form-input" placeholder="Search members..." oninput="filterRegisteredDirectory()" style="max-width: 250px;">
+            </div>
         </div>
+
+        <!-- Categorized Chips -->
+        <div class="category-filter-chips">
+            <button class="cat-chip-btn active" data-cat="all" onclick="filterDirectoryCategory('all')">
+                👥 All Members <span id="dir-count-all" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" data-cat="Student" onclick="filterDirectoryCategory('Student')">
+                🎓 Students <span id="dir-count-students" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" data-cat="Faculty" onclick="filterDirectoryCategory('Faculty')">
+                👨‍🏫 Faculty <span id="dir-count-faculty" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" data-cat="Guest" onclick="filterDirectoryCategory('Guest')">
+                👤 Guests <span id="dir-count-guests" class="cat-pill">0</span>
+            </button>
+        </div>
+
         <div id="registered-faces-list" class="faces-grid" style="margin-top: 20px;">
             <!-- Populated by JS -->
         </div>
     </main>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- TAB 4: FACE REGISTRATION                   -->
-    <!-- ═══════════════════════════════════════════ -->
-    <main id="tab-face-registration" class="tab-content">
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 7: DATABASE & SYSTEM ADMINISTRATION             -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-db-admin" class="tab-content">
         <div class="page-title">
-            <h2>👤 Remote Face Registration</h2>
-            <p>Upload a photo to register a new person into the facial recognition database</p>
+            <div>
+                <h2>🗄️ Database Administration & Utilities</h2>
+                <p>Backup SQLite database, export history, and reset logs</p>
+            </div>
         </div>
         
-        <div class="enroll-form">
-            <div class="form-row">
-                <input type="text" id="enroll-name" class="form-input" placeholder="Person's Full Name (e.g. Ayush)">
+        <div class="admin-action-cards">
+            <div class="admin-card">
+                <h3>📥 Backups & Data Export</h3>
+                <p>Download full logs or raw SQLite database for offline reporting and auditing.</p>
+                <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
+                    <a href="/db/download/sqlite" target="_blank" class="btn btn-primary">🗄️ Download SQLite (.db)</a>
+                    <a href="/db/download/csv" target="_blank" class="btn btn-secondary">📄 Attendance Logs (CSV)</a>
+                    <a href="/db/download/allotments" target="_blank" class="btn btn-secondary">💻 PC Allotments (CSV)</a>
+                </div>
             </div>
-            <div class="form-row" style="margin-top: 15px;">
-                <p style="margin-bottom: 5px;">Option 1: Capture from Webcam</p>
-                <button id="capture-photo-btn" class="btn btn-secondary">📷 Capture Now</button>
-                <span id="capture-status" style="margin-left: 10px;"></span>
+
+            <div class="admin-card">
+                <h3>⚠️ Danger Zone: Clear Attendance Logs</h3>
+                <p>Clears all past attendance entries from SQLite. Facial recognition and PC configs remain intact.</p>
+                <button id="clear-db-btn" class="btn btn-danger" style="margin-top: 14px;" onclick="clearAttendanceDB()">
+                    🗑️ Clear Attendance Logs
+                </button>
+                <div id="db-message" style="margin-top: 10px;"></div>
             </div>
-            <div class="form-row" style="margin-top: 15px;">
-                <p style="margin-bottom: 5px;">Option 2: Upload Photo</p>
-                <input type="file" id="enroll-image" accept="image/*" class="form-input" style="padding-top: 10px;">
-            </div>
-            <div class="form-row" style="margin-top: 15px;">
-                <button id="enroll-btn" class="btn btn-primary">📤 Register Face</button>
-            </div>
-            <div id="enroll-message" style="margin-top: 15px;"></div>
         </div>
     </main>
 
-    <!-- ═══════════════════════════════════════════ -->
-    <!-- TAB 5: DB ADMIN                            -->
-    <!-- ═══════════════════════════════════════════ -->
-    <main id="tab-db-admin" class="tab-content">
-        <div class="page-title">
-            <h2>🗄️ Database Administration</h2>
-            <p>Download backup or clear database logs</p>
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- MODALS                                              -->
+    <!-- ═══════════════════════════════════════════════════ -->
+
+    <!-- Modal 1: Lightbox for Intruder Photos -->
+    <div id="lightbox-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card modal-lightbox">
+            <div class="modal-header">
+                <h3 style="margin: 0;">📸 Intruder Face Snapshot</h3>
+                <button class="modal-close-btn" onclick="closeLightbox()">✕</button>
+            </div>
+            <div style="text-align: center; margin: 15px 0;">
+                <img id="lightbox-img" src="" style="max-height: 380px; max-width: 100%; border-radius: 8px; border: 2px solid var(--error);" alt="Snapshot">
+            </div>
+            <div id="lightbox-meta" style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 15px;"></div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-danger" id="lightbox-delete-btn">🗑️ Delete Snapshot</button>
+                <button class="btn btn-secondary" onclick="closeLightbox()">Close</button>
+            </div>
         </div>
-        
-        <div class="metrics-row" style="margin-top: 30px; justify-content: flex-start; gap: 20px;">
-            <button id="download-db-btn" class="btn btn-primary" style="font-size: 1.1em; padding: 15px 20px;">📥 Download SQLite DB</button>
-            <button id="clear-db-btn" class="btn btn-secondary" style="font-size: 1.1em; padding: 15px 20px; background-color: #ffebee; color: #d32f2f; border-color: #ffcdd2;">⚠️ Clear Attendance Logs</button>
+    </div>
+
+    <!-- Modal 2: SMTP / Email Settings -->
+    <div id="email-settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 style="margin: 0;">⚙️ Gmail / SMTP Configuration</h3>
+                <button class="modal-close-btn" onclick="closeEmailSettingsModal()">✕</button>
+            </div>
+            <div class="form-group" style="margin-top: 14px;">
+                <label class="form-label">Gmail Username:</label>
+                <input type="email" id="smtp-user-input" class="form-input" placeholder="prof.richa@gmail.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Google App Password (16 characters):</label>
+                <input type="password" id="smtp-pass-input" class="form-input" placeholder="•••• •••• •••• ••••">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Sender Name:</label>
+                <input type="text" id="smtp-sender-name-input" class="form-input" placeholder="Prof. Richa Choudhary - AI Lab">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 16px;">
+                <button class="btn btn-secondary" onclick="closeEmailSettingsModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEmailSettings()">Save SMTP Settings</button>
+            </div>
         </div>
-        <div id="db-message" style="margin-top: 15px;"></div>
-    </main>
+    </div>
 
     <!-- Footer -->
     <footer class="app-footer">
-        <p>AI/ML Lab Attendance System • Built for Richa Mam • Face Recognition + PC Tracker</p>
+        <p>AI/ML Lab Master Operations System • Built for Richa Mam • High-Speed Root Controller</p>
     </footer>
 
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=35"></script>
 </body>
 </html>

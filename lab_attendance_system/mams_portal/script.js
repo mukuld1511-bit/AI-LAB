@@ -6,7 +6,7 @@ if (!BASE_URL) {
     } else if (window.location.protocol.startsWith("http") && !window.location.hostname.includes("vercel.app")) {
         BASE_URL = window.location.origin;
     } else {
-        BASE_URL = "http://localhost:8000";
+        BASE_URL = "https://amaretto-confess-subtract.ngrok-free.dev";
     }
 }
 
@@ -82,20 +82,51 @@ async function apiFetch(endpoint, options = {}) {
     return response.json();
 }
 
+// ── Offline & Unupdated Status Helper ──
+function setOfflineStatus(isOffline, syncTime = "") {
+    const status = document.getElementById("connection-status");
+    let unupdatedBadge = document.getElementById("corner-unupdated-badge");
+    
+    if (!unupdatedBadge) {
+        unupdatedBadge = document.createElement("div");
+        unupdatedBadge.id = "corner-unupdated-badge";
+        unupdatedBadge.className = "corner-unupdated-badge";
+        document.body.appendChild(unupdatedBadge);
+    }
+
+    if (isOffline) {
+        const timeDisplay = syncTime || "Previous Session";
+        if (status) {
+            status.innerHTML = `⚠️ Unupdated (Offline • ${timeDisplay})`;
+            status.className = "badge badge-unupdated";
+            status.title = `Backend disconnected. Showing last saved allotment from ${timeDisplay}. Click to reconnect.`;
+        }
+        unupdatedBadge.innerHTML = `<span>⚠️</span> <span><strong>Unupdated</strong> &bull; Showing last saved allotment (${timeDisplay})</span>`;
+        unupdatedBadge.style.display = "flex";
+    } else {
+        if (status) {
+            status.innerHTML = "🟢 Connected to AI Lab";
+            status.className = "badge badge-connected";
+            status.title = "Live connection active";
+        }
+        unupdatedBadge.style.display = "none";
+    }
+}
+
 // ── Check Backend Connection ──
 async function checkConnection() {
     const status = document.getElementById("connection-status");
     const connUI = document.getElementById("connection-ui");
     
-    status.className = "badge";
-    status.innerHTML = "Connecting...";
-    status.style.backgroundColor = "#fbbf24";
+    if (status) {
+        status.className = "badge";
+        status.innerHTML = "Connecting...";
+        status.style.backgroundColor = "#fbbf24";
+    }
 
     try {
         await apiFetch("/health");
-        status.innerHTML = "🟢 Connected to AI Lab";
-        status.className = "badge badge-connected";
-        status.style.backgroundColor = "";
+        setOfflineStatus(false);
         if (connUI) connUI.style.display = "none";
         
         // Load data for all components
@@ -104,10 +135,12 @@ async function checkConnection() {
         loadAttendance();
         loadUnknownFaces();
     } catch (e) {
-        status.innerHTML = "🔴 Disconnected";
-        status.className = "badge badge-disconnected";
-        status.style.backgroundColor = "";
+        const syncTime = localStorage.getItem("lab_cached_pc_sync_time") || "Previous Session";
+        setOfflineStatus(true, syncTime);
         if (connUI) connUI.style.display = "flex";
+        
+        // Load cached last-known PC allotment
+        loadPCStatus(true);
     }
 }
 
@@ -164,6 +197,13 @@ async function loadPCStatus(silent = false) {
         const allowedPCIds = ["PC-1", "PC-2", "PC-3", "PC-4", "PC-5", "PC-6", "PC-7", "PC-8"];
         allPCsState = rawPcs.filter(p => allowedPCIds.includes(p.pc_id.toUpperCase()));
         
+        // Save latest allotment to cache for offline resilience
+        const syncTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        localStorage.setItem("lab_cached_pc_status", JSON.stringify(allPCsState));
+        localStorage.setItem("lab_cached_pc_sync_time", syncTimeStr);
+
+        setOfflineStatus(false);
+
         const freePCs = allPCsState.filter(p => p.status.toLowerCase() === "free");
         
         document.getElementById("stat-free").innerText = freePCs.length;
@@ -179,6 +219,34 @@ async function loadPCStatus(silent = false) {
         render2DGrid();
     } catch(e) {
         if (!silent) console.error("PC load failed", e);
+        
+        // Backend offline / down: recover last saved PC allotment state
+        const cached = localStorage.getItem("lab_cached_pc_status");
+        const syncTime = localStorage.getItem("lab_cached_pc_sync_time") || "Previous Session";
+
+        if (cached) {
+            try {
+                allPCsState = JSON.parse(cached);
+                const freePCs = allPCsState.filter(p => p.status.toLowerCase() === "free");
+                
+                const statFree = document.getElementById("stat-free");
+                const statOcc = document.getElementById("stat-occupied");
+                const statTot = document.getElementById("stat-total");
+                if (statFree) statFree.innerText = freePCs.length;
+                if (statOcc) statOcc.innerText = allPCsState.length - freePCs.length;
+                if (statTot) statTot.innerText = allPCsState.length;
+
+                // Sync 3D scene & 2D grid with cached state
+                if (typeof updatePCStatusIn3D === "function") {
+                    updatePCStatusIn3D(allPCsState);
+                }
+                render2DGrid();
+            } catch(err) {
+                console.error("Failed to parse cached PCs", err);
+            }
+        }
+
+        setOfflineStatus(true, syncTime);
     }
 }
 

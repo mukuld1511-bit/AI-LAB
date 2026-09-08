@@ -13,7 +13,7 @@ import shutil
 
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -439,6 +439,15 @@ def delete_registered_user_endpoint(name: str):
 
 
 # ── Face Recognition & Enrollment ──
+
+@app.get("/video_feed")
+def video_feed():
+    """Live MJPEG video feed from lab gate camera with intruder and face detection overlay."""
+    return StreamingResponse(
+        camera.generate_live_stream_frames(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
+
 
 @app.post("/api/scan_entry")
 def scan_entry():

@@ -18,7 +18,6 @@ def main():
     print("\n[INFO] Backend starting! Give it a few seconds to load the camera model...")
     time.sleep(5)
     
-    # Start Ngrok Tunnel (if the script exists)
     tunnel_script = os.path.join(root_dir, "auto_tunnel.py")
     if os.path.exists(tunnel_script):
         print("\n[INFO] Starting Ngrok Tunnel...")
@@ -27,8 +26,8 @@ def main():
         print("\n[WARNING] auto_tunnel.py not found. You can only access via localhost:8000")
 
     print("\n" + "=" * 65)
-    print("✅ SYSTEM RUNNING!")
-    print("➡️ OPEN DASHBOARD AT: http://localhost:8000")
+    print("[SUCCESS] SYSTEM RUNNING!")
+    print(">> OPEN DASHBOARD AT: http://localhost:8000")
     print("=" * 65 + "\n")
 
     try:
