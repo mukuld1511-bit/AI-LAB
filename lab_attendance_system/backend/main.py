@@ -727,6 +727,163 @@ def clear_db():
         raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
 
 
+# ── Weekly Timetable / Schedule Endpoints ──
+
+class TimetableBookRequest(BaseModel):
+    student_name: str
+    day_of_week: str
+    slot_number: int
+    week_label: Optional[str] = "recurring"
+
+
+@app.get("/api/timetable/slots")
+def get_slot_definitions():
+    """Returns the fixed 8-slot timetable definitions (L1–L8, 09:00–16:25)."""
+    return {
+        "slots": database.get_timetable_slots(),
+        "days": database.DAYS_OF_WEEK
+    }
+
+
+@app.get("/api/timetable")
+def get_timetable(
+    name: Optional[str] = Query(None, description="Filter by student name"),
+    week: Optional[str] = Query(None, description="Filter by week label (e.g. 'recurring' or '2026-W37')")
+):
+    """Returns all timetable bookings with optional filters."""
+    bookings = database.get_weekly_schedules(student_name=name, week_label=week)
+    return {"bookings": bookings, "count": len(bookings)}
+
+
+@app.post("/api/timetable")
+def book_timetable(payload: TimetableBookRequest):
+    """Books a single timetable slot for a student."""
+    if not payload.student_name.strip():
+        raise HTTPException(status_code=400, detail="Student name is required.")
+    
+    result = database.book_timetable_slot(
+        student_name=payload.student_name,
+        day_of_week=payload.day_of_week,
+        slot_number=payload.slot_number,
+        week_label=payload.week_label or "recurring"
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
+
+@app.delete("/api/timetable/{slot_id}")
+def delete_timetable_booking(slot_id: int):
+    """Deletes a specific timetable booking by ID."""
+    success = database.delete_timetable_slot(slot_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Booking not found.")
+    return {"status": "success", "message": "Booking removed."}
+
+
+@app.delete("/api/timetable/clear/{student_name}")
+def clear_student_schedule(student_name: str, week: Optional[str] = Query("recurring")):
+    """Clears all timetable bookings for a student."""
+    count = database.clear_student_timetable(student_name, week_label=week or "recurring")
+    return {"status": "success", "message": f"Cleared {count} booking(s) for {student_name}."}
+
+
+# ── Student Projects Endpoints ──
+
+class ProjectCreateRequest(BaseModel):
+    title: str
+    student_names: str
+    description: Optional[str] = ""
+    status: Optional[str] = "Ongoing"
+    technologies: Optional[str] = ""
+    start_date: Optional[str] = ""
+    pc_assigned: Optional[str] = ""
+
+
+class ProjectUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    student_names: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    technologies: Optional[str] = None
+    start_date: Optional[str] = None
+    pc_assigned: Optional[str] = None
+
+
+@app.get("/api/projects")
+def get_projects(status: Optional[str] = Query(None, description="Filter by status: Ongoing, Completed, Paused")):
+    """Returns all student projects."""
+    projects = database.get_student_projects(status=status)
+    return {"projects": projects, "count": len(projects)}
+
+
+@app.post("/api/projects")
+def create_project(payload: ProjectCreateRequest):
+    """Adds a new student project."""
+    if not payload.title.strip():
+        raise HTTPException(status_code=400, detail="Project title is required.")
+    if not payload.student_names.strip():
+        raise HTTPException(status_code=400, detail="Student name(s) required.")
+    
+    new_id = database.add_student_project(
+        title=payload.title,
+        student_names=payload.student_names,
+        description=payload.description or "",
+        status=payload.status or "Ongoing",
+        technologies=payload.technologies or "",
+        start_date=payload.start_date or "",
+        pc_assigned=payload.pc_assigned or ""
+    )
+    return {"status": "success", "message": f"Project '{payload.title}' created.", "id": new_id}
+
+
+@app.put("/api/projects/{project_id}")
+def update_project(project_id: int, payload: ProjectUpdateRequest):
+    """Updates an existing student project."""
+    success = database.update_student_project(
+        project_id=project_id,
+        title=payload.title,
+        student_names=payload.student_names,
+        description=payload.description,
+        status=payload.status,
+        technologies=payload.technologies,
+        start_date=payload.start_date,
+        pc_assigned=payload.pc_assigned
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return {"status": "success", "message": "Project updated."}
+
+
+@app.delete("/api/projects/{project_id}")
+def delete_project(project_id: int):
+    """Deletes a student project."""
+    success = database.delete_student_project(project_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return {"status": "success", "message": "Project deleted."}
+
+
+# ── Unknown Face Alert Polling Endpoint ──
+
+@app.get("/api/unknown_faces/latest")
+def get_latest_unknown_alerts(since: Optional[str] = Query(None, description="Timestamp to check from (YYYY-MM-DD HH:MM:SS)")):
+    """Returns recent unknown face detections since a given timestamp for real-time alerts."""
+    faces = database.get_latest_unknown_faces_since(since_timestamp=since)
+    # Attach image URLs
+    for face in faces:
+        if face.get("image_path"):
+            rel_path = face["image_path"].replace("\\", "/")
+            if rel_path.startswith("unknown_faces/"):
+                face["image_url"] = f"/unknown_faces_static/{rel_path.replace('unknown_faces/', '')}"
+            else:
+                face["image_url"] = f"/unknown_faces_static/{rel_path}"
+        else:
+            face["image_url"] = None
+    return {"faces": faces, "count": len(faces)}
+
+
 # Mount static frontend
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static_frontend")
 

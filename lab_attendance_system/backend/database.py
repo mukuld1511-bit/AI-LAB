@@ -86,6 +86,36 @@ def init_db() -> None:
         )
     """)
 
+    # Table 6: weekly_schedules (Flexible Timetable Bookings)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS weekly_schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_name TEXT,
+            day_of_week TEXT,
+            slot_number INTEGER,
+            slot_start TEXT,
+            slot_end TEXT,
+            week_label TEXT DEFAULT 'recurring',
+            created_at TEXT
+        )
+    """)
+
+    # Table 7: student_projects (Ongoing Lab Projects)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS student_projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            student_names TEXT,
+            description TEXT,
+            status TEXT DEFAULT 'Ongoing',
+            technologies TEXT,
+            start_date TEXT,
+            pc_assigned TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+    """)
+
     # Migrations for registered_users table
     cursor.execute("PRAGMA table_info(registered_users)")
     reg_columns = [row["name"] for row in cursor.fetchall()]
@@ -488,6 +518,215 @@ def get_all_settings() -> Dict[str, str]:
     except Exception:
         pass
     return settings
+
+
+# ── Weekly Schedule (Timetable) Helpers ──
+
+TIMETABLE_SLOTS = [
+    {"slot": 1, "start": "09:00", "end": "09:55", "label": "L1"},
+    {"slot": 2, "start": "09:55", "end": "10:50", "label": "L2"},
+    {"slot": 3, "start": "10:50", "end": "11:45", "label": "L3"},
+    {"slot": 4, "start": "11:45", "end": "12:40", "label": "L4"},
+    {"slot": 5, "start": "12:40", "end": "13:35", "label": "L5"},
+    {"slot": 6, "start": "13:35", "end": "14:30", "label": "L6"},
+    {"slot": 7, "start": "14:30", "end": "15:25", "label": "L7"},
+    {"slot": 8, "start": "15:30", "end": "16:25", "label": "L8"},
+]
+
+DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+
+def get_timetable_slots() -> List[Dict[str, Any]]:
+    """Returns the fixed slot definitions for the lab timetable."""
+    return TIMETABLE_SLOTS
+
+
+def get_weekly_schedules(student_name: Optional[str] = None, week_label: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Fetches all timetable bookings, optionally filtered by student name or week."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT id, student_name, day_of_week, slot_number, slot_start, slot_end, week_label, created_at FROM weekly_schedules WHERE 1=1"
+    params = []
+    if student_name:
+        query += " AND UPPER(student_name) = UPPER(?)"
+        params.append(student_name.strip())
+    if week_label:
+        query += " AND week_label = ?"
+        params.append(week_label)
+    query += " ORDER BY CASE day_of_week WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3 WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 ELSE 7 END, slot_number ASC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def book_timetable_slot(student_name: str, day_of_week: str, slot_number: int, week_label: str = "recurring") -> Dict[str, Any]:
+    """Books a single timetable slot for a student. Returns the booking or raises error if duplicate."""
+    if day_of_week not in DAYS_OF_WEEK:
+        return {"success": False, "message": f"Invalid day: {day_of_week}"}
+    slot_info = next((s for s in TIMETABLE_SLOTS if s["slot"] == slot_number), None)
+    if not slot_info:
+        return {"success": False, "message": f"Invalid slot number: {slot_number}"}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check for duplicate booking by same student
+    cursor.execute(
+        "SELECT id FROM weekly_schedules WHERE UPPER(student_name) = UPPER(?) AND day_of_week = ? AND slot_number = ? AND week_label = ?",
+        (student_name.strip(), day_of_week, slot_number, week_label)
+    )
+    if cursor.fetchone():
+        conn.close()
+        return {"success": False, "message": f"{student_name} already has slot {slot_info['label']} booked on {day_of_week}"}
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(
+        "INSERT INTO weekly_schedules (student_name, day_of_week, slot_number, slot_start, slot_end, week_label, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (student_name.strip(), day_of_week, slot_number, slot_info["start"], slot_info["end"], week_label, now_str)
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return {"success": True, "message": f"Booked {slot_info['label']} ({slot_info['start']}–{slot_info['end']}) on {day_of_week}", "id": new_id}
+
+
+def delete_timetable_slot(slot_id: int) -> bool:
+    """Deletes a timetable booking by its ID."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM weekly_schedules WHERE id = ?", (slot_id,))
+    conn.commit()
+    affected = cursor.rowcount > 0
+    conn.close()
+    return affected
+
+
+def clear_student_timetable(student_name: str, week_label: str = "recurring") -> int:
+    """Clears all timetable bookings for a specific student."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM weekly_schedules WHERE UPPER(student_name) = UPPER(?) AND week_label = ?", (student_name.strip(), week_label))
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+    return count
+
+
+# ── Student Projects Helpers ──
+
+def get_student_projects(status: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Returns all student projects, optionally filtered by status."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = "SELECT id, title, student_names, description, status, technologies, start_date, pc_assigned, created_at, updated_at FROM student_projects WHERE 1=1"
+    params = []
+    if status:
+        query += " AND UPPER(status) = UPPER(?)"
+        params.append(status.strip())
+    query += " ORDER BY id DESC"
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def add_student_project(title: str, student_names: str, description: str = "",
+                        status: str = "Ongoing", technologies: str = "",
+                        start_date: str = "", pc_assigned: str = "") -> int:
+    """Adds a new student project. Returns the new project ID."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if not start_date:
+        start_date = datetime.now().strftime("%Y-%m-%d")
+    cursor.execute("""
+        INSERT INTO student_projects (title, student_names, description, status, technologies, start_date, pc_assigned, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title.strip(), student_names.strip(), description.strip(), status.strip(), technologies.strip(), start_date, pc_assigned.strip(), now_str, now_str))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return new_id
+
+
+def update_student_project(project_id: int, title: Optional[str] = None, student_names: Optional[str] = None,
+                           description: Optional[str] = None, status: Optional[str] = None,
+                           technologies: Optional[str] = None, start_date: Optional[str] = None,
+                           pc_assigned: Optional[str] = None) -> bool:
+    """Updates an existing student project's fields."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    updates = []
+    params = []
+    if title is not None:
+        updates.append("title = ?")
+        params.append(title.strip())
+    if student_names is not None:
+        updates.append("student_names = ?")
+        params.append(student_names.strip())
+    if description is not None:
+        updates.append("description = ?")
+        params.append(description.strip())
+    if status is not None:
+        updates.append("status = ?")
+        params.append(status.strip())
+    if technologies is not None:
+        updates.append("technologies = ?")
+        params.append(technologies.strip())
+    if start_date is not None:
+        updates.append("start_date = ?")
+        params.append(start_date)
+    if pc_assigned is not None:
+        updates.append("pc_assigned = ?")
+        params.append(pc_assigned.strip())
+
+    if not updates:
+        conn.close()
+        return False
+
+    updates.append("updated_at = ?")
+    params.append(now_str)
+    params.append(project_id)
+
+    cursor.execute(f"UPDATE student_projects SET {', '.join(updates)} WHERE id = ?", tuple(params))
+    conn.commit()
+    affected = cursor.rowcount > 0
+    conn.close()
+    return affected
+
+
+def delete_student_project(project_id: int) -> bool:
+    """Deletes a student project by ID."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM student_projects WHERE id = ?", (project_id,))
+    conn.commit()
+    affected = cursor.rowcount > 0
+    conn.close()
+    return affected
+
+
+# ── Unknown Face Alert Helper ──
+
+def get_latest_unknown_faces_since(since_timestamp: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Returns unknown face attendance logs since a given timestamp for alert polling."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if since_timestamp:
+        cursor.execute(
+            "SELECT id, name, image_path, in_time, date FROM attendance_logs WHERE is_known = 0 AND in_time > ? ORDER BY id DESC LIMIT 10",
+            (since_timestamp,)
+        )
+    else:
+        cursor.execute(
+            "SELECT id, name, image_path, in_time, date FROM attendance_logs WHERE is_known = 0 ORDER BY id DESC LIMIT 5"
+        )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
 
 # Auto-initialize on import

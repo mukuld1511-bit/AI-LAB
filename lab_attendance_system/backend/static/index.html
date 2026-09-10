@@ -43,6 +43,7 @@
     <nav class="tab-nav">
         <button class="tab-btn active" data-tab="gate-cam">📹 Live Gate Camera & Detection</button>
         <button class="tab-btn" data-tab="pc-status">🖥️ Workstation Tracker</button>
+        <button class="tab-btn" data-tab="timetable">📅 Weekly Schedule</button>
         <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
         <button class="tab-btn" data-tab="unknown-faces">⚠️ Intruders & Unknowns <span id="nav-unknown-count" class="pill-count">0</span></button>
         <button class="tab-btn" data-tab="face-registration">👤 Register Member</button>
@@ -497,6 +498,71 @@ We will notify as soon as a slot frees up.
                     🗑️ Clear Attendance Logs
                 </button>
                 <div id="db-message" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB: WEEKLY TIMETABLE SCHEDULER                     -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-timetable" class="tab-content">
+        <div class="page-title">
+            <div>
+                <h2>📅 Flexible Weekly Lab Schedule</h2>
+                <p>Book your lab time slots • 9:00 AM – 4:25 PM • 55-min lectures (L1–L8) • Select days & hours</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-secondary" onclick="loadTimetable()" title="Refresh Schedule">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Student Name Input for Booking -->
+        <div class="tt-booking-bar">
+            <div class="tt-booking-bar-inner">
+                <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
+                    <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">👤 Your Name (for booking):</label>
+                    <input type="text" id="tt-student-name" class="form-input" placeholder="e.g. Ayush, Priya, Dr. Sharma" style="font-size: 14px;">
+                </div>
+                <div class="form-group" style="margin: 0; min-width: 140px;">
+                    <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">📌 Filter by Name:</label>
+                    <input type="text" id="tt-filter-name" class="form-input" placeholder="Filter..." oninput="loadTimetable()" style="font-size: 14px;">
+                </div>
+                <div style="display: flex; gap: 6px; align-items: flex-end; padding-bottom: 2px;">
+                    <button class="btn btn-secondary" onclick="clearMySchedule()" style="font-size: 12px; padding: 8px 12px;">🗑️ Clear My Schedule</button>
+                </div>
+            </div>
+            <div class="tt-summary-bar" id="tt-summary-bar">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- Interactive Timetable Grid -->
+        <div class="tt-grid-wrapper">
+            <table class="tt-grid" id="tt-grid-table">
+                <thead>
+                    <tr>
+                        <th class="tt-corner-cell">⏰ Time / Day</th>
+                        <!-- Days filled by JS -->
+                    </tr>
+                </thead>
+                <tbody id="tt-grid-body">
+                    <!-- Slots filled by JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Slot Legend -->
+        <div class="tt-legend">
+            <span class="tt-legend-item"><span class="tt-legend-dot tt-dot-available"></span> Available – Click to Book</span>
+            <span class="tt-legend-item"><span class="tt-legend-dot tt-dot-mine"></span> My Booked Slot</span>
+            <span class="tt-legend-item"><span class="tt-legend-dot tt-dot-others"></span> Booked by Others</span>
+        </div>
+
+        <!-- My Bookings Summary -->
+        <div class="tt-my-bookings">
+            <h3 class="section-title">📋 My Booked Slots</h3>
+            <div id="tt-my-bookings-list" class="tt-bookings-chips">
+                <!-- Filled by JS -->
             </div>
         </div>
     </main>
