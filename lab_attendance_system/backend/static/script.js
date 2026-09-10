@@ -11,6 +11,32 @@ let currentDirCategory = "all";
 let capturedBase64ForEnroll = null;
 let currentLightboxFilename = null;
 
+// Standalone SVG Avatar & Face Fallback Generators (Zero-CDN, 100% reliable on mobile phones)
+function getInitialsAvatarSVG(name, role = "Student") {
+    const cleanName = (name || "Member").trim();
+    const parts = cleanName.split(/\s+/).filter(Boolean);
+    let initials = "AI";
+    if (parts.length >= 2) {
+        initials = (parts[0][0] + parts[1][0]).toUpperCase();
+    } else if (cleanName.length > 0) {
+        initials = cleanName.slice(0, 2).toUpperCase();
+    }
+    let col1 = "#4f46e5", col2 = "#7c3aed";
+    const rLower = (role || "").toLowerCase();
+    if (rLower === "faculty") {
+        col1 = "#d97706"; col2 = "#b45309";
+    } else if (rLower === "guest") {
+        col1 = "#059669"; col2 = "#047857";
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><defs><linearGradient id="gb_${initials}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${col1}"/><stop offset="100%" stop-color="${col2}"/></linearGradient></defs><circle cx="60" cy="60" r="58" fill="url(#gb_${initials})"/><text x="60" y="74" font-size="44" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function getPlaceholderFaceSVG(text = "Snapshot") {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="100%" height="100%" fill="#1e293b"/><circle cx="150" cy="75" r="32" fill="#334155"/><path d="M 115 140 Q 150 110 185 140 Z" fill="#334155"/><text x="150" y="170" font-size="13" font-weight="600" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" fill="#94a3b8" text-anchor="middle">${text}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 // ── DOM Ready ──
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
@@ -171,9 +197,10 @@ async function refreshGateStats() {
                 strip.innerHTML = '<p style="font-size: 12px; color: var(--on-surface-variant); padding: 10px 0;">No unauthorized intruders detected today. 🎉</p>';
             } else {
                 const recentSlice = unknowns.slice(0, 4);
+                const fallbackThumb = getPlaceholderFaceSVG("Face");
                 strip.innerHTML = recentSlice.map(face => `
                     <div class="intruder-strip-item" onclick="openLightbox('${face.url}', '${face.filename}', '${face.timestamp}', '${face.date}')">
-                        <img src="${face.url}" alt="Intruder" onerror="this.src='https://placehold.co/48x48?text=Face'">
+                        <img src="${face.url}" alt="Intruder" onerror="this.onerror=null; this.src='${fallbackThumb}';">
                         <div>
                             <strong style="font-size: 12px; color: #dc2626;">⚠️ Alert: ${face.filename}</strong>
                             <div style="font-size: 11px; color: #64748b;">Time: ${face.timestamp}</div>
@@ -585,10 +612,12 @@ async function loadUnknownFaces() {
             return;
         }
 
-        grid.innerHTML = data.map(face => `
+        grid.innerHTML = data.map(face => {
+            const fallbackSnapshot = getPlaceholderFaceSVG("No Photo");
+            return `
             <div class="unknown-card">
                 <div class="unknown-img-wrap" onclick="openLightbox('${face.url}', '${face.filename}', '${face.timestamp}', '${face.date}')">
-                    <img src="${face.url}" alt="Intruder Snapshot" onerror="this.src='https://placehold.co/300x200?text=No+Photo'">
+                    <img src="${face.url}" alt="Intruder Snapshot" onerror="this.onerror=null; this.src='${fallbackSnapshot}';">
                 </div>
                 <div class="unknown-meta">
                     <strong>${face.filename}</strong><br>
@@ -599,7 +628,8 @@ async function loadUnknownFaces() {
                     <button class="btn btn-danger" style="font-size: 11px; padding: 4px 8px;" onclick="deleteUnknownPhoto('${face.filename}')">🗑️</button>
                 </div>
             </div>
-        `).join("");
+            `;
+        }).join("");
     } catch (e) {
         grid.innerHTML = `<p style="color: red; grid-column: 1/-1;">Error loading unknown faces: ${e.message}</p>`;
     }
@@ -839,11 +869,12 @@ function renderRegisteredDirectory(users) {
     container.innerHTML = users.map(user => {
         const role = user.role || "Student";
         const roleClass = role.toLowerCase() === "faculty" ? "badge-role-faculty" : role.toLowerCase() === "guest" ? "badge-role-guest" : "badge-role-student";
-        const avatarUrl = user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff`;
+        const fallbackAvatar = getInitialsAvatarSVG(user.name, role);
+        const avatarUrl = user.avatar_url || fallbackAvatar;
 
         return `
             <div class="user-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 14px; display: flex; gap: 12px; align-items: center;">
-                <img src="${avatarUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #cbd5e1;" alt="${user.name}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff'">
+                <img src="${avatarUrl}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #cbd5e1; flex-shrink: 0;" alt="${user.name}" onerror="this.onerror=null; this.src='${fallbackAvatar}';">
                 <div style="flex: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <h4 style="margin: 0; font-size: 14px;">${user.name}</h4>

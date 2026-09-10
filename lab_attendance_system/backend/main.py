@@ -54,6 +54,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Avatar dynamic handler with fallback SVG to prevent broken photo icons
+@app.get("/static/avatars/{filename}")
+def get_avatar_image(filename: str):
+    """Serves enrolled avatar photo or generates an elegant SVG avatar with initials."""
+    file_path = os.path.join(AVATARS_DIR, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    
+    clean_name = os.path.splitext(filename)[0].replace("_", " ").strip()
+    parts = clean_name.split()
+    initials = (parts[0][0] + (parts[1][0] if len(parts) > 1 else clean_name[1:2])).upper() if clean_name else "AI"
+    
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+        <defs>
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#4f46e5"/>
+                <stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r="58" fill="url(#g)"/>
+        <text x="60" y="72" font-size="44" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif" fill="#ffffff" text-anchor="middle">{initials}</text>
+    </svg>"""
+    return Response(content=svg, media_type="image/svg+xml")
+
+
 # Mount unknown faces and static directories
 app.mount("/unknown_faces_static", StaticFiles(directory=UNKNOWN_FACES_DIR), name="unknown_faces_static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_dir")
@@ -240,6 +265,7 @@ def free_pc_endpoint(payload: FreeRequest):
 # ── Attendance Logs ──
 
 @app.get("/attendance/logs")
+@app.get("/attendance")
 def get_attendance_logs(
     date: Optional[str] = Query(None, description="Format YYYY-MM-DD"),
     name: Optional[str] = Query(None, description="Filter by person's name")
@@ -249,6 +275,7 @@ def get_attendance_logs(
 
 
 @app.post("/api/manual_attendance")
+@app.post("/attendance/manual")
 def manual_attendance(payload: ManualAttendanceRequest):
     """Manually log IN or OUT for a person."""
     now_dt = datetime.now()

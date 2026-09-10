@@ -24,6 +24,32 @@ let webcamStream = null;
 let capturedSnapshotBase64 = null;
 let selectedRegRole = "Student";
 
+// Standalone SVG Avatar & Face Fallback Generators (Zero-CDN, 100% reliable on mobile phones)
+function getInitialsAvatarSVG(name, role = "Student") {
+    const cleanName = (name || "Member").trim();
+    const parts = cleanName.split(/\s+/).filter(Boolean);
+    let initials = "AI";
+    if (parts.length >= 2) {
+        initials = (parts[0][0] + parts[1][0]).toUpperCase();
+    } else if (cleanName.length > 0) {
+        initials = cleanName.slice(0, 2).toUpperCase();
+    }
+    let col1 = "#4f46e5", col2 = "#7c3aed";
+    const rLower = (role || "").toLowerCase();
+    if (rLower === "faculty") {
+        col1 = "#d97706"; col2 = "#b45309";
+    } else if (rLower === "guest") {
+        col1 = "#059669"; col2 = "#047857";
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><defs><linearGradient id="g_${initials}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${col1}"/><stop offset="100%" stop-color="${col2}"/></linearGradient></defs><circle cx="60" cy="60" r="58" fill="url(#g_${initials})"/><text x="60" y="74" font-size="44" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function getPlaceholderFaceSVG(text = "Snapshot") {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="100%" height="100%" fill="#1e293b"/><circle cx="150" cy="75" r="32" fill="#334155"/><path d="M 115 140 Q 150 110 185 140 Z" fill="#334155"/><text x="150" y="170" font-size="13" font-weight="600" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" fill="#94a3b8" text-anchor="middle">${text}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
     initDropdowns();
@@ -913,15 +939,16 @@ function renderRegisteredUsersGrid(users) {
     }
 
     grid.innerHTML = filtered.map(user => {
-        const avatarUrl = user.avatar_url ? `${BASE_URL}${user.avatar_url}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff`;
         const role = (user.role || "Student").capitalize ? user.role.capitalize() : user.role || "Student";
+        const fallbackAvatar = getInitialsAvatarSVG(user.name, role);
+        const avatarUrl = user.avatar_url ? `${BASE_URL}${user.avatar_url}` : fallbackAvatar;
         const roleBadgeClass = role.toLowerCase() === "faculty" ? "badge-role-faculty" : role.toLowerCase() === "guest" ? "badge-role-guest" : "badge-role-student";
         const roleIcon = role.toLowerCase() === "faculty" ? "👨‍🏫" : role.toLowerCase() === "guest" ? "👤" : "🎓";
 
         return `
             <div class="student-card">
                 <div class="student-card-top">
-                    <img src="${avatarUrl}" class="student-avatar" alt="${user.name}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff'">
+                    <img src="${avatarUrl}" class="student-avatar" alt="${user.name}" onerror="this.onerror=null; this.src='${fallbackAvatar}';">
                     <div class="student-info">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
                             <h4 style="margin: 0; font-size: 15px;">${user.name}</h4>
@@ -1012,10 +1039,11 @@ async function loadUnknownFaces() {
 
         grid.innerHTML = data.map(face => {
             const imgUrl = `${BASE_URL}${face.url}`;
+            const fallbackSnapshot = getPlaceholderFaceSVG("No Photo");
             return `
                 <div class="unknown-card">
                     <div class="unknown-img-wrap" onclick="openLightbox('${imgUrl}', '${face.filename}', '${face.timestamp}', '${face.date}')">
-                        <img src="${imgUrl}" alt="Intruder Snapshot" onerror="this.src='https://placehold.co/300x200?text=No+Photo'">
+                        <img src="${imgUrl}" alt="Intruder Snapshot" onerror="this.onerror=null; this.src='${fallbackSnapshot}';">
                     </div>
                     <div class="unknown-meta">
                         <strong>Captured:</strong> ${face.timestamp}<br>
