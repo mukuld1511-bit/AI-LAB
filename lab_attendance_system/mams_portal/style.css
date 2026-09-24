@@ -1257,3 +1257,35 @@ body {
     font-weight: 700 !important;
 }
 
+/* ── Active Student Project Badge & Tags ── */
+.pc-project-tag {
+    margin-top: 7px;
+    padding: 5px 9px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #3730a3;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+}
+
+.pc-project-tag span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #1e1b4b;
+    font-weight: 700;
+}
+
+.project-update-card {
+    transition: border-color 0.2s;
+}
+
+.project-update-card:focus-within {
+    border-color: #6366f1;
+}
+

@@ -53,6 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadAttendance();
     loadUnknownFaces();
     loadRegisteredFaces();
+    loadTimetable();
 
     // Auto-refresh PC status & Gate stats every 6 seconds
     setInterval(() => {
@@ -81,6 +82,7 @@ function initTabs() {
             else if (btn.dataset.tab === "unknown-faces") loadUnknownFaces();
             else if (btn.dataset.tab === "registered-faces") loadRegisteredFaces();
             else if (btn.dataset.tab === "gate-cam") reloadCameraFeed();
+            else if (btn.dataset.tab === "timetable") loadTimetable();
         });
     });
 }
@@ -296,6 +298,11 @@ function renderPCGrid(pcs) {
                             <strong style="color: #0f172a; font-size: 14px;">${p.occupied_by}</strong>
                             <span class="role-badge ${roleClass}">${role}</span>
                         </div>
+                        ${p.current_project ? `
+                            <p style="font-size: 11px; color: #4338ca; font-weight: 600; margin: 3px 0; background: #eef2ff; padding: 2px 6px; border-radius: 4px; display: inline-block;">
+                                💼 ${p.current_project}
+                            </p>
+                        ` : ''}
                         <p style="font-size: 11px; color: #475569; margin-bottom: 2px;">⏰ Started: ${p.since_time ? p.since_time.split(" ")[1] : 'N/A'}</p>
                         <p style="font-size: 11px; color: #dc2626; font-weight: 600;">⏳ Valid until: ${p.end_time ? p.end_time.split(" ")[1] : 'Open slot'}</p>
                     `}
@@ -982,3 +989,146 @@ async function saveEmailSettings() {
         alert("Failed to save email settings: " + e.message);
     }
 }
+
+// ═════════════════════════════════════════════════════════════════
+// TAB: WEEKLY TIMETABLE SCHEDULER
+// ═════════════════════════════════════════════════════════════════
+let timetableSlots = [];
+let timetableDays = [];
+let timetableBookings = [];
+
+async function loadTimetable() {
+    try {
+        // 1) Load slot definitions
+        const slotData = await apiFetch("/api/timetable/slots");
+        timetableSlots = slotData.slots || [];
+        timetableDays = slotData.days || ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+        // 2) Load bookings
+        const filterName = document.getElementById("tt-filter-name")?.value?.trim() || "";
+        let url = "/api/timetable";
+        if (filterName) url += `?name=${encodeURIComponent(filterName)}`;
+        const bookData = await apiFetch(url);
+        timetableBookings = bookData.bookings || [];
+
+        // 3) Render timetable grid
+        renderTimetableGrid();
+    } catch (e) {
+        console.error("Error loading timetable:", e);
+        const body = document.getElementById("tt-grid-body");
+        if (body) body.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 30px; color: var(--error);">Error loading schedule: ${e.message}</td></tr>`;
+    }
+}
+
+function renderTimetableGrid() {
+    const thead = document.querySelector("#tt-grid-table thead tr");
+    const tbody = document.getElementById("tt-grid-body");
+    const myName = (document.getElementById("tt-student-name")?.value || "").trim();
+    const myBookingsList = document.getElementById("tt-my-bookings-list");
+    const summaryBar = document.getElementById("tt-summary-bar");
+
+    if (!thead || !tbody) return;
+
+    // Build header
+    let headerHTML = '<th class="tt-corner-cell">⏰ Time / Day</th>';
+    timetableDays.forEach(day => {
+        headerHTML += `<th>${day}</th>`;
+    });
+    thead.innerHTML = headerHTML;
+
+    // Build body rows (one per slot)
+    let bodyHTML = "";
+    const myBookingChips = [];
+
+    timetableSlots.forEach(slot => {
+        bodyHTML += `<tr>`;
+        bodyHTML += `<td class="tt-slot-label">${slot.label || 'L' + slot.slot_number}<span class="slot-time">${slot.start_time || ''} – ${slot.end_time || ''}</span></td>`;
+
+        timetableDays.forEach(day => {
+            // Find booking for this cell
+            const booking = timetableBookings.find(b =>
+                b.day_of_week === day && b.slot_number === slot.slot_number
+            );
+
+            if (booking) {
+                const isMe = myName && booking.student_name.toLowerCase() === myName.toLowerCase();
+                const cellClass = isMe ? "tt-cell-mine" : "tt-cell-others";
+                bodyHTML += `<td class="${cellClass}" title="${booking.student_name}">${booking.student_name}</td>`;
+
+                if (isMe) {
+                    myBookingChips.push(`<span class="tt-booking-chip">📌 ${day} • ${slot.label || 'L' + slot.slot_number} (${slot.start_time || ''})</span>`);
+                }
+            } else {
+                bodyHTML += `<td class="tt-cell-available" onclick="bookTimetableSlot('${day}', ${slot.slot_number})" title="Click to book">+ Book</td>`;
+            }
+        });
+
+        bodyHTML += `</tr>`;
+    });
+
+    tbody.innerHTML = bodyHTML;
+
+    // My bookings summary
+    if (myBookingsList) {
+        if (myBookingChips.length > 0) {
+            myBookingsList.innerHTML = myBookingChips.join("");
+        } else {
+            myBookingsList.innerHTML = `<span style="font-size: 12px; color: var(--text-secondary);">No slots booked yet. Enter your name above and click cells to book.</span>`;
+        }
+    }
+
+    // Summary bar
+    if (summaryBar) {
+        const totalBooked = timetableBookings.length;
+        const totalSlots = timetableSlots.length * timetableDays.length;
+        const available = totalSlots - totalBooked;
+        summaryBar.innerHTML = `📊 <strong>${totalBooked}</strong> slots booked • <strong>${available}</strong> available out of ${totalSlots} total`;
+    }
+}
+
+async function bookTimetableSlot(day, slotNumber) {
+    const name = (document.getElementById("tt-student-name")?.value || "").trim();
+    if (!name) {
+        alert("Please enter your name in the booking bar before selecting a slot.");
+        document.getElementById("tt-student-name")?.focus();
+        return;
+    }
+
+    try {
+        await apiFetch("/api/timetable", {
+            method: "POST",
+            body: JSON.stringify({
+                student_name: name,
+                day_of_week: day,
+                slot_number: slotNumber,
+                week_label: "recurring"
+            })
+        });
+        await loadTimetable();
+    } catch (e) {
+        alert("Booking failed: " + e.message);
+    }
+}
+
+async function clearMySchedule() {
+    const name = (document.getElementById("tt-student-name")?.value || "").trim();
+    if (!name) return alert("Enter your name first to clear your slots.");
+
+    if (!confirm(`Clear all timetable bookings for "${name}"?`)) return;
+
+    try {
+        await apiFetch(`/api/timetable/clear?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+        await loadTimetable();
+    } catch (e) {
+        alert("Failed to clear schedule: " + e.message);
+    }
+}
+
+// Close dropdown on outside click
+document.addEventListener("click", (e) => {
+    const dropdown = document.querySelector(".dropdown");
+    const menu = document.getElementById("export-menu");
+    if (dropdown && menu && !dropdown.contains(e.target)) {
+        menu.classList.remove("open");
+    }
+});

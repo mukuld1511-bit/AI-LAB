@@ -31,7 +31,8 @@ def init_db() -> None:
             image_path TEXT,
             in_time TEXT,
             out_time TEXT,
-            date TEXT
+            date TEXT,
+            current_project TEXT DEFAULT ''
         )
     """)
 
@@ -45,7 +46,8 @@ def init_db() -> None:
             end_time TEXT,
             duration_mins INTEGER,
             user_email TEXT,
-            user_role TEXT DEFAULT 'Student'
+            user_role TEXT DEFAULT 'Student',
+            current_project TEXT DEFAULT ''
         )
     """)
 
@@ -59,6 +61,7 @@ def init_db() -> None:
             avatar_url TEXT,
             role TEXT DEFAULT 'Student',
             department TEXT DEFAULT '',
+            current_project TEXT DEFAULT '',
             created_at TEXT
         )
     """)
@@ -71,6 +74,7 @@ def init_db() -> None:
             student_name TEXT,
             user_email TEXT,
             user_role TEXT,
+            current_project TEXT DEFAULT '',
             start_time TEXT,
             end_time TEXT,
             duration_mins INTEGER,
@@ -123,6 +127,8 @@ def init_db() -> None:
         cursor.execute("ALTER TABLE registered_users ADD COLUMN role TEXT DEFAULT 'Student'")
     if "department" not in reg_columns:
         cursor.execute("ALTER TABLE registered_users ADD COLUMN department TEXT DEFAULT ''")
+    if "current_project" not in reg_columns:
+        cursor.execute("ALTER TABLE registered_users ADD COLUMN current_project TEXT DEFAULT ''")
 
     # Migrations for existing pc_status table if missing columns
     cursor.execute("PRAGMA table_info(pc_status)")
@@ -135,12 +141,24 @@ def init_db() -> None:
         cursor.execute("ALTER TABLE pc_status ADD COLUMN user_email TEXT")
     if "user_role" not in columns:
         cursor.execute("ALTER TABLE pc_status ADD COLUMN user_role TEXT DEFAULT 'Student'")
+    if "current_project" not in columns:
+        cursor.execute("ALTER TABLE pc_status ADD COLUMN current_project TEXT DEFAULT ''")
+    if "display_name" not in columns:
+        cursor.execute("ALTER TABLE pc_status ADD COLUMN display_name TEXT DEFAULT ''")
 
     # Migrations for pc_allotment_history
     cursor.execute("PRAGMA table_info(pc_allotment_history)")
     hist_columns = [row["name"] for row in cursor.fetchall()]
     if "user_role" not in hist_columns:
         cursor.execute("ALTER TABLE pc_allotment_history ADD COLUMN user_role TEXT DEFAULT 'Student'")
+    if "current_project" not in hist_columns:
+        cursor.execute("ALTER TABLE pc_allotment_history ADD COLUMN current_project TEXT DEFAULT ''")
+
+    # Migrations for attendance_logs
+    cursor.execute("PRAGMA table_info(attendance_logs)")
+    att_columns = [row["name"] for row in cursor.fetchall()]
+    if "current_project" not in att_columns:
+        cursor.execute("ALTER TABLE attendance_logs ADD COLUMN current_project TEXT DEFAULT ''")
 
     # Seed PC-1 to PC-10 if table empty
     cursor.execute("SELECT COUNT(*) AS cnt FROM pc_status")
@@ -196,7 +214,7 @@ def check_and_expire_pc_allocations() -> int:
             print(f"[AUTO-EXPIRE] Workstation {p['pc_id']} allotted to {p['occupied_by']} expired at {p['end_time']}. Marking FREE.")
             cursor.execute("""
                 UPDATE pc_status 
-                SET status = 'free', occupied_by = NULL, since_time = NULL, end_time = NULL, duration_mins = NULL, user_email = NULL, user_role = NULL 
+                SET status = 'free', occupied_by = NULL, since_time = NULL, end_time = NULL, duration_mins = NULL, user_email = NULL, user_role = NULL, current_project = '' 
                 WHERE UPPER(pc_id) = UPPER(?)
             """, (p["pc_id"],))
         conn.commit()
@@ -213,11 +231,21 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT pc_id, status, occupied_by, since_time, end_time, duration_mins, user_email, user_role FROM pc_status")
+    cursor.execute("SELECT pc_id, status, occupied_by, since_time, end_time, duration_mins, user_email, user_role, current_project, display_name FROM pc_status")
     rows = cursor.fetchall()
     conn.close()
 
-    results = [dict(row) for row in rows]
+    results = []
+    for row in rows:
+        item = dict(row)
+        if item.get("pc_id", "").upper() == "PC-1":
+            item["display_name"] = "BACKEND"
+            item["is_backend"] = True
+        else:
+            item["display_name"] = item.get("display_name") or item["pc_id"]
+            item["is_backend"] = False
+        results.append(item)
+
     def sort_key(item):
         try:
             return int(item["pc_id"].replace("PC-", ""))
@@ -234,9 +262,10 @@ def occupy_pc(
     end_time: Optional[str] = None,
     user_email: Optional[str] = None,
     user_role: Optional[str] = "Student",
-    start_time: Optional[str] = None
+    start_time: Optional[str] = None,
+    current_project: Optional[str] = ""
 ) -> bool:
-    """Marks a PC as occupied with optional time duration, user email, role, and explicit start_time."""
+    """Marks a PC as occupied with optional time duration, user email, role, explicit start_time, current project, and multi-occupant support."""
     conn = get_db_connection()
     cursor = conn.cursor()
     now_dt = datetime.now()
@@ -254,6 +283,11 @@ def occupy_pc(
         end_time = end_dt.strftime("%Y-%m-%d %H:%M:%S")
 
     role_val = user_role.strip().capitalize() if user_role else "Student"
+    proj_val = current_project.strip() if current_project else ""
+
+    # Parse and clean student names (supports single student or comma-separated group of students)
+    clean_names = [n.strip() for n in name.split(",") if n.strip()]
+    occupants_str = ", ".join(clean_names) if clean_names else name.strip()
 
     cursor.execute("""
         UPDATE pc_status 
@@ -263,29 +297,127 @@ def occupy_pc(
             end_time = ?, 
             duration_mins = ?, 
             user_email = ?,
-            user_role = ? 
+            user_role = ?,
+            current_project = ? 
         WHERE UPPER(pc_id) = UPPER(?)
-    """, (name.strip(), effective_start, end_time, duration_mins, user_email, role_val, pc_id.strip()))
+    """, (occupants_str, effective_start, end_time, duration_mins, user_email, role_val, proj_val, pc_id.strip()))
     affected = cursor.rowcount > 0
     
-    # Also log into pc_allotment_history
-    cursor.execute("""
-        INSERT INTO pc_allotment_history 
-        (pc_id, student_name, user_email, user_role, start_time, end_time, duration_mins, created_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (pc_id.strip(), name.strip(), user_email, role_val, effective_start, end_time, duration_mins, now_dt.strftime("%Y-%m-%d")))
+    # Log each student into pc_allotment_history
+    names_to_log = clean_names if clean_names else [name.strip()]
+    for student in names_to_log:
+        cursor.execute("""
+            INSERT INTO pc_allotment_history 
+            (pc_id, student_name, user_email, user_role, current_project, start_time, end_time, duration_mins, created_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (pc_id.strip(), student, user_email, role_val, proj_val, effective_start, end_time, duration_mins, now_dt.strftime("%Y-%m-%d")))
 
-    # Update or add registered user's email if provided
-    if user_email and name.strip() and role_val.lower() == "student":
-        cursor.execute("UPDATE registered_users SET email = ? WHERE UPPER(name) = UPPER(?)", (user_email.strip(), name.strip()))
+        # Update registered user's email and project if student
+        if student and role_val.lower() == "student":
+            if user_email and proj_val:
+                cursor.execute("UPDATE registered_users SET email = ?, current_project = ? WHERE UPPER(name) = UPPER(?)", (user_email.strip(), proj_val, student))
+            elif user_email:
+                cursor.execute("UPDATE registered_users SET email = ? WHERE UPPER(name) = UPPER(?)", (user_email.strip(), student))
+            elif proj_val:
+                cursor.execute("UPDATE registered_users SET current_project = ? WHERE UPPER(name) = UPPER(?)", (proj_val, student))
 
     conn.commit()
     conn.close()
     return affected
 
 
+def add_occupant_to_pc(pc_id: str, new_name: str, new_email: Optional[str] = None) -> Dict[str, Any]:
+    """Adds an additional student/teammate to an already occupied workstation."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT pc_id, status, occupied_by, user_email, since_time, end_time, duration_mins, user_role, current_project FROM pc_status WHERE UPPER(pc_id) = UPPER(?)", (pc_id.strip(),))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "message": f"PC {pc_id} not found."}
+
+    cleaned_new = new_name.strip()
+    if not cleaned_new:
+        conn.close()
+        return {"success": False, "message": "Partner/Student name is required."}
+
+    existing_occupants = [n.strip() for n in (row["occupied_by"] or "").split(",") if n.strip()]
+    if cleaned_new in existing_occupants:
+        conn.close()
+        return {"success": False, "message": f"'{cleaned_new}' is already assigned to {pc_id}."}
+
+    existing_occupants.append(cleaned_new)
+    updated_occupants_str = ", ".join(existing_occupants)
+
+    existing_emails = [e.strip() for e in (row["user_email"] or "").split(",") if e.strip()]
+    if new_email and new_email.strip() and new_email.strip() not in existing_emails:
+        existing_emails.append(new_email.strip())
+    updated_emails_str = ", ".join(existing_emails)
+
+    now_dt = datetime.now()
+    cursor.execute("""
+        UPDATE pc_status 
+        SET status = 'occupied', 
+            occupied_by = ?, 
+            user_email = ? 
+        WHERE UPPER(pc_id) = UPPER(?)
+    """, (updated_occupants_str, updated_emails_str, pc_id.strip()))
+
+    # Log new occupant to allotment history
+    cursor.execute("""
+        INSERT INTO pc_allotment_history 
+        (pc_id, student_name, user_email, user_role, current_project, start_time, end_time, duration_mins, created_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (pc_id.strip(), cleaned_new, new_email or "", row["user_role"] or "Student", row["current_project"] or "", row["since_time"] or now_dt.strftime("%Y-%m-%d %H:%M:%S"), row["end_time"], row["duration_mins"], now_dt.strftime("%Y-%m-%d")))
+
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": f"Added {cleaned_new} to {pc_id}", "all_occupants": updated_occupants_str}
+
+
+def remove_occupant_from_pc(pc_id: str, student_name: str) -> Dict[str, Any]:
+    """Removes one student from a workstation with multiple occupants."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT pc_id, status, occupied_by FROM pc_status WHERE UPPER(pc_id) = UPPER(?)", (pc_id.strip(),))
+    row = cursor.fetchone()
+    if not row or not row["occupied_by"]:
+        conn.close()
+        return {"success": False, "message": f"PC {pc_id} has no active occupants."}
+
+    existing = [n.strip() for n in row["occupied_by"].split(",") if n.strip()]
+    target = student_name.strip()
+    remaining = [n for n in existing if n.lower() != target.lower()]
+
+    if not remaining:
+        conn.close()
+        free_pc(pc_id)
+        return {"success": True, "message": f"Removed {target}. PC is now free.", "is_free": True}
+
+    new_str = ", ".join(remaining)
+    cursor.execute("UPDATE pc_status SET occupied_by = ? WHERE UPPER(pc_id) = UPPER(?)", (new_str, pc_id.strip()))
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": f"Removed {target} from {pc_id}.", "remaining_occupants": new_str, "is_free": False}
+
+
+def update_pc_project(pc_id: str, current_project: str) -> bool:
+    """Updates the project being worked on for a specific workstation in real-time."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE pc_status 
+        SET current_project = ? 
+        WHERE UPPER(pc_id) = UPPER(?)
+    """, (current_project.strip(), pc_id.strip()))
+    affected = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return affected
+
+
 def free_pc(pc_id: str) -> bool:
-    """Marks a PC as free and clears occupied_by, since_time, end_time, user_role, etc."""
+    """Marks a PC as free and clears occupied_by, since_time, end_time, user_role, current_project, etc."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -296,7 +428,8 @@ def free_pc(pc_id: str) -> bool:
             end_time = NULL, 
             duration_mins = NULL, 
             user_email = NULL,
-            user_role = NULL 
+            user_role = NULL,
+            current_project = '' 
         WHERE UPPER(pc_id) = UPPER(?)
     """, (pc_id.strip(),))
     conn.commit()
@@ -464,7 +597,7 @@ def get_allotment_history() -> List[Dict[str, Any]]:
     """Returns workstation allotment history logs."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, pc_id, student_name, user_email, start_time, end_time, duration_mins, created_date FROM pc_allotment_history ORDER BY id DESC")
+    cursor.execute("SELECT id, pc_id, student_name, user_email, user_role, current_project, start_time, end_time, duration_mins, created_date FROM pc_allotment_history ORDER BY id DESC")
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]

@@ -220,7 +220,7 @@ async function loadPCStatus(silent = false) {
     if (!BASE_URL) return;
     try {
         const rawPcs = await apiFetch("/pc/status");
-        const allowedPCIds = ["PC-1", "PC-2", "PC-3", "PC-4", "PC-5", "PC-6", "PC-7", "PC-8"];
+        const allowedPCIds = ["PC-1", "PC-2", "PC-3", "PC-4", "PC-5", "PC-6", "PC-7", "PC-8", "BACKEND"];
         allPCsState = rawPcs.filter(p => allowedPCIds.includes(p.pc_id.toUpperCase()));
         
         // Save latest allotment to cache for offline resilience
@@ -337,15 +337,26 @@ function render2DGrid() {
     if (!grid) return;
 
     grid.innerHTML = allPCsState.map(pc => {
-        const isFree = pc.status.toLowerCase() === "free";
-        const cardClass = isFree ? "pc-card-free" : "pc-card-occupied";
-        const badgeClass = isFree ? "badge-free" : "badge-occupied";
-        const badgeText = isFree ? "🟢 AVAILABLE" : "🔴 IN USE";
+        const isBackend = pc.is_backend || pc.pc_id === "PC-1" || pc.pc_id === "BACKEND";
+        const isFree = !isBackend && pc.status.toLowerCase() === "free";
+        const cardClass = isBackend ? "pc-card-occupied" : (isFree ? "pc-card-free" : "pc-card-occupied");
+        const badgeClass = isBackend ? "badge-occupied" : (isFree ? "badge-free" : "badge-occupied");
+        const badgeText = isBackend ? "⚡ 24/7 SERVER" : (isFree ? "🟢 AVAILABLE" : "🔴 IN USE");
         
         let countdownHtml = "";
         let timeRemainingStr = "";
 
-        if (!isFree) {
+        if (isBackend) {
+            countdownHtml = `
+                <div class="countdown-box" style="background: #eff6ff; color: #1e40af; border-color: #bfdbfe;">
+                    <span>Host Status:</span>
+                    <strong style="color: #2563eb;">⚡ 24/7 Dedicated Server</strong>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+                    Role: <strong style="color: #1e40af;">FastAPI Core + Static Ngrok Tunnel</strong>
+                </div>
+            `;
+        } else if (!isFree) {
             if (pc.end_time) {
                 const diff = calculateTimeRemaining(pc.end_time);
                 timeRemainingStr = diff.formatted;
@@ -375,38 +386,70 @@ function render2DGrid() {
             `;
         }
 
+        const occupants = pc.occupied_by ? pc.occupied_by.split(",").map(s => s.trim()).filter(Boolean) : [];
+        const isGroup = occupants.length > 1;
+
         let roleBadge = "";
-        if (!isFree && pc.occupied_by) {
-            const role = (pc.user_role || "Student").toLowerCase();
-            if (role === "faculty") {
-                roleBadge = `<span class="role-badge role-badge-faculty">👨‍🏫 Faculty</span>`;
-            } else if (role === "guest") {
-                roleBadge = `<span class="role-badge role-badge-guest">👤 Guest</span>`;
+        if (isBackend) {
+            roleBadge = `<span class="role-badge" style="background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe;">🖥️ Server Host</span>`;
+        } else if (!isFree && occupants.length > 0) {
+            if (isGroup) {
+                roleBadge = `<span class="role-badge" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe;">👥 Team (${occupants.length})</span>`;
             } else {
-                roleBadge = `<span class="role-badge role-badge-student">🎓 Student</span>`;
+                const role = (pc.user_role || "Student").toLowerCase();
+                if (role === "faculty") {
+                    roleBadge = `<span class="role-badge role-badge-faculty">👨‍🏫 Faculty</span>`;
+                } else if (role === "guest") {
+                    roleBadge = `<span class="role-badge role-badge-guest">👤 Guest</span>`;
+                } else {
+                    roleBadge = `<span class="role-badge role-badge-student">🎓 Student</span>`;
+                }
             }
         }
+
+        const displayTitle = isBackend ? "🖥️ BACKEND SERVER" : `💻 ${pc.pc_id}`;
 
         return `
             <div class="pc-card ${cardClass}" 
                  id="grid-pc-${pc.pc_id}"
+                 style="${isBackend ? 'border: 2px solid #60a5fa; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);' : ''}"
                  onclick="handlePCClick('${pc.pc_id}', ${isFree})"
                  onmouseenter="if (typeof highlightPC === 'function') highlightPC('${pc.pc_id}', true)"
                  onmouseleave="if (typeof highlightPC === 'function') highlightPC('${pc.pc_id}', false)">
                 
                 <div class="pc-header-row">
-                    <div class="pc-title">💻 ${pc.pc_id}</div>
+                    <div class="pc-title" style="${isBackend ? 'color: #1d4ed8; font-weight: 800;' : ''}">${displayTitle}</div>
                     <div style="display: flex; gap: 4px; align-items: center;">
                         ${roleBadge}
-                        <div class="status-badge ${badgeClass}">${badgeText}</div>
+                        <div class="status-badge ${badgeClass}" style="${isBackend ? 'background: #2563eb; color: #ffffff;' : ''}">${badgeText}</div>
                     </div>
                 </div>
 
                 <div class="pc-body">
-                    ${!isFree && pc.occupied_by ? `
-                        <div class="pc-user-info">
-                            <span>👤</span> <strong>${pc.occupied_by}</strong>
-                        </div>
+                    ${!isFree && occupants.length > 0 ? `
+                        ${isGroup ? `
+                            <div class="pc-user-info" style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="font-size: 11px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 4px;">
+                                    <span>👥 Active Team (${occupants.length}):</span>
+                                </div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    ${occupants.map(name => `
+                                        <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px;">
+                                            👤 ${name}
+                                        </span>
+                                    `).join("")}
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="pc-user-info">
+                                <span>${isBackend ? '🖥️' : '👤'}</span> <strong>${pc.occupied_by}</strong>
+                            </div>
+                        `}
+                        ${pc.current_project ? `
+                            <div class="pc-project-tag" title="Project: ${pc.current_project}">
+                                💼 <span>${pc.current_project}</span>
+                            </div>
+                        ` : ''}
                         ${pc.user_email ? `<div class="pc-email-info">✉️ ${pc.user_email}</div>` : ''}
                         <div style="font-size: 11px; color: #64748b; margin-top: 4px; display: flex; justify-content: space-between;">
                             <span>📅 ${formatFriendlyDate(pc.since_time)}</span>
@@ -422,13 +465,17 @@ function render2DGrid() {
                 ${countdownHtml}
 
                 <div class="pc-actions" onclick="event.stopPropagation()">
-                    ${isFree ? `
+                    ${isBackend ? `
+                        <button class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 6px 10px; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;" onclick="handlePCClick('${pc.pc_id}', false)">
+                            ⚙️ Server Host Details
+                        </button>
+                    ` : isFree ? `
                         <button class="btn btn-primary" style="width: 100%; font-size: 12px; padding: 6px 10px;" onclick="handlePCClick('${pc.pc_id}', true)">
                             ⚡ Assign PC
                         </button>
                     ` : `
-                        <button class="btn btn-secondary" style="flex: 1; font-size: 12px; padding: 5px 8px;" onclick="handlePCClick('${pc.pc_id}', true)">
-                            🔄 Extend / Edit
+                        <button class="btn btn-secondary" style="flex: 1; font-size: 12px; padding: 5px 8px;" onclick="handlePCClick('${pc.pc_id}', false)">
+                            🔄 Team / Extend
                         </button>
                         <button class="btn btn-danger" style="flex: 1; font-size: 12px; padding: 5px 8px;" onclick="quickFreePC('${pc.pc_id}')">
                             ❌ Free Slot
@@ -505,6 +552,129 @@ function startCountdownLoop() {
     }, 1000);
 }
 
+// ── Active Student Projects & Modal Selection ──
+let labProjectsCache = [];
+
+async function populateProjectSelect() {
+    const select = document.getElementById("modal-project-select");
+    if (!select) return;
+    try {
+        const res = await apiFetch("/api/projects");
+        labProjectsCache = res.projects || [];
+        select.innerHTML = '<option value="">-- Choose Existing Lab Project or Type Below --</option>';
+        labProjectsCache.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.title;
+            opt.innerText = `💼 ${p.title} (${p.status || 'Ongoing'})`;
+            select.appendChild(opt);
+        });
+    } catch (e) {
+        console.warn("Could not fetch project list", e);
+    }
+}
+
+function onProjectSelectChange() {
+    const select = document.getElementById("modal-project-select");
+    const input = document.getElementById("modal-current-project");
+    if (select && input && select.value) {
+        input.value = select.value;
+    }
+}
+
+async function submitQuickProjectUpdate() {
+    if (!currentPCId) return;
+    const input = document.getElementById("modal-edit-project-input");
+    const newProj = (input ? input.value : "").trim();
+
+    try {
+        await apiFetch(`/pc/${currentPCId}/project`, {
+            method: "POST",
+            body: JSON.stringify({
+                pc_id: currentPCId,
+                current_project: newProj
+            })
+        });
+        showToast(`💼 Updated active project for ${currentPCId} to "${newProj || 'General Work'}"`, "success");
+        closePCModal();
+        loadPCStatus(false);
+    } catch (e) {
+        showToast(`Failed to update project: ${e.message}`, "error");
+    }
+}
+
+// ── Multi-Occupant Group Partner Functions ──
+function appendStudentPartner() {
+    const select = document.getElementById("modal-student-select");
+    const nameInput = document.getElementById("modal-student-name");
+    const emailInput = document.getElementById("modal-student-email");
+    if (!select || !select.value) {
+        showToast("Please choose a student from the dropdown first.", "info");
+        return;
+    }
+    const chosenName = select.value.trim();
+    const chosenEmail = (select.options[select.selectedIndex]?.dataset?.email || "").trim();
+
+    if (!nameInput) return;
+    const currentNames = nameInput.value.split(",").map(n => n.trim()).filter(Boolean);
+    if (currentNames.includes(chosenName)) {
+        showToast(`'${chosenName}' is already added to this group.`, "info");
+        return;
+    }
+    currentNames.push(chosenName);
+    nameInput.value = currentNames.join(", ");
+
+    if (emailInput && chosenEmail) {
+        const currentEmails = emailInput.value.split(",").map(e => e.trim()).filter(Boolean);
+        if (!currentEmails.includes(chosenEmail)) {
+            currentEmails.push(chosenEmail);
+            emailInput.value = currentEmails.join(", ");
+        }
+    }
+    showToast(`👥 Added '${chosenName}' to group for ${currentPCId || 'Workstation'}`, "success");
+}
+
+async function submitAddPartnerToPC() {
+    if (!currentPCId) return;
+    const input = document.getElementById("modal-add-partner-input");
+    const partnerName = (input ? input.value : "").trim();
+    if (!partnerName) {
+        showToast("Please enter a student name to add.", "error");
+        return;
+    }
+
+    try {
+        await apiFetch(`/pc/${currentPCId}/add_occupant`, {
+            method: "POST",
+            body: JSON.stringify({
+                pc_id: currentPCId,
+                student_name: partnerName
+            })
+        });
+        showToast(`👥 Added '${partnerName}' to ${currentPCId}`, "success");
+        if (input) input.value = "";
+        closePCModal();
+        loadPCStatus(false);
+    } catch (e) {
+        showToast(`Failed to add partner: ${e.message}`, "error");
+    }
+}
+
+async function removePartnerFromPC(studentName) {
+    if (!currentPCId || !studentName) return;
+    if (!confirm(`Remove ${studentName} from ${currentPCId}?`)) return;
+
+    try {
+        const res = await apiFetch(`/pc/${currentPCId}/occupant/${encodeURIComponent(studentName)}`, {
+            method: "DELETE"
+        });
+        showToast(res.message || `Removed ${studentName}`, "success");
+        closePCModal();
+        loadPCStatus(false);
+    } catch (e) {
+        showToast(`Failed to remove partner: ${e.message}`, "error");
+    }
+}
+
 // ── Modal Handling for PC Allotment ──
 
 function handlePCClick(pcId, isFree) {
@@ -545,6 +715,11 @@ function handlePCClick(pcId, isFree) {
         document.getElementById("modal-faculty-notes").value = "";
         document.getElementById("modal-student-select").value = "";
         
+        // Reset and populate project dropdown
+        const curProjInput = document.getElementById("modal-current-project");
+        if (curProjInput) curProjInput.value = "";
+        populateProjectSelect();
+        
         // Initialize Date From-To & Time From-To Range with current dynamic times
         initAllotmentRangeDefaults();
     } else {
@@ -559,6 +734,15 @@ function handlePCClick(pcId, isFree) {
         document.getElementById("modal-free-pc-title").innerText = `${currentPCId} is Allocated to ${pcData.occupied_by}`;
         document.getElementById("modal-free-pc-desc").innerText = `Started: ${formatFriendlyDateTime(pcData.since_time)} • Valid until: ${formatFriendlyDateTime(pcData.end_time)}`;
         
+        const activeProjBadge = document.getElementById("modal-active-project-badge");
+        if (activeProjBadge) {
+            activeProjBadge.innerText = pcData.current_project ? pcData.current_project : "General Research / Coding";
+        }
+        const editProjInput = document.getElementById("modal-edit-project-input");
+        if (editProjInput) {
+            editProjInput.value = pcData.current_project || "";
+        }
+
         actionBtn.innerText = "❌ Free / Deselect Workstation";
         actionBtn.className = "btn btn-danger";
     }
@@ -781,6 +965,7 @@ async function handleModalActionSubmit() {
             const durationMins = Math.max(1, Math.round((endDt - startDt) / 60000));
             const explicitStartTime = `${dateFrom} ${timeFrom}:00`;
             const explicitEndTime = `${dateTo} ${timeTo}:00`;
+            const currentProject = (document.getElementById("modal-current-project")?.value || "").trim();
 
             const response = await apiFetch("/pc/occupy", {
                 method: "POST",
@@ -793,11 +978,15 @@ async function handleModalActionSubmit() {
                     end_time: explicitEndTime,
                     send_email: sendEmail && !!email,
                     notes: notes,
-                    user_role: selectedUserRole
+                    user_role: selectedUserRole,
+                    current_project: currentProject
                 })
             });
 
             let toastMsg = `💻 ${currentPCId} assigned to ${name} (${selectedUserRole}) until ${timeTo}`;
+            if (currentProject) {
+                toastMsg += ` • 💼 ${currentProject}`;
+            }
             if (sendEmail && email) {
                 if (response && response.email_result) {
                     if (response.email_result.success) {

@@ -255,16 +255,22 @@
 
                 <!-- Section A: Registered Student Dropdown -->
                 <div class="form-group" id="reg-student-group">
-                    <label class="form-label">Select Registered Student:</label>
-                    <select id="modal-student-select" class="form-select" onchange="onStudentSelectChange()">
-                        <option value="">-- Choose from Registered Database --</option>
-                    </select>
+                    <label class="form-label">Select Registered Student / Teammate:</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="modal-student-select" class="form-select" onchange="onStudentSelectChange()" style="flex: 1;">
+                            <option value="">-- Choose from Registered Database --</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" onclick="appendStudentPartner()" title="Add another student to this PC" style="white-space: nowrap; font-size: 12px;">➕ Add Teammate</button>
+                    </div>
                 </div>
 
                 <!-- Section B: Name Input (Dynamic label & placeholder based on Role) -->
                 <div class="form-group">
-                    <label class="form-label" id="modal-name-label">Student / User Name:</label>
-                    <input type="text" id="modal-student-name" class="form-input" placeholder="e.g. Ayush, Dr. Sharma, Prof. Verma">
+                    <label class="form-label" id="modal-name-label">Student(s) / Team Members:</label>
+                    <input type="text" id="modal-student-name" class="form-input" placeholder="e.g. Ayush, Priya, Rohan (Group work allowed)">
+                    <small style="display: block; margin-top: 4px; color: var(--on-surface-variant); font-size: 11px;">
+                        👥 <strong>Multi-Person Allowed:</strong> Enter multiple names separated by commas (e.g. <em>Ayush, Priya, Rohan</em>) or pick from above and click "➕ Add Teammate".
+                    </small>
                 </div>
 
                 <!-- Section C: Dynamic Date & Time Range (From-To) -->
@@ -329,6 +335,20 @@
                     </div>
                 </div>
 
+                <!-- Section: Project Currently Working On -->
+                <div class="form-group" style="margin-top: 14px;">
+                    <label class="form-label">💼 Project Currently Working On:</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+                        <select id="modal-project-select" class="form-select" onchange="onProjectSelectChange()" style="flex: 1;">
+                            <option value="">-- Select Lab Project or Enter Title Below --</option>
+                        </select>
+                    </div>
+                    <input type="text" id="modal-current-project" class="form-input" placeholder="e.g. YOLOv8 Surveillance, LLM Fine-Tuning, Autonomous Vision, Edge AI">
+                    <small style="display: block; margin-top: 4px; color: var(--on-surface-variant); font-size: 11px;">
+                        Specify what assignment, research project, or task the student is actively utilizing this PC for.
+                    </small>
+                </div>
+
                 <!-- Optional Faculty Note -->
                 <div class="form-group">
                     <label class="form-label">Optional Note / Instructions from Mam:</label>
@@ -338,14 +358,39 @@
 
             <!-- Free PC Section (when PC is already occupied) -->
             <div id="modal-free-section" style="display: none;">
-                <div class="alert-box alert-warning" style="margin-bottom: 20px;">
+                <div class="alert-box alert-warning" style="margin-bottom: 16px;">
                     <div style="font-size: 28px;">⚠️</div>
                     <div>
                         <strong id="modal-free-pc-title">PC-1 is Currently Occupied</strong>
                         <p id="modal-free-pc-desc" style="margin: 4px 0 0 0; font-size: 13px;">Occupied by Ayush. Would you like to deselect and free this slot?</p>
                     </div>
                 </div>
-                <div id="modal-free-details" style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 20px;"></div>
+
+                <div id="modal-free-details" style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 16px;"></div>
+
+                <!-- Quick Inline Project Update for Active Session -->
+                <div class="project-update-card" style="padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <span>💼 Active Project:</span>
+                        <span id="modal-active-project-badge" style="color: #4338ca; font-weight: 600;">None specified</span>
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="modal-edit-project-input" class="form-input" placeholder="Update project name for this session..." style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" onclick="submitQuickProjectUpdate()" style="white-space: nowrap;">💾 Save Project</button>
+                    </div>
+                </div>
+
+                <!-- Add Partner / Teammate to Active PC Session -->
+                <div class="partner-add-card" style="padding: 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #166534; display: flex; align-items: center; gap: 6px;">
+                        <span>👥 Add Partner / Teammate to this Workstation:</span>
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="modal-add-partner-input" class="form-input" placeholder="Enter student name to add to this PC..." style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" onclick="submitAddPartnerToPC()" style="white-space: nowrap; background: #ffffff; border-color: #86efac; color: #15803d; font-weight: 700;">➕ Add Partner</button>
+                    </div>
+                    <div id="modal-current-partners-list" style="margin-top: 8px; font-size: 12px; color: #1e293b;"></div>
+                </div>
             </div>
             
             <div class="modal-footer">

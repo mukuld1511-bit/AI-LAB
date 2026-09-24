@@ -1,0 +1,9 @@
+version: "3"
+agent:
+  authtoken: "" # Add your auth token here or in .env
+tunnels:
+  lab_backend:
+    proto: http
+    addr: 8000
+    domain: amaretto-confess-subtract.ngrok-free.dev
+    inspect: false

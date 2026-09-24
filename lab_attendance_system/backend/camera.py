@@ -1,5 +1,10 @@
 import cv2
-import face_recognition
+try:
+    import face_recognition
+    HAS_FACE_RECOGNITION = True
+except (ImportError, ModuleNotFoundError):
+    face_recognition = None
+    HAS_FACE_RECOGNITION = False
 import pickle
 import os
 import time
@@ -146,7 +151,7 @@ class GateCameraManager:
                 self.latest_raw_frame = frame.copy()
 
             # Face recognition inference every ~0.4s
-            if current_time - last_detect_time >= 0.4:
+            if HAS_FACE_RECOGNITION and face_recognition and (current_time - last_detect_time >= 0.4):
                 last_detect_time = current_time
                 try:
                     small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
@@ -273,6 +278,9 @@ def scan_face_for_entry():
     known_names = list(known_dict.keys())
     known_encodings = list(known_dict.values())
 
+    if not HAS_FACE_RECOGNITION or face_recognition is None:
+        return {"success": False, "message": "Biometric face_recognition module not installed. Please use Manual Attendance or install dlib."}
+
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     face_locations = face_recognition.face_locations(rgb_frame, model="hog")
 
@@ -318,16 +326,19 @@ def scan_face_for_entry():
 
 def capture_face_photo():
     """Captures a frame and returns it as a base64 string for enrollment."""
-    mgr = GateCameraManager()
-    mgr.start()
-    time.sleep(0.3)
-    frame = mgr.get_raw_frame() or capture_frame(retries=5)
-    if frame is None:
-        return {"success": False, "message": "Failed to access camera."}
+    try:
+        mgr = GateCameraManager()
+        mgr.start()
+        time.sleep(0.3)
+        frame = mgr.get_raw_frame() or capture_frame(retries=3)
+        if frame is None:
+            return {"success": False, "message": "Camera is currently busy or unavailable. Please upload a photo file using Method 2 below."}
 
-    ret, buffer = cv2.imencode('.jpg', frame)
-    if not ret:
-        return {"success": False, "message": "Failed to encode image."}
+        ret, buffer = cv2.imencode('.jpg', frame)
+        if not ret:
+            return {"success": False, "message": "Failed to encode camera snapshot."}
 
-    b64 = base64.b64encode(buffer).decode('utf-8')
-    return {"success": True, "image_base64": f"data:image/jpeg;base64,{b64}"}
+        b64 = base64.b64encode(buffer).decode('utf-8')
+        return {"success": True, "image_base64": f"data:image/jpeg;base64,{b64}"}
+    except Exception as e:
+        return {"success": False, "message": f"Camera access error ({str(e)}). Please use Method 2 to upload photo."}

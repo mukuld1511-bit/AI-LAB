@@ -98,7 +98,8 @@ def send_allotment_email(
     end_time: Optional[str] = None,
     duration_mins: Optional[int] = None,
     notes: Optional[str] = None,
-    user_role: Optional[str] = "Student"
+    user_role: Optional[str] = "Student",
+    current_project: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Sends an automated workstation allotment email to student, faculty, or guest.
@@ -109,6 +110,7 @@ def send_allotment_email(
 
     cfg = get_smtp_config()
     role_clean = (user_role or "Student").strip().capitalize()
+    proj_clean = (current_project or "").strip()
     
     # Formatted Date & Time Strings
     allot_date_pretty = format_date_pretty(start_time)
@@ -132,6 +134,8 @@ def send_allotment_email(
         allot_desc = f"You have been allocated a dedicated workstation in the AI/ML Lab by Prof. Richa Choudhary."
         subject = f"Workstation Allotment: {pc_id} Assigned to You"
 
+    proj_line_plain = f"• Active Project: {proj_clean}\n" if proj_clean else ""
+
     # Clean plain-text fallback (Crucial for Gmail spam filter score)
     plain_content = f"""{subject}
 
@@ -142,7 +146,7 @@ def send_allotment_email(
 Allotment Details:
 • Workstation ID: {pc_id}
 • Assigned User: {student_name} ({role_label})
-• Allotment Date: {allot_date_pretty}
+{proj_line_plain}• Allotment Date: {allot_date_pretty}
 • Start Time: {start_time_pretty}
 • Allocated Duration: {duration_text}
 • VALID UNTIL: {expiry_pretty}
@@ -165,6 +169,15 @@ AI/ML Research Laboratory
         <div style="background-color: #f8fafc; border-left: 4px solid #4f46e5; padding: 12px 16px; margin: 16px 0; font-size: 13px; color: #334155;">
             <strong>Instructions from Faculty:</strong><br>{notes}
         </div>
+        """
+
+    proj_html = ""
+    if proj_clean:
+        proj_html = f"""
+        <tr style="background-color:#f0fdf4;">
+            <td style="color:#166534; font-weight:bold;">💼 Active Project:</td>
+            <td style="color:#15803d; font-weight:bold;">{proj_clean}</td>
+        </tr>
         """
 
     # Clean inline-styled HTML (Gmail safe without head style blocks)
@@ -195,6 +208,7 @@ AI/ML Research Laboratory
                         <td style="color:#64748b; font-weight:bold; width:40%;">Assigned User:</td>
                         <td style="color:#0f172a; font-weight:bold;">{student_name} ({role_label})</td>
                     </tr>
+                    {proj_html}
                     <tr style="background-color:#fcfcfd;">
                         <td style="color:#64748b; font-weight:bold;">Workstation:</td>
                         <td style="color:#0f172a; font-weight:bold;">{pc_id}</td>

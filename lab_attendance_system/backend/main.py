@@ -5,7 +5,12 @@ from typing import Optional, List, Dict, Any
 import base64
 import cv2
 import numpy as np
-import face_recognition
+try:
+    import face_recognition
+    HAS_FACE_RECOGNITION = True
+except (ImportError, ModuleNotFoundError):
+    face_recognition = None
+    HAS_FACE_RECOGNITION = False
 import pickle
 import csv
 import io
@@ -96,6 +101,18 @@ class OccupyRequest(BaseModel):
     send_email: Optional[bool] = False
     notes: Optional[str] = None
     user_role: Optional[str] = "Student"
+    current_project: Optional[str] = ""
+
+
+class UpdatePCProjectRequest(BaseModel):
+    pc_id: Optional[str] = None
+    current_project: str
+
+
+class AddOccupantRequest(BaseModel):
+    pc_id: Optional[str] = None
+    student_name: str
+    email: Optional[str] = None
 
 
 class FreeRequest(BaseModel):
@@ -139,11 +156,34 @@ class EnrollRequest(BaseModel):
 
 @app.get("/health")
 def health_check():
-    """Simple health check endpoint for connectivity testing."""
+    """Comprehensive health check endpoint for connectivity, 24/7 monitoring, and diagnostic testing."""
+    all_pcs = database.get_all_pc_status()
+    occupied_count = sum(1 for p in all_pcs if p.get("status") == "occupied")
+    free_count = len(all_pcs) - occupied_count
+
+    # Check active ngrok tunnel file
+    tunnel_url = None
+    tunnel_file = os.path.join(BASE_DIR, "tunnel_url.txt")
+    if os.path.exists(tunnel_file):
+        try:
+            with open(tunnel_file, "r", encoding="utf-8") as f:
+                tunnel_url = f.read().strip()
+        except Exception:
+            pass
+
     return {
         "status": "ok",
+        "service": "AI/ML Lab Attendance & PC Tracking System",
+        "version": "2.1.0",
         "timestamp": datetime.now().isoformat(),
-        "smtp_configured": mailer.is_smtp_configured()
+        "smtp_configured": mailer.is_smtp_configured(),
+        "permanent_domain": "amaretto-confess-subtract.ngrok-free.dev",
+        "current_tunnel_url": tunnel_url or "https://amaretto-confess-subtract.ngrok-free.dev",
+        "workstations": {
+            "total": len(all_pcs),
+            "free": free_count,
+            "occupied": occupied_count
+        }
     }
 
 
@@ -171,6 +211,7 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
     end_time = payload.end_time.strip() if payload.end_time else None
     send_email_flag = payload.send_email
     user_role = payload.user_role or "Student"
+    current_project = payload.current_project.strip() if payload.current_project else ""
 
     if not pc_id:
         raise HTTPException(status_code=400, detail="pc_id is required.")
@@ -209,7 +250,8 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
         end_time=end_time,
         user_email=email,
         user_role=user_role,
-        start_time=start_time_str
+        start_time=start_time_str,
+        current_project=current_project
     )
 
     if not success:
@@ -226,21 +268,44 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
                 end_time=end_time,
                 duration_mins=duration_mins,
                 notes=payload.notes,
-                user_role=user_role
+                user_role=user_role,
+                current_project=current_project
             )
         except Exception as e:
             email_response = {"success": False, "error": str(e)}
 
     return {
         "status": "success",
-        "message": f"{pc_id} marked occupied by {name} ({user_role})",
+        "message": f"{pc_id} marked occupied by {name} ({user_role})" + (f" for project '{current_project}'" if current_project else ""),
         "pc_id": pc_id,
         "occupied_by": name,
         "user_role": user_role,
+        "current_project": current_project,
         "since_time": start_time_str,
         "end_time": end_time,
         "duration_mins": duration_mins,
         "email_result": email_response
+    }
+
+
+@app.post("/pc/project")
+@app.patch("/pc/{pc_id}/project")
+def update_pc_project_endpoint(payload: UpdatePCProjectRequest, pc_id: Optional[str] = None):
+    """Updates the project a student is actively working on for a workstation."""
+    target_pc = (pc_id or payload.pc_id or "").strip()
+    if not target_pc:
+        raise HTTPException(status_code=400, detail="pc_id is required.")
+
+    proj_text = payload.current_project.strip() if payload.current_project else ""
+    success = database.update_pc_project(pc_id=target_pc, current_project=proj_text)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"PC {target_pc} not found.")
+
+    return {
+        "status": "success",
+        "message": f"Updated active project for {target_pc} to '{proj_text}'",
+        "pc_id": target_pc,
+        "current_project": proj_text
     }
 
 
@@ -260,6 +325,32 @@ def free_pc_endpoint(payload: FreeRequest):
         "message": f"{pc_id} marked as available",
         "pc_id": pc_id
     }
+
+
+@app.post("/pc/add_occupant")
+@app.post("/pc/{pc_id}/add_occupant")
+def add_occupant_endpoint(payload: AddOccupantRequest, pc_id: Optional[str] = None):
+    """Allows multiple students/teammates on a single PC by adding a group partner."""
+    target_pc = (pc_id or payload.pc_id or "").strip()
+    target_name = (payload.student_name or "").strip()
+    if not target_pc:
+        raise HTTPException(status_code=400, detail="pc_id is required.")
+    if not target_name:
+        raise HTTPException(status_code=400, detail="student_name is required.")
+
+    result = database.add_occupant_to_pc(pc_id=target_pc, new_name=target_name, new_email=payload.email)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+
+@app.delete("/pc/{pc_id}/occupant/{student_name}")
+def remove_occupant_endpoint(pc_id: str, student_name: str):
+    """Removes a specific student from a workstation with multiple occupants."""
+    result = database.remove_occupant_from_pc(pc_id=pc_id, student_name=student_name)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
 
 
 # ── Attendance Logs ──
@@ -488,10 +579,15 @@ def scan_entry():
 @app.get("/api/capture_photo")
 def capture_photo():
     """Captures a photo from webcam for registration."""
-    result = camera.capture_face_photo()
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=result["message"])
-    return result
+    try:
+        result = camera.capture_face_photo()
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("message", "Webcam is unavailable. Please use Method 2 to upload photo."))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Webcam access error ({str(e)}). Please use Method 2 to upload photo.")
 
 
 @app.post("/enroll")
@@ -508,6 +604,21 @@ def enroll_face(payload: EnrollRequest):
         if img is None:
             raise HTTPException(status_code=400, detail="Invalid image data")
         
+        if not HAS_FACE_RECOGNITION or face_recognition is None:
+            # Fallback when dlib/face_recognition not installed: save avatar image directly
+            safe_name = "".join([c for c in payload.name if c.isalpha() or c.isdigit() or c == " "]).rstrip()
+            avatar_filename = f"{safe_name.replace(' ', '_')}.jpg"
+            cv2.imwrite(os.path.join(AVATARS_DIR, avatar_filename), img)
+            database.add_or_update_registered_user(
+                name=payload.name.strip(),
+                email=payload.email.strip() if payload.email else "",
+                roll_no=payload.roll_no.strip() if payload.roll_no else "",
+                avatar_url=f"/static/avatars/{avatar_filename}",
+                role=payload.role or "Student",
+                department=payload.department or ""
+            )
+            return {"status": "success", "message": f"Successfully registered {payload.role or 'Member'} '{payload.name}' in directory."}
+
         rgb_frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         face_locations = face_recognition.face_locations(rgb_frame, model="hog")
         
@@ -712,8 +823,10 @@ def download_allotments_csv():
     writer.writerow([
         "ID",
         "Workstation",
-        "Student Name",
-        "Student Email",
+        "Student / User Name",
+        "Role",
+        "Project Working On",
+        "User Email",
         "Start Time",
         "End Time",
         "Duration (Mins)",
@@ -722,14 +835,16 @@ def download_allotments_csv():
     
     for a in allotments:
         writer.writerow([
-            a["id"],
-            a["pc_id"],
-            a["student_name"],
-            a["user_email"] or "N/A",
-            a["start_time"],
-            a["end_time"] or "N/A",
-            a["duration_mins"] or "N/A",
-            a["created_date"]
+            a.get("id"),
+            a.get("pc_id"),
+            a.get("student_name"),
+            a.get("user_role") or "Student",
+            a.get("current_project") or "General Lab Work",
+            a.get("user_email") or "N/A",
+            a.get("start_time"),
+            a.get("end_time") or "N/A",
+            a.get("duration_mins") or "N/A",
+            a.get("created_date")
         ])
         
     today_str = datetime.now().strftime("%Y%m%d_%H%M")
