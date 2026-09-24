@@ -158,6 +158,7 @@ async function checkConnection() {
         // Load data for all components
         await loadRegisteredFaces();
         await loadPCStatus();
+        loadStudentProjects();
         loadAttendance();
         loadUnknownFaces();
         loadGateCameraStatusFromPortal();
@@ -191,6 +192,7 @@ function initTabs() {
                     if (typeof onWindowResize === 'function') onWindowResize();
                 }, 50);
             }
+            if (btn.dataset.tab === 'projects') loadStudentProjects();
             if (btn.dataset.tab === 'attendance') loadAttendance();
             if (btn.dataset.tab === 'registered-faces') loadRegisteredFaces();
             if (btn.dataset.tab === 'unknown-faces') loadUnknownFaces();
@@ -1978,4 +1980,321 @@ async function triggerKioskScanFromModal() {
         showToast("Scan error: " + e.message, "error");
     }
 }
+
+// ── Student Research Projects & Deployments (Tab 2) ──
+
+let allProjectsData = [];
+let currentProjectFilter = "all";
+
+async function loadStudentProjects() {
+    try {
+        const res = await apiFetch("/api/projects");
+        allProjectsData = res.projects || [];
+        updateProjectMetrics();
+        renderProjectsGrid(allProjectsData);
+    } catch (e) {
+        console.warn("Failed to load projects:", e);
+        const grid = document.getElementById("projects-grid");
+        if (grid && allProjectsData.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">⚠️ Could not load projects. Please verify backend connection.</div>`;
+        }
+    }
+}
+
+function updateProjectMetrics() {
+    const activeCount = allProjectsData.filter(p => (p.status || '').toLowerCase() === 'ongoing' || !p.status).length;
+    const deployedCount = allProjectsData.filter(p => !!(p.deployment_url || '').trim()).length;
+    const filedCount = allProjectsData.filter(p => (p.report_status || '').toLowerCase() === 'filed').length;
+    const pendingCount = allProjectsData.filter(p => (p.report_status || '').toLowerCase() !== 'filed').length;
+
+    const navBadge = document.getElementById("nav-project-count");
+    if (navBadge) navBadge.innerText = allProjectsData.length;
+
+    const statActive = document.getElementById("stat-proj-active");
+    if (statActive) statActive.innerText = activeCount || allProjectsData.length;
+
+    const statDeployed = document.getElementById("stat-proj-deployed");
+    if (statDeployed) statDeployed.innerText = deployedCount;
+
+    const statReports = document.getElementById("stat-proj-reports");
+    if (statReports) statReports.innerText = filedCount;
+
+    const fAll = document.getElementById("filter-cnt-all");
+    if (fAll) fAll.innerText = allProjectsData.length;
+
+    const fFiled = document.getElementById("filter-cnt-filed");
+    if (fFiled) fFiled.innerText = filedCount;
+
+    const fPending = document.getElementById("filter-cnt-pending");
+    if (fPending) fPending.innerText = pendingCount;
+}
+
+function filterProjectsList(filter) {
+    currentProjectFilter = filter;
+    document.querySelectorAll("[data-proj-filter]").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-proj-filter") === filter);
+    });
+
+    let filtered = allProjectsData;
+    if (filter === "filed") {
+        filtered = allProjectsData.filter(p => (p.report_status || '').toLowerCase() === 'filed');
+    } else if (filter === "pending") {
+        filtered = allProjectsData.filter(p => (p.report_status || '').toLowerCase() !== 'filed');
+    }
+    renderProjectsGrid(filtered);
+}
+
+function renderProjectsGrid(projects) {
+    const grid = document.getElementById("projects-grid");
+    if (!grid) return;
+
+    if (!projects || projects.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 48px; background: var(--surface); border-radius: 12px; border: 1px dashed var(--border);">
+                <div style="font-size: 36px; margin-bottom: 8px;">🚀</div>
+                <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">No Projects Found</div>
+                <div style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 16px;">Add a new project or adjust filters to view research records.</div>
+                <button class="btn btn-primary" onclick="openAddProjectModal()">➕ Add First Project</button>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = projects.map(proj => {
+        const isFiled = (proj.report_status || '').toLowerCase() === 'filed';
+        const reportBadgeClass = isFiled ? 'badge-success' : 'badge-warning';
+        const reportBadgeIcon = isFiled ? '✅' : '⏳';
+        const reportText = isFiled ? 'Report Filed' : (proj.report_status || 'Report Pending');
+
+        const studentsArr = (proj.student_names || '').split(',').map(s => s.trim()).filter(Boolean);
+        const techArr = (proj.technologies || '').split(',').map(t => t.trim()).filter(Boolean);
+
+        return `
+            <div class="project-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.05);" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform='none'">
+                <div>
+                    <!-- Top Badges Row -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 6px;">
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #6366f1; font-weight: 700; border: 1px solid rgba(99, 102, 241, 0.25);">
+                                🖥️ ${escapeHtml(proj.pc_assigned || 'Unassigned')}
+                            </span>
+                            <span class="badge badge-success" style="font-size: 11px;">
+                                ● ${escapeHtml(proj.status || 'Ongoing')}
+                            </span>
+                        </div>
+                        <span class="badge ${reportBadgeClass}" style="font-weight: 700; font-size: 11px; padding: 3px 8px;">
+                            ${reportBadgeIcon} ${escapeHtml(reportText)}
+                        </span>
+                    </div>
+
+                    <!-- Project Title -->
+                    <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 700; color: var(--on-surface); line-height: 1.35;">
+                        ${escapeHtml(proj.title)}
+                    </h3>
+
+                    <!-- Project Description -->
+                    <p style="margin: 0 0 14px 0; font-size: 12.5px; color: var(--on-surface-variant); line-height: 1.5;">
+                        ${escapeHtml(proj.description || 'No description provided.')}
+                    </p>
+
+                    <!-- Assigned Students -->
+                    <div style="margin-bottom: 12px; padding: 10px 12px; background: var(--surface-variant); border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--on-surface-variant); letter-spacing: 0.5px; margin-bottom: 6px;">
+                            👥 Assigned Students & Roles
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            ${studentsArr.map(st => `
+                                <span style="background: var(--surface); border: 1px solid var(--border); padding: 3px 9px; border-radius: 14px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                                    <span style="width: 7px; height: 7px; border-radius: 50%; background: #6366f1;"></span>
+                                    ${escapeHtml(st)}
+                                </span>
+                            `).join('')}
+                        </div>
+                        ${proj.student_details ? `
+                            <div style="font-size: 11px; color: var(--on-surface-variant); margin-top: 6px; font-style: italic;">
+                                💡 ${escapeHtml(proj.student_details)}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Tech Stack Badges -->
+                    ${techArr.length > 0 ? `
+                        <div style="margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 5px;">
+                            ${techArr.map(t => `
+                                <span style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; background: rgba(56, 189, 248, 0.1); color: #0284c7; border: 1px solid rgba(56, 189, 248, 0.2);">
+                                    ${escapeHtml(t)}
+                                </span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <!-- Duration & Report Details Grid -->
+                    <div style="font-size: 11.5px; color: var(--on-surface-variant); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; padding-top: 10px; border-top: 1px dashed var(--border);">
+                        <div>
+                            <strong>⏱️ Duration:</strong><br>
+                            ${escapeHtml(proj.duration || proj.start_date || 'N/A')}
+                        </div>
+                        <div>
+                            <strong>📄 Report Status:</strong><br>
+                            ${isFiled && proj.report_url ? `
+                                <a href="${escapeHtml(proj.report_url)}" target="_blank" style="color: #10b981; font-weight: 700; text-decoration: underline;">
+                                    Filed (View Doc ↗)
+                                </a>
+                            ` : `<span style="font-weight: 600; color: ${isFiled ? '#10b981' : '#f59e0b'};">${escapeHtml(reportText)}</span>`}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Action Buttons -->
+                <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border);">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        ${proj.deployment_url ? `
+                            <a href="${escapeHtml(proj.deployment_url)}" target="_blank" class="btn btn-primary" style="font-size: 11px; padding: 5px 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                🌐 Deployment ↗
+                            </a>
+                        ` : ''}
+                        ${proj.github_url ? `
+                            <a href="${escapeHtml(proj.github_url)}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                💻 Code ↗
+                            </a>
+                        ` : ''}
+                    </div>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="btn btn-secondary" onclick="openEditProjectModal(${proj.id})" style="font-size: 11px; padding: 5px 8px;" title="Edit Project">
+                            ✏️
+                        </button>
+                        <button class="btn btn-secondary" onclick="deleteStudentProject(${proj.id})" style="font-size: 11px; padding: 5px 8px; color: var(--error);" title="Delete Project">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openAddProjectModal() {
+    document.getElementById("project-modal-title").innerText = "➕ Add Student Research Project";
+    document.getElementById("proj-edit-id").value = "";
+    document.getElementById("proj-title-input").value = "";
+    document.getElementById("proj-students-input").value = "";
+    document.getElementById("proj-details-input").value = "";
+    document.getElementById("proj-desc-input").value = "";
+    document.getElementById("proj-tech-input").value = "";
+    document.getElementById("proj-duration-input").value = "";
+    document.getElementById("proj-deploy-input").value = "";
+    document.getElementById("proj-github-input").value = "";
+    document.getElementById("proj-report-status-input").value = "Pending";
+    document.getElementById("proj-report-url-input").value = "";
+    document.getElementById("proj-pc-input").value = "PC-1";
+
+    const modal = document.getElementById("project-modal");
+    if (modal) modal.style.display = "flex";
+}
+
+function openEditProjectModal(projectId) {
+    const proj = allProjectsData.find(p => p.id === projectId);
+    if (!proj) return;
+
+    document.getElementById("project-modal-title").innerText = "✏️ Edit Student Research Project";
+    document.getElementById("proj-edit-id").value = proj.id;
+    document.getElementById("proj-title-input").value = proj.title || "";
+    document.getElementById("proj-students-input").value = proj.student_names || "";
+    document.getElementById("proj-details-input").value = proj.student_details || "";
+    document.getElementById("proj-desc-input").value = proj.description || "";
+    document.getElementById("proj-tech-input").value = proj.technologies || "";
+    document.getElementById("proj-duration-input").value = proj.duration || "";
+    document.getElementById("proj-deploy-input").value = proj.deployment_url || "";
+    document.getElementById("proj-github-input").value = proj.github_url || "";
+    document.getElementById("proj-report-status-input").value = proj.report_status || "Pending";
+    document.getElementById("proj-report-url-input").value = proj.report_url || "";
+    document.getElementById("proj-pc-input").value = proj.pc_assigned || "PC-1";
+
+    const modal = document.getElementById("project-modal");
+    if (modal) modal.style.display = "flex";
+}
+
+function closeProjectModal() {
+    const modal = document.getElementById("project-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function saveProjectFromModal() {
+    const editId = document.getElementById("proj-edit-id").value;
+    const title = document.getElementById("proj-title-input").value.trim();
+    const studentNames = document.getElementById("proj-students-input").value.trim();
+    const studentDetails = document.getElementById("proj-details-input").value.trim();
+    const description = document.getElementById("proj-desc-input").value.trim();
+    const tech = document.getElementById("proj-tech-input").value.trim();
+    const duration = document.getElementById("proj-duration-input").value.trim();
+    const deployUrl = document.getElementById("proj-deploy-input").value.trim();
+    const githubUrl = document.getElementById("proj-github-input").value.trim();
+    const reportStatus = document.getElementById("proj-report-status-input").value;
+    const reportUrl = document.getElementById("proj-report-url-input").value.trim();
+    const pcAssigned = document.getElementById("proj-pc-input").value;
+
+    if (!title) {
+        return showToast("Project title is required", "error");
+    }
+    if (!studentNames) {
+        return showToast("Assigned student(s) required", "error");
+    }
+
+    const payload = {
+        title,
+        student_names: studentNames,
+        student_details: studentDetails,
+        description,
+        technologies: tech,
+        duration,
+        deployment_url: deployUrl,
+        github_url: githubUrl,
+        report_status: reportStatus,
+        report_url: reportUrl,
+        pc_assigned: pcAssigned
+    };
+
+    const saveBtn = document.getElementById("save-project-btn");
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerText = "Saving...";
+    }
+
+    try {
+        if (editId) {
+            await apiFetch(`/api/projects/${editId}`, {
+                method: "PUT",
+                body: JSON.stringify(payload)
+            });
+            showToast("Project updated successfully!", "success");
+        } else {
+            await apiFetch("/api/projects", {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            showToast("Project added successfully!", "success");
+        }
+        closeProjectModal();
+        await loadStudentProjects();
+    } catch (e) {
+        showToast("Error saving project: " + e.message, "error");
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerText = "Save Project";
+        }
+    }
+}
+
+async function deleteStudentProject(projectId) {
+    if (!confirm("Are you sure you want to remove this project?")) return;
+    try {
+        await apiFetch(`/api/projects/${projectId}`, { method: "DELETE" });
+        showToast("Project deleted", "info");
+        await loadStudentProjects();
+    } catch (e) {
+        showToast("Failed to delete project: " + e.message, "error");
+    }
+}
+
 

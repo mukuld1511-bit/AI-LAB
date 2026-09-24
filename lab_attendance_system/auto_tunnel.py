@@ -116,9 +116,72 @@ def start_tunnel_process():
     return proc
 
 
-def run_tunnel():
+def run_cloudflared_tunnel():
+    """Runs Cloudflare Quick Tunnel with completely unlimited free bandwidth (bypasses ngrok quota)."""
+    cloudflared_exe = os.path.join(CURRENT_DIR, "cloudflared.exe")
+    if not os.path.exists(cloudflared_exe):
+        cloudflared_exe = "cloudflared"
+
+    cmd = [cloudflared_exe, "tunnel", "--url", f"http://localhost:{NGROK_PORT}"]
+    print("\n" + "=" * 65)
+    print("   AI/ML LAB UNLIMITED CLOUDFLARE TUNNEL (NO BANDWIDTH CAP)")
+    print(f"   Target Port  : {NGROK_PORT}")
+    print(f"   Executable   : {cloudflared_exe}")
     print("=" * 65)
-    print("   AI/ML LAB 24/7 PERMANENT NGROK TUNNEL MANAGER")
+    print(f"[INFO] Spawning Cloudflare process: {' '.join(cmd)}")
+
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+    except Exception as e:
+        print(f"[ERROR] Could not start cloudflared: {e}")
+        return False
+
+    url = None
+    import re
+    while True:
+        line = proc.stdout.readline()
+        if not line and proc.poll() is not None:
+            break
+        line_str = line.strip()
+        if "trycloudflare.com" in line_str:
+            m = re.search(r'https://[a-zA-Z0-9-]+\.trycloudflare\.com', line_str)
+            if m:
+                url = m.group(0)
+                print("\n" + "=" * 65)
+                print("  [SUCCESS] 24/7 CLOUDFLARE UNLIMITED TUNNEL ONLINE!")
+                print(f"  >> Public Cloud URL: {url}")
+                print(f"  >> Faculty Portal  : {url}/mams_portal/index.html")
+                print("  >> Completely UNLIMITED Bandwidth (Zero Monthly Caps)")
+                print("=" * 65 + "\n")
+                try:
+                    with open(TUNNEL_FILE, "w", encoding="utf-8") as f:
+                        f.write(url.strip())
+                    print(f"[INFO] Saved active URL to {TUNNEL_FILE}")
+                except Exception as e:
+                    print(f"[WARN] Could not write {TUNNEL_FILE}: {e}")
+                copy_to_clipboard(url)
+
+    proc.wait()
+    return True
+
+
+def run_tunnel():
+    tunnel_provider = ENV_CONFIG.get("TUNNEL_PROVIDER", "auto").lower()
+
+    # If provider is explicitly set to cloudflared, run it directly
+    if tunnel_provider == "cloudflared":
+        print("[INFO] TUNNEL_PROVIDER set to cloudflared. Running Cloudflare Unlimited Tunnel...")
+        run_cloudflared_tunnel()
+        return
+
+    print("=" * 65)
+    print("   AI/ML LAB 24/7 PERMANENT TUNNEL MANAGER")
     print(f"   Target Port  : {NGROK_PORT}")
     print(f"   Target Domain: {NGROK_DOMAIN or '(Random Ephemeral)'}")
     print("=" * 65)
@@ -131,16 +194,23 @@ def run_tunnel():
         res = subprocess.run(["ngrok", "version"], capture_output=True, text=True, check=True)
         print(f"[INFO] Detected: {res.stdout.strip()}")
     except (FileNotFoundError, subprocess.CalledProcessError):
-        print("[ERROR] ngrok is not installed or not in PATH!")
-        print("        Download from: https://ngrok.com/download")
-        print("        Run: setup_lab_pc.bat to install prerequisites.")
-        sys.exit(1)
+        print("[WARN] ngrok is not installed or not in PATH! Switching to Cloudflare Tunnel...")
+        run_cloudflared_tunnel()
+        return
 
     # 3. Configure authtoken if specified
     check_and_apply_authtoken()
 
-    # 4. Continuous tunnel runner
+    # 4. Continuous tunnel runner with automatic failover to Cloudflare on bandwidth limit
+    ngrok_quota_exceeded = False
+
     while True:
+        if ngrok_quota_exceeded:
+            print("\n[WARN] ngrok monthly bandwidth quota is exceeded. Running on Cloudflare Unlimited Tunnel...")
+            run_cloudflared_tunnel()
+            time.sleep(5)
+            continue
+
         try:
             proc = start_tunnel_process()
             print("[INFO] Establishing permanent cloud tunnel connection...")
@@ -152,6 +222,11 @@ def run_tunnel():
                 if proc.poll() is not None:
                     err_out = proc.stderr.read() if proc.stderr else "Process exited"
                     print(f"[WARN] ngrok exited early: {err_out.strip()}")
+                    if "ERR_NGROK_725" in err_out or "bandwidth exceeded" in err_out.lower():
+                        print("[ALERT] ngrok Account Bandwidth Exceeded (ERR_NGROK_725)!")
+                        print("[INFO] Automatically switching to Cloudflare Tunnel (unlimited bandwidth)...")
+                        ngrok_quota_exceeded = True
+                        break
                     if "ERR_NGROK_334" in err_out:
                         print("[INFO] Endpoint conflict detected. Clearing previous session...")
                         kill_existing_ngrok()
@@ -163,7 +238,7 @@ def run_tunnel():
                     break
                 print(f"       Attempt {attempt}/15 verifying tunnel status...")
 
-            if url:
+            if url and not ngrok_quota_exceeded:
                 print("\n" + "=" * 65)
                 print("  [SUCCESS] 24/7 PERMANENT TUNNEL ONLINE!")
                 print(f"  >> Public Cloud URL: {url}")
@@ -185,7 +260,8 @@ def run_tunnel():
                 proc.wait()
                 print(f"[WARN] ngrok process terminated with exit code {proc.returncode}.")
             else:
-                print("[WARN] Could not retrieve tunnel URL. Retrying in 5s...")
+                if not ngrok_quota_exceeded:
+                    print("[WARN] Could not retrieve tunnel URL. Retrying in 5s...")
                 if proc.poll() is None:
                     proc.terminate()
                     try:

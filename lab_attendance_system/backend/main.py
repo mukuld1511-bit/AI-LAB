@@ -962,9 +962,15 @@ def clear_student_schedule(student_name: str, week: Optional[str] = Query("recur
 class ProjectCreateRequest(BaseModel):
     title: str
     student_names: str
+    student_details: Optional[str] = ""
     description: Optional[str] = ""
     status: Optional[str] = "Ongoing"
     technologies: Optional[str] = ""
+    duration: Optional[str] = ""
+    deployment_url: Optional[str] = ""
+    github_url: Optional[str] = ""
+    report_status: Optional[str] = "Pending"
+    report_url: Optional[str] = ""
     start_date: Optional[str] = ""
     pc_assigned: Optional[str] = ""
 
@@ -972,9 +978,15 @@ class ProjectCreateRequest(BaseModel):
 class ProjectUpdateRequest(BaseModel):
     title: Optional[str] = None
     student_names: Optional[str] = None
+    student_details: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
     technologies: Optional[str] = None
+    duration: Optional[str] = None
+    deployment_url: Optional[str] = None
+    github_url: Optional[str] = None
+    report_status: Optional[str] = None
+    report_url: Optional[str] = None
     start_date: Optional[str] = None
     pc_assigned: Optional[str] = None
 
@@ -997,9 +1009,15 @@ def create_project(payload: ProjectCreateRequest):
     new_id = database.add_student_project(
         title=payload.title,
         student_names=payload.student_names,
+        student_details=payload.student_details or "",
         description=payload.description or "",
         status=payload.status or "Ongoing",
         technologies=payload.technologies or "",
+        duration=payload.duration or "",
+        deployment_url=payload.deployment_url or "",
+        github_url=payload.github_url or "",
+        report_status=payload.report_status or "Pending",
+        report_url=payload.report_url or "",
         start_date=payload.start_date or "",
         pc_assigned=payload.pc_assigned or ""
     )
@@ -1013,9 +1031,15 @@ def update_project(project_id: int, payload: ProjectUpdateRequest):
         project_id=project_id,
         title=payload.title,
         student_names=payload.student_names,
+        student_details=payload.student_details,
         description=payload.description,
         status=payload.status,
         technologies=payload.technologies,
+        duration=payload.duration,
+        deployment_url=payload.deployment_url,
+        github_url=payload.github_url,
+        report_status=payload.report_status,
+        report_url=payload.report_url,
         start_date=payload.start_date,
         pc_assigned=payload.pc_assigned
     )

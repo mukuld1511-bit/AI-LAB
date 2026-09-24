@@ -842,9 +842,11 @@ def clear_student_timetable(student_name: str, week_label: str = "recurring") ->
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM weekly_schedules WHERE UPPER(student_name) = UPPER(?) AND week_label = ?", (student_name.strip(), week_label))
-    conn.commit()
-    count = cursor.rowcount
-    conn.c# ── Student Projects Helpers ──
+    conn.close()
+    return count
+
+
+# ── Student Projects Helpers ──
 
 def get_student_projects(status: Optional[str] = None) -> List[Dict[str, Any]]:
     """Returns all student projects, optionally filtered by status."""
@@ -971,7 +973,6 @@ def update_student_project(project_id: int, title: Optional[str] = None,
     conn.commit()
     affected = cursor.rowcount > 0
     conn.close()
-    return affected  conn.close()
     return affected
 
 

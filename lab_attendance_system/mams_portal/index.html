@@ -68,6 +68,7 @@
     <!-- Tab Navigation -->
     <nav class="tab-nav">
         <button class="tab-btn active" data-tab="pc-status">🖥️ 3D Lab & Workstations</button>
+        <button class="tab-btn" data-tab="projects">🚀 Research & Projects <span id="nav-project-count" class="pill-count" style="background: #6366f1; color: #fff;">4</span></button>
         <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
         <button class="tab-btn" data-tab="registered-faces">👥 Registered Users <span id="nav-reg-count" class="pill-count">0</span></button>
         <button class="tab-btn" data-tab="unknown-faces">⚠️ Unwanted / Intruders <span id="nav-unknown-count" class="pill-count pill-alert">0</span></button>
@@ -137,7 +138,57 @@
     </main>
 
     <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 2: ATTENDANCE LOGS                             -->
+    <!-- TAB 2: STUDENT RESEARCH PROJECTS & DEPLOYMENTS      -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-projects" class="tab-content">
+        <div class="page-title-row">
+            <div>
+                <h2>🚀 AI Lab Research Projects & Student Deployments</h2>
+                <p>Track ongoing student research projects • Assigned DGX workstations • Live web deployments • Report filing status</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-primary" onclick="openAddProjectModal()">➕ Add New Project</button>
+                <button class="btn btn-secondary" onclick="loadStudentProjects()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Project Metrics Bar -->
+        <div class="metrics-row" style="margin-bottom: 20px;">
+            <div class="metric-card metric-green">
+                <div class="metric-value" id="stat-proj-active">4</div>
+                <div class="metric-label">ACTIVE PROJECTS</div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #6366f1;">
+                <div class="metric-value" id="stat-proj-deployed" style="color: #6366f1;">4</div>
+                <div class="metric-label">LIVE DEPLOYMENTS</div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #10b981;">
+                <div class="metric-value" id="stat-proj-reports" style="color: #10b981;">3</div>
+                <div class="metric-label">REPORTS FILED</div>
+            </div>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="category-filter-chips" style="margin-bottom: 18px;">
+            <button class="cat-chip-btn active" data-proj-filter="all" onclick="filterProjectsList('all')">
+                All Projects <span id="filter-cnt-all" class="cat-pill">4</span>
+            </button>
+            <button class="cat-chip-btn" data-proj-filter="filed" onclick="filterProjectsList('filed')">
+                ✅ Report Filed <span id="filter-cnt-filed" class="cat-pill">3</span>
+            </button>
+            <button class="cat-chip-btn" data-proj-filter="pending" onclick="filterProjectsList('pending')">
+                ⏳ Report Pending <span id="filter-cnt-pending" class="cat-pill">1</span>
+            </button>
+        </div>
+
+        <!-- Projects Grid Container -->
+        <div id="projects-grid" class="projects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 18px;">
+            <!-- Rendered dynamically by script.js -->
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 3: ATTENDANCE LOGS                             -->
     <!-- ═══════════════════════════════════════════════════ -->
     <main id="tab-attendance" class="tab-content">
         <div class="page-title-row">
@@ -670,11 +721,106 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- MODAL 7: ADD / EDIT STUDENT PROJECT                 -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div id="project-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large" style="max-width: 660px;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="project-modal-title" style="margin: 0; font-size: 18px;">🚀 Add Student Research Project</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--on-surface-variant);">Configure project details, assigned students, deployment links & report status</p>
+                </div>
+                <button class="modal-close-btn" onclick="closeProjectModal()">✕</button>
+            </div>
+
+            <input type="hidden" id="proj-edit-id" value="">
+
+            <div class="form-group">
+                <label class="form-label">Project Title *:</label>
+                <input type="text" id="proj-title-input" class="form-input" placeholder="e.g. Autonomous Drone Vision & Precision Landing">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Assigned Students *:</label>
+                    <input type="text" id="proj-students-input" class="form-input" placeholder="e.g. Ritik Kumar, Harsh Vardhan">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Workstation Assigned:</label>
+                    <select id="proj-pc-input" class="form-input">
+                        <option value="PC-1">PC-1 (Outer Window)</option>
+                        <option value="PC-2">PC-2</option>
+                        <option value="PC-3">PC-3</option>
+                        <option value="PC-4">PC-4</option>
+                        <option value="PC-5">PC-5</option>
+                        <option value="PC-6">PC-6 (Ritik)</option>
+                        <option value="PC-7">PC-7 (Mukul)</option>
+                        <option value="PC-8">PC-8</option>
+                        <option value="BACKEND">BACKEND Host Server</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Student Details & Roles:</label>
+                <input type="text" id="proj-details-input" class="form-input" placeholder="e.g. Ritik (Lead Vision Researcher), Harsh (Flight Systems)">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Project Description:</label>
+                <textarea id="proj-desc-input" class="form-input" rows="3" placeholder="Summary of objectives, methodology and deliverables..."></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Technologies Used:</label>
+                    <input type="text" id="proj-tech-input" class="form-input" placeholder="e.g. PyTorch, YOLOv10, ROS2, CUDA">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Duration / Timeline:</label>
+                    <input type="text" id="proj-duration-input" class="form-input" placeholder="e.g. 4 Months (Jan 2026 - May 2026)">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Live Deployment Link:</label>
+                    <input type="url" id="proj-deploy-input" class="form-input" placeholder="https://my-project.vercel.app">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">GitHub / Code Repo:</label>
+                    <input type="url" id="proj-github-input" class="form-input" placeholder="https://github.com/my-lab/project">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Report Status *:</label>
+                    <select id="proj-report-status-input" class="form-input">
+                        <option value="Filed">✅ Filed</option>
+                        <option value="Pending">⏳ Pending</option>
+                        <option value="Under Review">🔍 Under Review</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Report Document / Drive URL:</label>
+                    <input type="text" id="proj-report-url-input" class="form-input" placeholder="e.g. /reports/my_report.pdf or Google Drive link">
+                </div>
+            </div>
+
+            <div class="modal-footer" style="margin-top: 18px;">
+                <button class="btn btn-secondary" onclick="closeProjectModal()">Cancel</button>
+                <button id="save-project-btn" class="btn btn-primary" onclick="saveProjectFromModal()">Save Project</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Scripts -->
-    <script src="three_scene.js?v=25"></script>
-    <script src="script.js?v=51"></script>
+    <script src="three_scene.js?v=26"></script>
+    <script src="script.js?v=52"></script>
 </body>
 </html>
