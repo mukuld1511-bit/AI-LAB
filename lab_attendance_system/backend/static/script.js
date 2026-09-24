@@ -54,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadUnknownFaces();
     loadRegisteredFaces();
     loadTimetable();
+    loadGateCameraStatus();
 
     // Auto-refresh PC status & Gate stats every 6 seconds
     setInterval(() => {
@@ -161,6 +162,59 @@ function reloadCameraFeed() {
         img.style.display = "block";
         if (fallback) fallback.style.display = "none";
         img.src = `/video_feed?t=${Date.now()}`;
+    }
+}
+
+async function toggleGateCameraPower() {
+    try {
+        const res = await apiFetch("/api/camera/toggle", { method: "POST" });
+        updateGateCameraPowerUI(res.enabled);
+        showToast(res.message || "Camera power toggled", "info");
+        setTimeout(reloadCameraFeed, 400);
+    } catch (e) {
+        showToast("Failed to toggle camera: " + e.message, "error");
+    }
+}
+
+async function loadGateCameraStatus() {
+    try {
+        const res = await apiFetch("/api/camera/status");
+        updateGateCameraPowerUI(res.enabled);
+    } catch (e) {}
+}
+
+function updateGateCameraPowerUI(isEnabled) {
+    const mainBtn = document.getElementById("gate-camera-power-btn");
+    const miniBtn = document.getElementById("stream-mini-toggle-btn");
+    const recDot = document.getElementById("stream-rec-dot");
+    const recLabel = document.getElementById("stream-rec-label");
+
+    if (isEnabled) {
+        if (mainBtn) {
+            mainBtn.innerHTML = "🟢 Camera: ON";
+            mainBtn.style.color = "#15803d";
+            mainBtn.style.borderColor = "#86efac";
+            mainBtn.style.background = "#f0fdf4";
+        }
+        if (miniBtn) {
+            miniBtn.innerHTML = "🛑 Turn OFF";
+            miniBtn.style.color = "#dc2626";
+        }
+        if (recDot) recDot.style.background = "#ef4444";
+        if (recLabel) recLabel.innerText = "LIVE GATE SURVEILLANCE";
+    } else {
+        if (mainBtn) {
+            mainBtn.innerHTML = "🔴 Camera: OFF";
+            mainBtn.style.color = "#dc2626";
+            mainBtn.style.borderColor = "#fca5a5";
+            mainBtn.style.background = "#fef2f2";
+        }
+        if (miniBtn) {
+            miniBtn.innerHTML = "▶️ Turn ON";
+            miniBtn.style.color = "#15803d";
+        }
+        if (recDot) recDot.style.background = "#94a3b8";
+        if (recLabel) recLabel.innerText = "GATE CAMERA PAUSED (OFF)";
     }
 }
 

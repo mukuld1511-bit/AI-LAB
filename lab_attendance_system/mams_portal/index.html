@@ -44,6 +44,11 @@
                 ✉️ Send Email
             </button>
 
+            <!-- Gate Camera Live & Power Toggle Button -->
+            <button id="gate-camera-modal-btn" class="btn btn-secondary" onclick="openGateCameraModal()" title="View live gate camera stream & toggle ON/OFF" style="display: inline-flex; align-items: center; gap: 6px;">
+                📹 Gate Camera <span id="portal-cam-pill" class="pill-count" style="background: #22c55e; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 700;">ON</span>
+            </button>
+
             <!-- Email Settings Button -->
             <button class="btn btn-secondary" onclick="openEmailSettingsModal()" title="Configure Gmail / SMTP Credentials">
                 ⚙️ Mail Config
@@ -78,6 +83,7 @@
                 <p>Interactive spatial layout with real-time countdowns • Click any PC to allocate with duration & email</p>
             </div>
             <div class="view-controls">
+                <button id="portal-stream-quick-btn" class="btn btn-secondary" onclick="openGateCameraModal()" style="color: #6366f1; font-weight: 600;">📹 Gate Feed</button>
                 <button id="rotate-90-btn" class="btn btn-secondary">🔄 Rotate 90°</button>
                 <button id="gate-view-btn" class="btn btn-secondary">🚪 Gate View</button>
                 <button id="top-view-btn" class="btn btn-secondary">🔝 Top View</button>
@@ -608,11 +614,67 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- MODAL 6: GATE CAMERA LIVE FEED & HARDWARE ON/OFF    -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div id="gate-camera-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 780px; width: 92%; padding: 20px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                        📹 Entrance Gate Camera Live Stream
+                        <span id="modal-camera-badge" class="badge badge-success" style="font-size: 11px; padding: 2px 8px;">ONLINE</span>
+                    </h3>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--on-surface-variant);">
+                        Real-time AI Face Recognition & Attendance Monitoring
+                    </p>
+                </div>
+                <button class="modal-close-btn" onclick="closeGateCameraModal()">✕</button>
+            </div>
+
+            <!-- Video Player Frame -->
+            <div style="position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                <img id="portal-camera-stream" src="" alt="Gate Camera Live Feed" style="width: 100%; height: 100%; object-fit: contain; display: block;" onerror="handleStreamImageError()">
+                <div id="portal-camera-fallback" style="display: none; text-align: center; color: var(--on-surface-variant); padding: 20px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
+                    <div style="font-weight: 600; font-size: 14px;">Camera Feed Offline or Standby</div>
+                    <div style="font-size: 12px; margin-top: 4px;">Turn camera ON below or check backend connection</div>
+                </div>
+                <div id="portal-camera-overlay-indicator" style="position: absolute; top: 12px; left: 12px; background: rgba(15,23,42,0.8); padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #4ade80; display: flex; align-items: center; gap: 7px; backdrop-filter: blur(6px); border: 1px solid rgba(74,222,128,0.25);">
+                    <span id="portal-camera-rec-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block; box-shadow: 0 0 8px #4ade80;"></span>
+                    <span id="portal-camera-rec-text">LIVE MJPEG FEED</span>
+                </div>
+            </div>
+
+            <!-- Controls bar below feed -->
+            <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 16px; background: var(--surface-variant); border-radius: 10px; border: 1px solid var(--border);">
+                <div>
+                    <div style="font-size: 13px; font-weight: 700;" id="camera-power-text">Camera Hardware State: Active (ON)</div>
+                    <div style="font-size: 11px; color: var(--on-surface-variant); margin-top: 2px;">Turn OFF to pause recognition or release camera hardware index 0.</div>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="portal-toggle-camera-btn" class="btn btn-danger" onclick="toggleGateCameraFromPortal()" style="font-weight: 700; padding: 8px 16px; display: flex; align-items: center; gap: 6px;">
+                        🛑 Turn Camera OFF
+                    </button>
+                    <button class="btn btn-secondary" onclick="triggerKioskScanFromModal()" title="Trigger face scan for instant attendance check-in" style="padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
+                        ⚡ 1-Click Scan
+                    </button>
+                </div>
+            </div>
+
+            <div id="modal-scan-result-box" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px;"></div>
+
+            <div class="modal-footer" style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeGateCameraModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Scripts -->
     <script src="three_scene.js?v=25"></script>
-    <script src="script.js?v=50"></script>
+    <script src="script.js?v=51"></script>
 </body>
 </html>
