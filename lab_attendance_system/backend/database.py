@@ -160,7 +160,23 @@ def init_db() -> None:
     if "current_project" not in att_columns:
         cursor.execute("ALTER TABLE attendance_logs ADD COLUMN current_project TEXT DEFAULT ''")
 
-    # Seed PC-1 to PC-10 if table empty
+    # Migrations for student_projects table
+    cursor.execute("PRAGMA table_info(student_projects)")
+    proj_columns = [row["name"] for row in cursor.fetchall()]
+    if "deployment_url" not in proj_columns:
+        cursor.execute("ALTER TABLE student_projects ADD COLUMN deployment_url TEXT DEFAULT ''")
+    if "github_url" not in proj_columns:
+        cursor.execute("ALTER TABLE student_projects ADD COLUMN github_url TEXT DEFAULT ''")
+    if "duration" not in proj_columns:
+        cursor.execute("ALTER TABLE student_projects ADD COLUMN duration TEXT DEFAULT ''")
+    if "report_status" not in proj_columns:
+        cursor.execute("ALTER TABLE student_projects ADD COLUMN report_status TEXT DEFAULT 'Pending'")
+    if "report_url" not in proj_columns:
+        cursor.execute("ALTER TABLE student_projects ADD COLUMN report_url TEXT DEFAULT ''")
+    if "student_details" not in proj_columns:
+        cursor.execute("ALTER TABLE student_projects ADD COLUMN student_details TEXT DEFAULT ''")
+
+    # Seed PC-1 to PC-8 + BACKEND if table empty
     cursor.execute("SELECT COUNT(*) AS cnt FROM pc_status")
     row = cursor.fetchone()
     if row and row["cnt"] == 0:
@@ -187,6 +203,89 @@ def init_db() -> None:
                         """, (clean_name, "", "", avatar_path, now_str))
         except Exception as e:
             print(f"[WARN] Error syncing registered users from pkl: {e}")
+
+    # Seed initial AI Lab student projects if table empty
+    cursor.execute("SELECT COUNT(*) AS cnt FROM student_projects")
+    proj_cnt_row = cursor.fetchone()
+    if proj_cnt_row and proj_cnt_row["cnt"] == 0:
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        seed_projects = [
+            (
+                "Autonomous Drone Vision & Precision Landing",
+                "Ritik Kumar, Harsh Vardhan",
+                "Ritik (Lead Vision Researcher), Harsh (Flight Systems Integration)",
+                "Edge-computed real-time visual odometry, ArUco fiducial marker tracking, and autonomous precision landing in GPS-denied indoor environments.",
+                "Ongoing",
+                "PyTorch, YOLOv10, ROS2, OpenCV, CUDA, TensorRT",
+                "4 Months (Jan 2026 - May 2026)",
+                "https://drone-vision.ailab.internal",
+                "https://github.com/ailab/drone-precision-landing",
+                "Filed",
+                "/reports/drone_precision_landing_interim.pdf",
+                "2026-01-15",
+                "PC-6",
+                now_str,
+                now_str
+            ),
+            (
+                "AI/ML Lab Digital Twin & Attendance Biometrics",
+                "Mukul",
+                "Mukul (Full-Stack AI Architect)",
+                "Interactive 3D digital twin of AI/ML research lab, real-time facial recognition surveillance at entrance gate, automated multi-seat workstation allocation and reporting.",
+                "Ongoing",
+                "FastAPI, Three.js, Face Recognition, SQLite, WebRTC, Uvicorn",
+                "3 Months (Jan 2026 - Present)",
+                "https://amaretto-confess-subtract.ngrok-free.dev",
+                "https://github.com/mukuld1511-bit/AI-LAB",
+                "Filed",
+                "/reports/ai_lab_digital_twin_system_v2.pdf",
+                "2026-01-10",
+                "PC-7",
+                now_str,
+                now_str
+            ),
+            (
+                "Medical Imaging CT-Scan Lesion Segmentation",
+                "Prateek Sharma, Aman Gupta",
+                "Prateek (Lead Deep Learning), Aman (Dataset & Augmentation)",
+                "Volumetric 3D CT scan segmentation for early detection of pulmonary nodules and ischemic stroke lesions using MONAI on high-memory DGX nodes.",
+                "Ongoing",
+                "MONAI, 3D U-Net, PyTorch, SimpleITK, CUDA",
+                "6 Months (Nov 2025 - May 2026)",
+                "https://med-vision.ailab.internal",
+                "https://github.com/ailab/monai-ct-lesions",
+                "Pending",
+                "",
+                "2025-11-20",
+                "PC-4",
+                now_str,
+                now_str
+            ),
+            (
+                "Local Agentic LLM Workbench & Document RAG",
+                "Harsh Vardhan, Ritik Kumar",
+                "Harsh (Agentic Orchestration), Ritik (Inference Engine & RAG)",
+                "On-premise zero-data-leakage LLM agent workbench with multi-model local routing, vector document retrieval, and automated audit report generation.",
+                "Ongoing",
+                "Ollama, vLLM, LangChain, Qdrant, Electron, Python",
+                "2 Months (Feb 2026 - Present)",
+                "https://agentic-workbench.ailab.local",
+                "https://github.com/ailab/local-agentic-workbench",
+                "Filed",
+                "/reports/local_agentic_workbench_audit.pdf",
+                "2026-02-01",
+                "PC-5",
+                now_str,
+                now_str
+            )
+        ]
+        cursor.executemany("""
+            INSERT INTO student_projects (
+                title, student_names, student_details, description, status,
+                technologies, duration, deployment_url, github_url, report_status,
+                report_url, start_date, pc_assigned, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, seed_projects)
 
     conn.commit()
     conn.close()
@@ -745,17 +844,18 @@ def clear_student_timetable(student_name: str, week_label: str = "recurring") ->
     cursor.execute("DELETE FROM weekly_schedules WHERE UPPER(student_name) = UPPER(?) AND week_label = ?", (student_name.strip(), week_label))
     conn.commit()
     count = cursor.rowcount
-    conn.close()
-    return count
-
-
-# ── Student Projects Helpers ──
+    conn.c# ── Student Projects Helpers ──
 
 def get_student_projects(status: Optional[str] = None) -> List[Dict[str, Any]]:
     """Returns all student projects, optionally filtered by status."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    query = "SELECT id, title, student_names, description, status, technologies, start_date, pc_assigned, created_at, updated_at FROM student_projects WHERE 1=1"
+    query = """
+        SELECT id, title, student_names, student_details, description, status, 
+               technologies, duration, deployment_url, github_url, report_status, 
+               report_url, start_date, pc_assigned, created_at, updated_at 
+        FROM student_projects WHERE 1=1
+    """
     params = []
     if status:
         query += " AND UPPER(status) = UPPER(?)"
@@ -767,8 +867,11 @@ def get_student_projects(status: Optional[str] = None) -> List[Dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
-def add_student_project(title: str, student_names: str, description: str = "",
-                        status: str = "Ongoing", technologies: str = "",
+def add_student_project(title: str, student_names: str, student_details: str = "",
+                        description: str = "", status: str = "Ongoing",
+                        technologies: str = "", duration: str = "",
+                        deployment_url: str = "", github_url: str = "",
+                        report_status: str = "Pending", report_url: str = "",
                         start_date: str = "", pc_assigned: str = "") -> int:
     """Adds a new student project. Returns the new project ID."""
     conn = get_db_connection()
@@ -777,19 +880,38 @@ def add_student_project(title: str, student_names: str, description: str = "",
     if not start_date:
         start_date = datetime.now().strftime("%Y-%m-%d")
     cursor.execute("""
-        INSERT INTO student_projects (title, student_names, description, status, technologies, start_date, pc_assigned, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (title.strip(), student_names.strip(), description.strip(), status.strip(), technologies.strip(), start_date, pc_assigned.strip(), now_str, now_str))
+        INSERT INTO student_projects (
+            title, student_names, student_details, description, status,
+            technologies, duration, deployment_url, github_url, report_status,
+            report_url, start_date, pc_assigned, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        title.strip(), student_names.strip(), (student_details or "").strip(),
+        (description or "").strip(), (status or "Ongoing").strip(),
+        (technologies or "").strip(), (duration or "").strip(),
+        (deployment_url or "").strip(), (github_url or "").strip(),
+        (report_status or "Pending").strip(), (report_url or "").strip(),
+        start_date, (pc_assigned or "").strip(), now_str, now_str
+    ))
     conn.commit()
     new_id = cursor.lastrowid
     conn.close()
     return new_id
 
 
-def update_student_project(project_id: int, title: Optional[str] = None, student_names: Optional[str] = None,
-                           description: Optional[str] = None, status: Optional[str] = None,
-                           technologies: Optional[str] = None, start_date: Optional[str] = None,
-                           pc_assigned: Optional[str] = None) -> bool:
+def update_student_project(project_id: int, title: Optional[str] = None,
+                            student_names: Optional[str] = None,
+                            student_details: Optional[str] = None,
+                            description: Optional[str] = None,
+                            status: Optional[str] = None,
+                            technologies: Optional[str] = None,
+                            duration: Optional[str] = None,
+                            deployment_url: Optional[str] = None,
+                            github_url: Optional[str] = None,
+                            report_status: Optional[str] = None,
+                            report_url: Optional[str] = None,
+                            start_date: Optional[str] = None,
+                            pc_assigned: Optional[str] = None) -> bool:
     """Updates an existing student project's fields."""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -803,6 +925,9 @@ def update_student_project(project_id: int, title: Optional[str] = None, student
     if student_names is not None:
         updates.append("student_names = ?")
         params.append(student_names.strip())
+    if student_details is not None:
+        updates.append("student_details = ?")
+        params.append(student_details.strip())
     if description is not None:
         updates.append("description = ?")
         params.append(description.strip())
@@ -812,6 +937,21 @@ def update_student_project(project_id: int, title: Optional[str] = None, student
     if technologies is not None:
         updates.append("technologies = ?")
         params.append(technologies.strip())
+    if duration is not None:
+        updates.append("duration = ?")
+        params.append(duration.strip())
+    if deployment_url is not None:
+        updates.append("deployment_url = ?")
+        params.append(deployment_url.strip())
+    if github_url is not None:
+        updates.append("github_url = ?")
+        params.append(github_url.strip())
+    if report_status is not None:
+        updates.append("report_status = ?")
+        params.append(report_status.strip())
+    if report_url is not None:
+        updates.append("report_url = ?")
+        params.append(report_url.strip())
     if start_date is not None:
         updates.append("start_date = ?")
         params.append(start_date)
@@ -831,6 +971,7 @@ def update_student_project(project_id: int, title: Optional[str] = None, student
     conn.commit()
     affected = cursor.rowcount > 0
     conn.close()
+    return affected  conn.close()
     return affected
 
 

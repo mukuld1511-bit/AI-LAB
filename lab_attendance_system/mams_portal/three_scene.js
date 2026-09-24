@@ -930,19 +930,20 @@ function buildAllLabWorkstations() {
     // 1. Left Continuous Wooden Slab (Holds BACKEND near gate, PC-2, PC-3)
     createConnectedBench(-6.0, -1.0, 9.2);
 
-    // 2. Right Extended Continuous Wooden Slab (Holds PC-4, PC-5, PC-6, and PC-1 near outer window)
-    createConnectedBench(6.0, -1.4, 11.0);
+    // 2. Right Extended Continuous Wooden Slab (Front edge aligned with Left table at Z = +3.6, extends to Z = -6.8)
+    createConnectedBench(6.0, -1.6, 10.4);
 
     // 3. Mount Left Monitors & Accessories on Left Slab
     mountMonitorStation("BACKEND", -6.0, 2.4, Math.PI / 2, tablePosY + slabH / 2, true); // Dedicated Host Server right in front of the gate (where PC-1 used to be)
     mountMonitorStation("PC-2", -6.0, -1.0, Math.PI / 2, tablePosY + slabH / 2);
     mountMonitorStation("PC-3", -6.0, -4.4, Math.PI / 2, tablePosY + slabH / 2);
 
-    // 4. Mount Right Monitors & Accessories on Extended Right Slab (4 Workstations evenly spaced)
-    mountMonitorStation("PC-4", 6.0, 2.5, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-5", 6.0, 0.0, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-6", 6.0, -2.5, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
-    mountMonitorStation("PC-1", 6.0, -5.2, -Math.PI / 2, tablePosY + slabH / 2); // 4th DGX Workstation shifted to right table near outer window
+    // 4. Mount Right Monitors & Accessories on Extended Right Slab:
+    // PC-4, PC-5, PC-6 are perfectly aligned opposite BACKEND, PC-2, PC-3 across the aisle; PC-1 is the 4th PC near outer window
+    mountMonitorStation("PC-4", 6.0, 2.4, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-5", 6.0, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 6.0, -4.4, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
+    mountMonitorStation("PC-1", 6.0, -5.9, -Math.PI / 2, tablePosY + slabH / 2); // 4th DGX Workstation shifted to right table near outer window
 
     // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.6, rotated Math.PI)
     createStandaloneTable("PC-7", 2.4, 5.6, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
