@@ -1,12 +1,20 @@
 // ── DYNAMIC BACKEND URL (DGX Spark / Remote / Localhost) ──
+const ACTIVE_TUNNEL_FALLBACK = "https://beneficial-arrangement-holds-head.trycloudflare.com";
 let BASE_URL = localStorage.getItem("lab_backend_url") || "";
+
+// If stored URL was the blocked ngrok domain, migrate immediately to the active Cloudflare tunnel
+if (BASE_URL.includes("amaretto-confess-subtract.ngrok-free.dev")) {
+    BASE_URL = ACTIVE_TUNNEL_FALLBACK;
+    localStorage.setItem("lab_backend_url", BASE_URL);
+}
+
 if (!BASE_URL) {
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
         BASE_URL = "http://localhost:8000";
     } else if (window.location.protocol.startsWith("http") && !window.location.hostname.includes("vercel.app")) {
         BASE_URL = window.location.origin;
     } else {
-        BASE_URL = "https://amaretto-confess-subtract.ngrok-free.dev";
+        BASE_URL = ACTIVE_TUNNEL_FALLBACK;
     }
 }
 
