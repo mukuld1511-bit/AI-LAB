@@ -160,6 +160,7 @@ async function checkConnection() {
         await loadPCStatus();
         loadAttendance();
         loadUnknownFaces();
+        loadGateCameraStatusFromPortal();
     } catch (e) {
         const syncTime = localStorage.getItem("lab_cached_pc_sync_time") || "Previous Session";
         setOfflineStatus(true, syncTime);
@@ -1804,3 +1805,177 @@ function showToast(message, type = "info") {
         setTimeout(() => toast.remove(), 300);
     }, 4000);
 }
+
+// ── Gate Camera Live Stream & Power Controls (Modal 6) ──
+
+let gateCameraStatusPollInterval = null;
+
+function openGateCameraModal() {
+    const modal = document.getElementById("gate-camera-modal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    
+    // Set live stream URL
+    const streamImg = document.getElementById("portal-camera-stream");
+    const fallback = document.getElementById("portal-camera-fallback");
+    if (streamImg) {
+        streamImg.style.display = "block";
+        if (fallback) fallback.style.display = "none";
+        streamImg.src = `${BASE_URL}/video_feed?t=${Date.now()}`;
+    }
+
+    // Refresh current power status
+    loadGateCameraStatusFromPortal();
+
+    // Start 4-second status poll while modal is open
+    if (!gateCameraStatusPollInterval) {
+        gateCameraStatusPollInterval = setInterval(loadGateCameraStatusFromPortal, 4000);
+    }
+}
+
+function closeGateCameraModal() {
+    const modal = document.getElementById("gate-camera-modal");
+    if (modal) modal.style.display = "none";
+    
+    // Stop image stream fetching to save client bandwidth
+    const streamImg = document.getElementById("portal-camera-stream");
+    if (streamImg) {
+        streamImg.src = "";
+    }
+
+    if (gateCameraStatusPollInterval) {
+        clearInterval(gateCameraStatusPollInterval);
+        gateCameraStatusPollInterval = null;
+    }
+}
+
+async function loadGateCameraStatusFromPortal() {
+    try {
+        const res = await apiFetch("/api/camera/status");
+        updateGateCameraPortalUI(res.enabled);
+    } catch (e) {
+        // Backend might be offline
+    }
+}
+
+async function toggleGateCameraFromPortal() {
+    const toggleBtn = document.getElementById("portal-toggle-camera-btn");
+    if (toggleBtn) {
+        toggleBtn.disabled = true;
+        toggleBtn.innerText = "Switching...";
+    }
+    try {
+        const res = await apiFetch("/api/camera/toggle", { method: "POST" });
+        updateGateCameraPortalUI(res.enabled);
+        showToast(res.message || "Camera power updated", "info");
+        
+        // Refresh stream image
+        setTimeout(() => {
+            const streamImg = document.getElementById("portal-camera-stream");
+            if (streamImg && streamImg.style.display !== "none") {
+                streamImg.src = `${BASE_URL}/video_feed?t=${Date.now()}`;
+            }
+        }, 500);
+    } catch (e) {
+        showToast("Failed to switch camera: " + e.message, "error");
+    } finally {
+        if (toggleBtn) toggleBtn.disabled = false;
+    }
+}
+
+function updateGateCameraPortalUI(isEnabled) {
+    const toggleBtn = document.getElementById("portal-toggle-camera-btn");
+    const headerPill = document.getElementById("portal-cam-pill");
+    const modalBadge = document.getElementById("modal-camera-badge");
+    const powerText = document.getElementById("camera-power-text");
+    const recDot = document.getElementById("portal-camera-rec-dot");
+    const recText = document.getElementById("portal-camera-rec-text");
+
+    if (isEnabled) {
+        if (toggleBtn) {
+            toggleBtn.className = "btn btn-danger";
+            toggleBtn.innerHTML = "🛑 Turn Camera OFF";
+        }
+        if (headerPill) {
+            headerPill.innerText = "ON";
+            headerPill.style.background = "#22c55e";
+        }
+        if (modalBadge) {
+            modalBadge.className = "badge badge-success";
+            modalBadge.innerText = "ONLINE";
+        }
+        if (powerText) {
+            powerText.innerText = "Camera Hardware State: Active (ON)";
+        }
+        if (recDot) {
+            recDot.style.background = "#4ade80";
+            recDot.style.boxShadow = "0 0 8px #4ade80";
+        }
+        if (recText) {
+            recText.innerText = "LIVE MJPEG FEED";
+            recText.style.color = "#4ade80";
+        }
+    } else {
+        if (toggleBtn) {
+            toggleBtn.className = "btn btn-primary";
+            toggleBtn.innerHTML = "🟢 Turn Camera ON";
+        }
+        if (headerPill) {
+            headerPill.innerText = "OFF";
+            headerPill.style.background = "#ef4444";
+        }
+        if (modalBadge) {
+            modalBadge.className = "badge badge-danger";
+            modalBadge.innerText = "OFFLINE / PAUSED";
+        }
+        if (powerText) {
+            powerText.innerText = "Camera Hardware State: OFF (Standby / Released)";
+        }
+        if (recDot) {
+            recDot.style.background = "#ef4444";
+            recDot.style.boxShadow = "0 0 8px #ef4444";
+        }
+        if (recText) {
+            recText.innerText = "CAMERA OFF (STANDBY)";
+            recText.style.color = "#ef4444";
+        }
+    }
+}
+
+function handleStreamImageError() {
+    const streamImg = document.getElementById("portal-camera-stream");
+    const fallback = document.getElementById("portal-camera-fallback");
+    if (streamImg) streamImg.style.display = "none";
+    if (fallback) fallback.style.display = "block";
+}
+
+async function triggerKioskScanFromModal() {
+    const resultBox = document.getElementById("modal-scan-result-box");
+    if (resultBox) {
+        resultBox.style.display = "block";
+        resultBox.style.background = "rgba(99, 102, 241, 0.1)";
+        resultBox.style.border = "1px solid #6366f1";
+        resultBox.style.color = "#818cf8";
+        resultBox.innerHTML = "⚡ Scanning gate camera frame for faces...";
+    }
+    try {
+        const res = await apiFetch("/api/scan_entry", { method: "POST" });
+        if (resultBox) {
+            resultBox.style.background = "rgba(34, 197, 94, 0.1)";
+            resultBox.style.border = "1px solid #22c55e";
+            resultBox.style.color = "#4ade80";
+            resultBox.innerHTML = `✅ Face Recognized: <strong>${res.student_name || 'Verified'}</strong> (Attendance Logged)`;
+        }
+        showToast(`Attendance scanned: ${res.student_name || 'Success'}`, "success");
+        loadAttendance();
+    } catch (e) {
+        if (resultBox) {
+            resultBox.style.background = "rgba(239, 68, 68, 0.1)";
+            resultBox.style.border = "1px solid #ef4444";
+            resultBox.style.color = "#f87171";
+            resultBox.innerHTML = `⚠️ Scan error: ${e.message}`;
+        }
+        showToast("Scan error: " + e.message, "error");
+    }
+}
+
