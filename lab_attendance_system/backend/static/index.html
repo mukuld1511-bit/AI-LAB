@@ -61,6 +61,7 @@
                 <p>Live stream from the lab entrance webcam with AI facial recognition and unauthorized intruder tracking</p>
             </div>
             <div style="display: flex; gap: 8px;">
+                <button id="gate-camera-power-btn" class="btn btn-secondary" onclick="toggleGateCameraPower()" style="font-weight: 700; color: #15803d; border-color: #86efac; background: #f0fdf4;">🟢 Camera: ON</button>
                 <button class="btn btn-primary" onclick="triggerKioskScan()">📸 1-Click Kiosk Scan & Log IN</button>
                 <button class="btn btn-secondary" onclick="reloadCameraFeed()">🔄 Refresh Feed</button>
             </div>
@@ -71,10 +72,13 @@
             <div class="video-stream-card">
                 <div class="stream-header-bar">
                     <div class="stream-rec-indicator">
-                        <span class="rec-dot"></span>
-                        <strong>LIVE GATE SURVEILLANCE</strong>
+                        <span class="rec-dot" id="stream-rec-dot"></span>
+                        <strong id="stream-rec-label">LIVE GATE SURVEILLANCE</strong>
                     </div>
-                    <span id="stream-clock" class="stream-clock">--:--:--</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="stream-mini-toggle-btn" class="btn btn-secondary" onclick="toggleGateCameraPower()" style="font-size: 11px; padding: 2px 7px; color: #dc2626;">🛑 Turn OFF</button>
+                        <span id="stream-clock" class="stream-clock">--:--:--</span>
+                    </div>
                 </div>
                 
                 <div class="stream-viewport">
