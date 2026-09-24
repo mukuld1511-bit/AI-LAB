@@ -743,6 +743,29 @@ function handlePCClick(pcId, isFree) {
             editProjInput.value = pcData.current_project || "";
         }
 
+        // Render Current Partners / Teammates List
+        const partnersListEl = document.getElementById("modal-current-partners-list");
+        if (partnersListEl) {
+            const occupants = pcData.occupied_by ? pcData.occupied_by.split(",").map(s => s.trim()).filter(Boolean) : [];
+            if (occupants.length > 0) {
+                partnersListEl.innerHTML = `
+                    <div style="margin-top: 8px;">
+                        <strong style="color: #166534; font-size: 11px;">Current Assigned Members (${occupants.length}):</strong>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                            ${occupants.map(n => `
+                                <span style="display: inline-flex; align-items: center; gap: 6px; background: #ffffff; border: 1px solid #86efac; color: #15803d; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 700;">
+                                    👤 ${n}
+                                    <button type="button" onclick="removePartnerFromPC('${n.replace(/'/g, "\\'")}')" style="background: none; border: none; color: #ef4444; font-weight: 800; cursor: pointer; padding: 0 2px;" title="Remove ${n} from this workstation">✕</button>
+                                </span>
+                            `).join("")}
+                        </div>
+                    </div>
+                `;
+            } else {
+                partnersListEl.innerHTML = "";
+            }
+        }
+
         actionBtn.innerText = "❌ Free / Deselect Workstation";
         actionBtn.className = "btn btn-danger";
     }

@@ -277,27 +277,50 @@ function renderPCGrid(pcs) {
     if (!grid) return;
 
     grid.innerHTML = pcs.map(p => {
-        const isFree = p.status.toLowerCase() === "free";
+        const isBackend = p.is_backend || p.pc_id === "PC-1" || p.pc_id === "BACKEND";
+        const isFree = !isBackend && p.status.toLowerCase() === "free";
+        const occupants = p.occupied_by ? p.occupied_by.split(",").map(s => s.trim()).filter(Boolean) : [];
+        const isGroup = occupants.length > 1;
+
         const role = p.user_role || "Student";
         const roleClass = role.toLowerCase() === "faculty" ? "badge-role-faculty" : role.toLowerCase() === "guest" ? "badge-role-guest" : "badge-role-student";
+        const displayTitle = isBackend ? "🖥️ BACKEND SERVER" : p.pc_id;
 
         return `
-            <div class="pc-card ${isFree ? 'pc-free' : 'pc-occupied'}" onclick="selectPCForManagement('${p.pc_id}')">
+            <div class="pc-card ${isBackend ? 'pc-occupied' : isFree ? 'pc-free' : 'pc-occupied'}" 
+                 style="${isBackend ? 'border: 2px solid #3b82f6; background: #f8fafc;' : ''}"
+                 onclick="selectPCForManagement('${p.pc_id}')">
                 <div class="pc-header">
-                    <span class="pc-name">${p.pc_id}</span>
-                    <span class="pc-status-pill ${isFree ? 'pill-free' : 'pill-occupied'}">
-                        ${isFree ? '🟢 Free' : '🔴 Occupied'}
+                    <span class="pc-name" style="${isBackend ? 'color: #1d4ed8; font-weight: 800;' : ''}">${displayTitle}</span>
+                    <span class="pc-status-pill ${isBackend ? 'pill-occupied' : isFree ? 'pill-free' : 'pill-occupied'}" style="${isBackend ? 'background: #2563eb; color: #fff;' : ''}">
+                        ${isBackend ? '⚡ 24/7 Host' : isFree ? '🟢 Free' : '🔴 Occupied'}
                     </span>
                 </div>
                 <div class="pc-body">
-                    ${isFree ? `
+                    ${isBackend ? `
+                        <p class="pc-user" style="color: #1e40af; font-weight: 700; margin-bottom: 2px;">24/7 Dedicated Server Host</p>
+                        <p style="font-size: 11px; color: #4338ca; font-weight: 600; margin: 3px 0; background: #eef2ff; padding: 2px 6px; border-radius: 4px; display: inline-block;">
+                            💼 ${p.current_project || 'FastAPI Core & Ngrok Tunnel'}
+                        </p>
+                        <p style="font-size: 11px; color: #059669; font-weight: 600;">Status: Active & Serving Requests</p>
+                    ` : isFree ? `
                         <p class="pc-user" style="color: #64748b;">Available for Allotment</p>
                         <small style="color: #94a3b8; font-size: 11px;">Click to assign slot</small>
                     ` : `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <strong style="color: #0f172a; font-size: 14px;">${p.occupied_by}</strong>
-                            <span class="role-badge ${roleClass}">${role}</span>
+                            ${isGroup ? `
+                                <strong style="color: #0f172a; font-size: 13px;">👥 Group (${occupants.length})</strong>
+                                <span class="role-badge" style="background: #e0e7ff; color: #3730a3;">Team</span>
+                            ` : `
+                                <strong style="color: #0f172a; font-size: 14px;">${p.occupied_by}</strong>
+                                <span class="role-badge ${roleClass}">${role}</span>
+                            `}
                         </div>
+                        ${isGroup ? `
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px;">
+                                ${occupants.map(n => `<span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 8px;">👤 ${n}</span>`).join("")}
+                            </div>
+                        ` : ''}
                         ${p.current_project ? `
                             <p style="font-size: 11px; color: #4338ca; font-weight: 600; margin: 3px 0; background: #eef2ff; padding: 2px 6px; border-radius: 4px; display: inline-block;">
                                 💼 ${p.current_project}
@@ -319,9 +342,11 @@ function populatePCSelect(pcs) {
     const currentVal = select.value;
     select.innerHTML = '<option value="">-- Choose Workstation --</option>';
     pcs.forEach(p => {
+        const isBackend = p.is_backend || p.pc_id === "PC-1" || p.pc_id === "BACKEND";
         const opt = document.createElement("option");
         opt.value = p.pc_id;
-        opt.innerText = `${p.pc_id} (${p.status.toUpperCase()}${p.occupied_by ? ` - ${p.occupied_by}` : ''})`;
+        const nameLabel = isBackend ? `🖥️ BACKEND SERVER (${p.pc_id})` : p.pc_id;
+        opt.innerText = `${nameLabel} (${p.status.toUpperCase()}${p.occupied_by ? ` - ${p.occupied_by}` : ''})`;
         select.appendChild(opt);
     });
     if (currentVal) select.value = currentVal;
@@ -734,7 +759,9 @@ async function captureWebcamPhoto() {
             previewWrap.style.display = "block";
         }
     } catch (e) {
-        if (status) status.innerText = "❌ Capture failed: " + e.message;
+        if (status) {
+            status.innerHTML = `<span style="color: #ef4444; font-weight: 600;">⚠️ Webcam busy or in use by Gate Monitor.<br>👉 Please use <strong>Method 2: Upload Member Photo File</strong> below.</span>`;
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import face_recognition
 import pickle
 import os
@@ -17,19 +18,26 @@ BACKEND_DIR = os.path.join(PROJECT_ROOT, "backend")
 sys.path.insert(0, BACKEND_DIR)
 import database
 
+_RECOG_CACHE = {}
+_RECOG_MTIME = 0.0
 
 def load_known_encodings():
-    """Loads known faces dictionary {name: encoding} from pickle file."""
+    """Loads known faces dictionary {name: encoding} from pickle file with mtime caching."""
+    global _RECOG_CACHE, _RECOG_MTIME
     if not os.path.exists(ENCODINGS_FILE):
         return {}
     try:
-        with open(ENCODINGS_FILE, "rb") as f:
-            data = pickle.load(f)
-            if isinstance(data, dict):
-                return data
+        mtime = os.path.getmtime(ENCODINGS_FILE)
+        if mtime != _RECOG_MTIME or not _RECOG_CACHE:
+            with open(ENCODINGS_FILE, "rb") as f:
+                data = pickle.load(f)
+                if isinstance(data, dict):
+                    _RECOG_CACHE = data
+                    _RECOG_MTIME = mtime
+        return _RECOG_CACHE
     except Exception as e:
         print(f"[WARNING] Could not load {ENCODINGS_FILE}: {e}")
-    return {}
+        return _RECOG_CACHE or {}
 
 
 def main():
@@ -88,18 +96,20 @@ def main():
             all_known_names = list(known_names) + list(session_unknowns.keys())
             all_known_encodings = list(known_encodings) + list(session_unknowns.values())
 
-            # Convert BGR (OpenCV) to RGB (face_recognition)
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # High-performance 0.25x downscaling (16x faster than full resolution HOG)
+            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+            rgb_small = np.ascontiguousarray(small_frame[:, :, ::-1])
 
-            # Detect faces using CPU-based HOG model ONLY (Do NOT use CNN)
-            face_locations = face_recognition.face_locations(rgb_frame, model="hog")
+            # Detect faces using CPU-based HOG model on downscaled frame
+            face_locations_small = face_recognition.face_locations(rgb_small, model="hog")
             
             new_face_locations = []
             new_face_names = []
             new_face_colors = []
 
-            if len(face_locations) > 0:
-                face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+            if len(face_locations_small) > 0:
+                face_locations = [(t * 4, r * 4, b * 4, l * 4) for (t, r, b, l) in face_locations_small]
+                face_encodings = face_recognition.face_encodings(rgb_small, face_locations_small)
 
                 for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
                     matched_name = None
