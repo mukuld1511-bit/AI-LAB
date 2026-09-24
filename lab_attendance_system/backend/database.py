@@ -164,7 +164,7 @@ def init_db() -> None:
     cursor.execute("SELECT COUNT(*) AS cnt FROM pc_status")
     row = cursor.fetchone()
     if row and row["cnt"] == 0:
-        seed_pcs = [(f"PC-{i}", "free", None, None, None, None, None) for i in range(1, 11)]
+        seed_pcs = [("BACKEND", "occupied", "24/7 Local Host Server", None, None, None, None)] + [(f"PC-{i}", "free", None, None, None, None, None) for i in range(1, 9)]
         cursor.executemany(
             "INSERT INTO pc_status (pc_id, status, occupied_by, since_time, end_time, duration_mins, user_email) VALUES (?, ?, ?, ?, ?, ?, ?)",
             seed_pcs
@@ -238,7 +238,7 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
     results = []
     for row in rows:
         item = dict(row)
-        if item.get("pc_id", "").upper() == "PC-1":
+        if item.get("pc_id", "").upper() == "BACKEND":
             item["display_name"] = "BACKEND"
             item["is_backend"] = True
         else:
@@ -247,8 +247,11 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
         results.append(item)
 
     def sort_key(item):
+        pid = item.get("pc_id", "").upper()
+        if pid == "BACKEND":
+            return 0 # Place BACKEND first or as host
         try:
-            return int(item["pc_id"].replace("PC-", ""))
+            return int(pid.replace("PC-", ""))
         except Exception:
             return 999
     results.sort(key=sort_key)

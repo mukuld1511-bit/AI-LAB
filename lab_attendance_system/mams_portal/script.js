@@ -337,7 +337,7 @@ function render2DGrid() {
     if (!grid) return;
 
     grid.innerHTML = allPCsState.map(pc => {
-        const isBackend = pc.is_backend || pc.pc_id === "PC-1" || pc.pc_id === "BACKEND";
+        const isBackend = pc.pc_id === "BACKEND";
         const isFree = !isBackend && pc.status.toLowerCase() === "free";
         const cardClass = isBackend ? "pc-card-occupied" : (isFree ? "pc-card-free" : "pc-card-occupied");
         const badgeClass = isBackend ? "badge-occupied" : (isFree ? "badge-free" : "badge-occupied");

@@ -927,26 +927,22 @@ function buildAllLabWorkstations() {
         }
     }
 
-    // 1. Left Continuous Wooden Slab (Holds PC-2, PC-3)
+    // 1. Left Continuous Wooden Slab (Holds BACKEND near gate, PC-2, PC-3)
     createConnectedBench(-6.0, -1.0, 9.2);
 
-    // 2. Right Extended Continuous Wooden Slab (Extended to hold 4 PCs: PC-4, PC-5, PC-6, and BACKEND)
-    createConnectedBench(6.0, -0.6, 12.2);
+    // 2. Right Extended Continuous Wooden Slab (Holds PC-4, PC-5, PC-6, and PC-1 near outer window)
+    createConnectedBench(6.0, -2.3, 12.2);
 
     // 3. Mount Left Monitors & Accessories on Left Slab
-    mountMonitorStation("PC-2", -6.0, 1.2, Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-3", -6.0, -2.2, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("BACKEND", -6.0, 2.4, Math.PI / 2, tablePosY + slabH / 2, true); // Dedicated Host Server right in front of the gate (where PC-1 used to be)
+    mountMonitorStation("PC-2", -6.0, -1.0, Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-3", -6.0, -4.4, Math.PI / 2, tablePosY + slabH / 2);
 
     // 4. Mount Right Monitors & Accessories on Extended Right Slab (4 Workstations)
-    mountMonitorStation("PC-4", 6.0, 3.8, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-5", 6.0, 1.2, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-6", 6.0, -1.4, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
-    mountMonitorStation("BACKEND", 6.0, -4.0, -Math.PI / 2, tablePosY + slabH / 2, true); // New 4th PC on Right Shelf: BACKEND Server
-
-    // Also alias PC-1 to the BACKEND station so any PC-1 updates bind to BACKEND
-    if (pcWorkstations["BACKEND"]) {
-        pcWorkstations["PC-1"] = pcWorkstations["BACKEND"];
-    }
+    mountMonitorStation("PC-4", 6.0, 2.4, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-5", 6.0, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 6.0, -4.4, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
+    mountMonitorStation("PC-1", 6.0, -7.0, -Math.PI / 2, tablePosY + slabH / 2); // 4th DGX Workstation shifted to right table near outer window
 
     // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.6, rotated Math.PI)
     createStandaloneTable("PC-7", 2.4, 5.6, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
@@ -1134,7 +1130,7 @@ function createStatusSprite(pcId, statusText, isFree) {
 function drawSpriteCanvas(ctx, pcId, statusText, isFree) {
     ctx.clearRect(0, 0, 512, 200);
 
-    const isBackend = pcId === "BACKEND" || pcId === "PC-1";
+    const isBackend = pcId === "BACKEND";
 
     // Card background pill
     const radius = 24;
@@ -1222,32 +1218,28 @@ function updatePCStatusIn3D(pcs) {
     if (!pcs || !Array.isArray(pcs)) return;
 
     pcs.forEach(pc => {
-        const isBackend = pc.pc_id === "PC-1" || pc.pc_id === "BACKEND" || pc.is_backend;
-        const targetIds = isBackend ? ["BACKEND", "PC-1"] : [pc.pc_id];
+        const item = pcWorkstations[pc.pc_id];
+        if (!item) return;
 
-        targetIds.forEach(tId => {
-            const item = pcWorkstations[tId];
-            if (!item) return;
+        const isBackend = pc.pc_id === "BACKEND" || pc.is_backend;
+        const isFree = !isBackend && pc.status.toLowerCase() === "free";
+        item.status = isFree ? "free" : "occupied";
+        item.pcData = pc;
 
-            const isFree = pc.status.toLowerCase() === "free";
-            item.status = isFree ? "free" : "occupied";
-            item.pcData = pc;
+        // 1. Update Screen Material Color & Emissive
+        const serverColor = 0x38bdf8; // Electric Cyan Blue for Server Host
+        const targetColor = isBackend ? serverColor : isFree ? PALETTE.screenFree : PALETTE.screenOccupied;
+        item.screenMat.color.setHex(targetColor);
+        item.screenMat.emissive.setHex(targetColor);
+        item.screenMat.emissiveIntensity = isBackend ? 1.1 : isFree ? 0.75 : 0.95;
 
-            // 1. Update Screen Material Color & Emissive
-            const serverColor = 0x38bdf8; // Electric Cyan Blue for Server Host
-            const targetColor = isBackend ? serverColor : isFree ? PALETTE.screenFree : PALETTE.screenOccupied;
-            item.screenMat.color.setHex(targetColor);
-            item.screenMat.emissive.setHex(targetColor);
-            item.screenMat.emissiveIntensity = isBackend ? 1.1 : isFree ? 0.75 : 0.95;
-
-            // 2. Update Floating Sprite Canvas Texture
-            if (item.sprite && item.sprite.userData) {
-                const { ctx, texture } = item.sprite.userData;
-                const statusLabel = isBackend ? "24/7 SERVER" : isFree ? "AVAILABLE" : (pc.occupied_by || "IN USE");
-                drawSpriteCanvas(ctx, isBackend ? "BACKEND" : pc.pc_id, statusLabel, isFree);
-                texture.needsUpdate = true;
-            }
-        });
+        // 2. Update Floating Sprite Canvas Texture
+        if (item.sprite && item.sprite.userData) {
+            const { ctx, texture } = item.sprite.userData;
+            const statusLabel = isBackend ? "24/7 SERVER" : isFree ? "AVAILABLE" : (pc.occupied_by || "IN USE");
+            drawSpriteCanvas(ctx, pc.pc_id, statusLabel, isFree);
+            texture.needsUpdate = true;
+        }
     });
 }
 

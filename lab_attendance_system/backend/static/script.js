@@ -277,7 +277,7 @@ function renderPCGrid(pcs) {
     if (!grid) return;
 
     grid.innerHTML = pcs.map(p => {
-        const isBackend = p.is_backend || p.pc_id === "PC-1" || p.pc_id === "BACKEND";
+        const isBackend = p.pc_id === "BACKEND";
         const isFree = !isBackend && p.status.toLowerCase() === "free";
         const occupants = p.occupied_by ? p.occupied_by.split(",").map(s => s.trim()).filter(Boolean) : [];
         const isGroup = occupants.length > 1;
