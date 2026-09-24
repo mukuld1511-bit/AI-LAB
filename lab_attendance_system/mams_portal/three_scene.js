@@ -931,18 +931,18 @@ function buildAllLabWorkstations() {
     createConnectedBench(-6.0, -1.0, 9.2);
 
     // 2. Right Extended Continuous Wooden Slab (Holds PC-4, PC-5, PC-6, and PC-1 near outer window)
-    createConnectedBench(6.0, -2.3, 12.2);
+    createConnectedBench(6.0, -1.4, 11.0);
 
     // 3. Mount Left Monitors & Accessories on Left Slab
     mountMonitorStation("BACKEND", -6.0, 2.4, Math.PI / 2, tablePosY + slabH / 2, true); // Dedicated Host Server right in front of the gate (where PC-1 used to be)
     mountMonitorStation("PC-2", -6.0, -1.0, Math.PI / 2, tablePosY + slabH / 2);
     mountMonitorStation("PC-3", -6.0, -4.4, Math.PI / 2, tablePosY + slabH / 2);
 
-    // 4. Mount Right Monitors & Accessories on Extended Right Slab (4 Workstations)
-    mountMonitorStation("PC-4", 6.0, 2.4, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-5", 6.0, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-6", 6.0, -4.4, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
-    mountMonitorStation("PC-1", 6.0, -7.0, -Math.PI / 2, tablePosY + slabH / 2); // 4th DGX Workstation shifted to right table near outer window
+    // 4. Mount Right Monitors & Accessories on Extended Right Slab (4 Workstations evenly spaced)
+    mountMonitorStation("PC-4", 6.0, 2.5, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-5", 6.0, 0.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 6.0, -2.5, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
+    mountMonitorStation("PC-1", 6.0, -5.2, -Math.PI / 2, tablePosY + slabH / 2); // 4th DGX Workstation shifted to right table near outer window
 
     // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.6, rotated Math.PI)
     createStandaloneTable("PC-7", 2.4, 5.6, Math.PI, woodMat, metalLegMat, tablePosY, slabH);
@@ -1083,8 +1083,8 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY, isServer = false)
 
     // 3D Floating Badge Sprite
     const sprite = createStatusSprite(pcId, "AVAILABLE", true);
-    sprite.position.set(0, surfaceY + 1.25, 0);
-    sprite.scale.set(1.9, 0.75, 1);
+    sprite.position.set(0, surfaceY + 1.35, 0);
+    sprite.scale.set(2.2, 0.86, 1);
     group.add(sprite);
 
     // Click Hitbox for Raycaster
@@ -1113,14 +1113,15 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY, isServer = false)
  */
 function createStatusSprite(pcId, statusText, isFree) {
     const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 200;
+    canvas.width = 1024;
+    canvas.height = 400;
     const ctx = canvas.getContext("2d");
 
     drawSpriteCanvas(ctx, pcId, statusText, isFree);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.userData = { canvas: canvas, ctx: ctx, texture: texture };
@@ -1128,46 +1129,43 @@ function createStatusSprite(pcId, statusText, isFree) {
 }
 
 function drawSpriteCanvas(ctx, pcId, statusText, isFree) {
-    ctx.clearRect(0, 0, 512, 200);
+    ctx.clearRect(0, 0, 1024, 400);
 
     const isBackend = pcId === "BACKEND";
 
-    // Card background pill
-    const radius = 24;
-    const bgColor = isBackend ? "rgba(30, 58, 138, 0.95)" : isFree ? "rgba(16, 185, 129, 0.92)" : "rgba(239, 68, 68, 0.95)";
-    ctx.fillStyle = "rgba(15, 20, 28, 0.92)";
-    roundRect(ctx, 16, 16, 480, 168, radius);
+    // Card background pill (High-DPI 1024x400)
+    const radius = 42;
+    const bgColor = isBackend ? "rgba(14, 165, 233, 0.95)" : isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)";
+    ctx.fillStyle = "rgba(15, 23, 42, 0.96)";
+    roundRect(ctx, 24, 24, 976, 352, radius);
     ctx.fill();
 
     ctx.strokeStyle = isBackend ? "#38bdf8" : isFree ? "#10b981" : "#ef4444";
-    ctx.lineWidth = 6;
-    roundRect(ctx, 16, 16, 480, 168, radius);
+    ctx.lineWidth = 10;
+    roundRect(ctx, 24, 24, 976, 352, radius);
     ctx.stroke();
 
     // PC Name (Top)
     ctx.fillStyle = "#ffffff";
-    ctx.font = isBackend ? "bold 44px 'Inter', sans-serif" : "bold 52px 'Inter', sans-serif";
+    ctx.font = isBackend ? "bold 78px 'Inter', -apple-system, sans-serif" : "bold 96px 'Inter', -apple-system, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(isBackend ? "🖥️ BACKEND SERVER" : `💻 ${pcId}`, 256, 70);
+    ctx.fillText(isBackend ? "🖥️ BACKEND SERVER" : `💻 ${pcId}`, 512, 135);
 
     // Status Pill (Bottom)
-    if (isBackend) {
-        ctx.fillStyle = "rgba(14, 165, 233, 0.92)";
-        roundRect(ctx, 40, 110, 432, 54, 16);
-        ctx.fill();
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 26px 'Inter', sans-serif";
-        ctx.fillText("⚡ 24/7 DEDICATED HOST", 256, 138);
-    } else {
-        ctx.fillStyle = bgColor;
-        roundRect(ctx, 60, 110, 392, 54, 16);
-        ctx.fill();
+    ctx.fillStyle = bgColor;
+    roundRect(ctx, 70, 215, 884, 124, 30);
+    ctx.fill();
 
+    ctx.fillStyle = "#ffffff";
+    if (isBackend) {
+        ctx.font = "bold 56px 'Inter', -apple-system, sans-serif";
+        ctx.fillText("⚡ 24/7 DEDICATED HOST", 512, 277);
+    } else {
         const label = isFree ? "🟢 AVAILABLE" : `🔴 ${statusText}`;
-        const fontSize = label.length > 18 ? 24 : label.length > 14 ? 28 : 32;
-        ctx.font = `bold ${fontSize}px 'Inter', sans-serif`;
-        ctx.fillText(label, 256, 138);
+        const fontSize = label.length > 20 ? 46 : label.length > 14 ? 54 : 64;
+        ctx.font = `bold ${fontSize}px 'Inter', -apple-system, sans-serif`;
+        ctx.fillText(label, 512, 277);
     }
 }
 

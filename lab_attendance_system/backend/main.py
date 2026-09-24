@@ -567,6 +567,32 @@ def video_feed():
     )
 
 
+@app.get("/api/camera/status")
+def get_camera_status():
+    """Returns current power and running status of gate camera."""
+    mgr = camera.GateCameraManager()
+    return mgr.get_status()
+
+
+@app.post("/api/camera/toggle")
+def toggle_camera_power():
+    """Toggles gate camera power ON or OFF."""
+    mgr = camera.GateCameraManager()
+    new_state = mgr.toggle_power()
+    state_str = "ON" if new_state else "OFF"
+    return {"status": "success", "enabled": new_state, "message": f"Gate Camera turned {state_str}"}
+
+
+@app.post("/api/camera/power")
+def set_camera_power(payload: dict = Body(...)):
+    """Sets gate camera power state explicitly: {'enabled': true/false}."""
+    mgr = camera.GateCameraManager()
+    enabled = payload.get("enabled", True)
+    new_state = mgr.set_power(enabled)
+    state_str = "ON" if new_state else "OFF"
+    return {"status": "success", "enabled": new_state, "message": f"Gate Camera turned {state_str}"}
+
+
 @app.post("/api/scan_entry")
 def scan_entry():
     """Opens camera, scans face, and logs IN."""

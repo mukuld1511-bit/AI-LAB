@@ -84,6 +84,7 @@ class GateCameraManager:
 
     def _init(self):
         self.running = False
+        self.is_enabled = True # Hardware camera power switch
         self.latest_jpeg = create_standby_frame("INITIALIZING CAMERA...")
         self.latest_raw_frame = None
         self.subscribers = 0
@@ -94,6 +95,35 @@ class GateCameraManager:
         # Thread-safe detected face boxes: list of ((top, right, bottom, left), name, is_intruder)
         self.detected_faces = []
         self.detect_lock = threading.Lock()
+
+    def toggle_power(self) -> bool:
+        """Toggles hardware camera capture between ON and OFF."""
+        with self.frame_lock:
+            self.is_enabled = not self.is_enabled
+            if not self.is_enabled:
+                self.latest_jpeg = create_standby_frame("GATE CAMERA TURNED OFF (PAUSED)")
+                with self.detect_lock:
+                    self.detected_faces = []
+            return self.is_enabled
+
+    def set_power(self, enabled: bool) -> bool:
+        """Explicitly sets hardware camera capture power state."""
+        with self.frame_lock:
+            self.is_enabled = bool(enabled)
+            if not self.is_enabled:
+                self.latest_jpeg = create_standby_frame("GATE CAMERA TURNED OFF (PAUSED)")
+                with self.detect_lock:
+                    self.detected_faces = []
+            return self.is_enabled
+
+    def get_status(self) -> dict:
+        """Returns power and operational status."""
+        with self.frame_lock:
+            return {
+                "enabled": self.is_enabled,
+                "running": self.running,
+                "has_face_recognition": HAS_FACE_RECOGNITION and (face_recognition is not None)
+            }
 
     def start(self):
         with self.frame_lock:
@@ -137,6 +167,16 @@ class GateCameraManager:
         fail_count = 0
 
         while self.running:
+            # If camera is powered OFF, release hardware device and idle with standby screen
+            if not self.is_enabled:
+                if cap and cap.isOpened():
+                    cap.release()
+                standby = create_standby_frame("GATE CAMERA TURNED OFF (PAUSED)")
+                with self.frame_lock:
+                    self.latest_jpeg = standby
+                time.sleep(0.3)
+                continue
+
             if not cap.isOpened():
                 standby = create_standby_frame("CAMERA OFFLINE / DEVICE BUSY")
                 with self.frame_lock:
@@ -201,6 +241,10 @@ class GateCameraManager:
         last_recognized_logged_time = {} # {name: timestamp}
 
         while self.running:
+            if not self.is_enabled:
+                time.sleep(0.4)
+                continue
+
             # Pull latest frame safely
             frame_to_process = None
             with self.frame_lock:
