@@ -2,8 +2,8 @@
 const ACTIVE_TUNNEL_FALLBACK = "https://feelings-mar-menus-inspection.trycloudflare.com";
 let BASE_URL = localStorage.getItem("lab_backend_url") || "";
 
-// If stored URL was the blocked ngrok domain, migrate immediately to the active Cloudflare tunnel
-if (BASE_URL.includes("amaretto-confess-subtract.ngrok-free.dev")) {
+// If stored URL was the blocked ngrok domain OR an old Cloudflare tunnel, migrate immediately to the active one
+if (BASE_URL.includes("amaretto-confess-subtract.ngrok-free.dev") || (BASE_URL.includes("trycloudflare.com") && BASE_URL !== ACTIVE_TUNNEL_FALLBACK)) {
     BASE_URL = ACTIVE_TUNNEL_FALLBACK;
     localStorage.setItem("lab_backend_url", BASE_URL);
 }
