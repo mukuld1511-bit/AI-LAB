@@ -1,3 +1,11 @@
+// ── UTILITIES ──
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe.toString().replace(/[&<"'>]/g, function (m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+    });
+}
+
 // ── DYNAMIC BACKEND URL (DGX Spark / Remote / Localhost) ──
 const ACTIVE_TUNNEL_FALLBACK = "https://feelings-mar-menus-inspection.trycloudflare.com";
 let BASE_URL = localStorage.getItem("lab_backend_url") || "";
