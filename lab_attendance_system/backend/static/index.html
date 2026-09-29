@@ -527,11 +527,11 @@ We will notify as soon as a slot frees up.
             <div class="tt-booking-bar-inner">
                 <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
                     <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">👤 Your Name (for booking):</label>
-                    <input type="text" id="tt-student-name" class="form-input" placeholder="e.g. Ayush, Priya, Dr. Sharma" style="font-size: 14px;">
+                    <input type="text" id="tt-student-name" list="registered-members-list" class="form-input" placeholder="e.g. Ayush, Priya, Dr. Sharma" style="font-size: 14px;">
                 </div>
                 <div class="form-group" style="margin: 0; min-width: 140px;">
                     <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">📌 Filter by Name:</label>
-                    <input type="text" id="tt-filter-name" class="form-input" placeholder="Filter..." oninput="loadTimetable()" style="font-size: 14px;">
+                    <input type="text" id="tt-filter-name" list="registered-members-list" class="form-input" placeholder="Filter..." oninput="loadTimetable()" style="font-size: 14px;">
                 </div>
                 <div style="display: flex; gap: 6px; align-items: flex-end; padding-bottom: 2px;">
                     <button class="btn btn-secondary" onclick="clearMySchedule()" style="font-size: 12px; padding: 8px 12px;">🗑️ Clear My Schedule</button>
@@ -630,7 +630,7 @@ We will notify as soon as a slot frees up.
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group" style="margin: 0;">
                         <label class="form-label">Student Name(s): *</label>
-                        <input type="text" id="proj-students" class="form-input" required placeholder="e.g. Ritik Kumar, Harsh Vardhan">
+                        <input type="text" id="proj-students" list="registered-members-list" class="form-input" required placeholder="e.g. Ritik Kumar, Harsh Vardhan">
                     </div>
                     <div class="form-group" style="margin: 0;">
                         <label class="form-label">Assigned Workstation:</label>
@@ -764,5 +764,6 @@ We will notify as soon as a slot frees up.
     </footer>
 
     <script src="script.js?v=35"></script>
+    <datalist id="registered-members-list"></datalist>
 </body>
 </html>
