@@ -630,7 +630,21 @@ We will notify as soon as a slot frees up.
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group" style="margin: 0;">
                         <label class="form-label">Student Name(s): *</label>
-                        <input type="text" id="proj-students" list="registered-members-list" class="form-input" required placeholder="e.g. Ritik Kumar, Harsh Vardhan">
+                        <div class="custom-multi-select" id="student-multi-select" style="position: relative;">
+                            <div class="select-box form-input" onclick="toggleStudentDropdown()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; min-height: 40px; height: auto; padding: 8px 12px;">
+                                <div id="student-selected-badges" class="selected-badges" style="display: flex; flex-wrap: wrap; gap: 5px; color: var(--on-surface-variant);">Select members...</div>
+                                <div class="arrow" style="font-size: 10px; color: var(--on-surface-variant); margin-left: 10px;">▼</div>
+                            </div>
+                            <div class="dropdown-list" id="student-dropdown-list" style="display: none; position: absolute; z-index: 1000; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-top: 5px;">
+                                <div style="position: sticky; top: 0; background: #ffffff; padding: 8px; border-bottom: 1px solid #e2e8f0; z-index: 10;">
+                                    <input type="text" id="student-search" class="form-input" placeholder="Search members..." onkeyup="filterStudentDropdown()" style="height: 32px; font-size: 13px;" onclick="event.stopPropagation();">
+                                </div>
+                                <div class="options-container" id="student-options-container" style="padding: 8px; background: #ffffff; text-align: left; display: flex; flex-direction: column; align-items: flex-start;">
+                                    <!-- Checkboxes injected via JS -->
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="proj-students">
                     </div>
                     <div class="form-group" style="margin: 0;">
                         <label class="form-label">Assigned Workstation:</label>
