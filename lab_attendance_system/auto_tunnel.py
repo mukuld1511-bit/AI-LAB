@@ -13,6 +13,13 @@ import time
 import sys
 import json
 import os
+import shutil
+
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+except Exception:
+    pass
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_FILE = os.path.join(CURRENT_DIR, ".env")
@@ -40,6 +47,7 @@ ENV_CONFIG = load_env_vars()
 NGROK_PORT = int(os.environ.get("NGROK_PORT", ENV_CONFIG.get("NGROK_PORT", 8000)))
 NGROK_DOMAIN = os.environ.get("NGROK_DOMAIN", ENV_CONFIG.get("NGROK_DOMAIN", "amaretto-confess-subtract.ngrok-free.dev"))
 NGROK_AUTHTOKEN = os.environ.get("NGROK_AUTHTOKEN", ENV_CONFIG.get("NGROK_AUTHTOKEN", "")).strip()
+NGROK_BIN = shutil.which("ngrok") or shutil.which("ngrok.exe") or "ngrok"
 
 
 def kill_existing_ngrok():
@@ -59,7 +67,7 @@ def check_and_apply_authtoken():
         print("[INFO] Applying ngrok authtoken from configuration...")
         try:
             res = subprocess.run(
-                ["ngrok", "config", "add-authtoken", NGROK_AUTHTOKEN],
+                [NGROK_BIN, "config", "add-authtoken", NGROK_AUTHTOKEN],
                 capture_output=True,
                 text=True,
                 check=False
@@ -101,7 +109,7 @@ def copy_to_clipboard(text: str) -> bool:
 
 def start_tunnel_process():
     """Spawns ngrok with permanent static domain flag."""
-    cmd = ["ngrok", "http", str(NGROK_PORT)]
+    cmd = [NGROK_BIN, "http", str(NGROK_PORT)]
     if NGROK_DOMAIN:
         cmd.extend(["--domain", NGROK_DOMAIN])
 
@@ -191,7 +199,7 @@ def run_tunnel():
 
     # 2. Verify ngrok CLI availability
     try:
-        res = subprocess.run(["ngrok", "version"], capture_output=True, text=True, check=True)
+        res = subprocess.run([NGROK_BIN, "version"], capture_output=True, text=True, check=True)
         print(f"[INFO] Detected: {res.stdout.strip()}")
     except (FileNotFoundError, subprocess.CalledProcessError):
         print("[WARN] ngrok is not installed or not in PATH! Switching to Cloudflare Tunnel...")
@@ -203,12 +211,17 @@ def run_tunnel():
 
     # 4. Continuous tunnel runner with automatic failover to Cloudflare on bandwidth limit
     ngrok_quota_exceeded = False
+    conflict_count = 0
 
     while True:
-        if ngrok_quota_exceeded:
-            print("\n[WARN] ngrok monthly bandwidth quota is exceeded. Running on Cloudflare Unlimited Tunnel...")
+        if ngrok_quota_exceeded or conflict_count >= 3:
+            if conflict_count >= 3:
+                print("\n[WARN] ngrok domain endpoint conflict persisted (ERR_NGROK_334). Switching to Cloudflare Unlimited Tunnel...")
+            else:
+                print("\n[WARN] ngrok monthly bandwidth quota is exceeded. Running on Cloudflare Unlimited Tunnel...")
             run_cloudflared_tunnel()
             time.sleep(5)
+            conflict_count = 0
             continue
 
         try:
@@ -228,9 +241,10 @@ def run_tunnel():
                         ngrok_quota_exceeded = True
                         break
                     if "ERR_NGROK_334" in err_out:
-                        print("[INFO] Endpoint conflict detected. Clearing previous session...")
+                        conflict_count += 1
+                        print(f"[INFO] Endpoint conflict detected ({conflict_count}/3). Clearing previous session...")
                         kill_existing_ngrok()
-                        time.sleep(5)
+                        time.sleep(3)
                     break
 
                 url = get_ngrok_url()

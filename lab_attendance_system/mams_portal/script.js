@@ -1,5 +1,5 @@
 // ── DYNAMIC BACKEND URL (DGX Spark / Remote / Localhost) ──
-const ACTIVE_TUNNEL_FALLBACK = "https://beneficial-arrangement-holds-head.trycloudflare.com";
+const ACTIVE_TUNNEL_FALLBACK = "https://feelings-mar-menus-inspection.trycloudflare.com";
 let BASE_URL = localStorage.getItem("lab_backend_url") || "";
 
 // If stored URL was the blocked ngrok domain, migrate immediately to the active Cloudflare tunnel

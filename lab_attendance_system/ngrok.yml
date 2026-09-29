@@ -1,6 +1,7 @@
 version: "3"
 agent:
-  authtoken: "" # Add your auth token here or in .env
+  authtoken: "3GTmpfbFkCBLXNdvlgJp0RdJz6n_83WYHGCyrsfHJHLsTQXEi"
+
 tunnels:
   lab_backend:
     proto: http

@@ -22,6 +22,12 @@ LOGS_DIR = os.path.join(CURRENT_DIR, "logs")
 os.makedirs(LOGS_DIR, exist_ok=True)
 
 WATCHDOG_LOG = os.path.join(LOGS_DIR, "watchdog.log")
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+except Exception:
+    pass
+
 BACKEND_LOG = os.path.join(LOGS_DIR, "backend.log")
 NGROK_LOG = os.path.join(LOGS_DIR, "ngrok.log")
 
@@ -29,10 +35,11 @@ NGROK_LOG = os.path.join(LOGS_DIR, "ngrok.log")
 def log_watchdog(message: str):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     formatted = f"[{timestamp}] [WATCHDOG] {message}"
-    print(formatted)
+    print(formatted, flush=True)
     try:
         with open(WATCHDOG_LOG, "a", encoding="utf-8") as f:
             f.write(formatted + "\n")
+            f.flush()
     except Exception:
         pass
 

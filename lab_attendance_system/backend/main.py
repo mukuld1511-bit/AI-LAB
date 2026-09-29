@@ -1106,6 +1106,14 @@ def get_latest_unknown_alerts(since: Optional[str] = Query(None, description="Ti
     return {"faces": faces, "count": len(faces)}
 
 
+# Mount static portals and face images
+MAMS_PORTAL_DIR = os.path.join(BASE_DIR, "mams_portal")
+if os.path.exists(MAMS_PORTAL_DIR):
+    app.mount("/mams_portal", StaticFiles(directory=MAMS_PORTAL_DIR, html=True), name="mams_portal")
+
+if os.path.exists(UNKNOWN_FACES_DIR):
+    app.mount("/unknown_faces_static", StaticFiles(directory=UNKNOWN_FACES_DIR), name="unknown_faces_static")
+
 # Mount static frontend
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static_frontend")
 
