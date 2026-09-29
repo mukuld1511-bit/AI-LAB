@@ -1351,7 +1351,7 @@ function openBackendProjectModal(editId = null) {
         document.getElementById("proj-pc-assigned").value = proj.pc_assigned || "";
         document.getElementById("proj-status").value = proj.status || "Ongoing";
         document.getElementById("proj-duration").value = proj.duration || "";
-        document.getElementById("proj-technologies").value = proj.technologies || "";
+        setTechSelection(proj.technologies || "");
         document.getElementById("proj-description").value = proj.description || "";
         document.getElementById("proj-deployment-url").value = proj.deployment_url || "";
         document.getElementById("proj-github-url").value = proj.github_url || "";
@@ -1361,6 +1361,7 @@ function openBackendProjectModal(editId = null) {
         if (titleEl) titleEl.innerText = "🚀 Add New Research Project";
         if (editIdInput) editIdInput.value = "";
         document.getElementById("backend-project-form").reset();
+        setTechSelection("");
     }
 
     if (modal) modal.style.display = "flex";
