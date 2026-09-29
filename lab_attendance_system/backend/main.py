@@ -962,6 +962,13 @@ def book_timetable(payload: TimetableBookRequest):
     return result
 
 
+@app.delete("/api/timetable/clear/{student_name}")
+def clear_student_schedule(student_name: str, week: Optional[str] = Query("recurring")):
+    """Clears all timetable bookings for a student."""
+    count = database.clear_student_timetable(student_name, week_label=week or "recurring")
+    return {"status": "success", "message": f"Cleared {count} booking(s) for {student_name}."}
+
+
 @app.delete("/api/timetable/{slot_id}")
 def delete_timetable_booking(slot_id: int):
     """Deletes a specific timetable booking by ID."""
@@ -969,13 +976,6 @@ def delete_timetable_booking(slot_id: int):
     if not success:
         raise HTTPException(status_code=404, detail="Booking not found.")
     return {"status": "success", "message": "Booking removed."}
-
-
-@app.delete("/api/timetable/clear/{student_name}")
-def clear_student_schedule(student_name: str, week: Optional[str] = Query("recurring")):
-    """Clears all timetable bookings for a student."""
-    count = database.clear_student_timetable(student_name, week_label=week or "recurring")
-    return {"status": "success", "message": f"Cleared {count} booking(s) for {student_name}."}
 
 
 # ── Student Projects Endpoints ──
