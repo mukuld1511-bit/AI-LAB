@@ -1474,6 +1474,8 @@ function initTechDropdown() {
     predefinedTechs.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).forEach(tech => {
         const label = document.createElement("label");
         label.style.display = "flex";
+        label.style.justifyContent = "flex-start";
+        label.style.flexDirection = "row";
         label.style.alignItems = "center";
         label.style.gap = "8px";
         label.style.padding = "6px";
@@ -1485,6 +1487,7 @@ function initTechDropdown() {
         cb.type = "checkbox";
         cb.value = tech;
         cb.className = "tech-cb";
+        cb.style.margin = "0";
         cb.onclick = (e) => {
             e.stopPropagation();
             if (cb.checked) selectedTechs.add(tech);
@@ -1513,6 +1516,8 @@ function filterTechDropdown() {
     labels.forEach(label => {
         if (label.innerText.toLowerCase().includes(query)) {
             label.style.display = "flex";
+        label.style.justifyContent = "flex-start";
+        label.style.flexDirection = "row";
         } else {
             label.style.display = "none";
         }
