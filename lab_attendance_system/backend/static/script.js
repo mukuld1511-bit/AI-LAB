@@ -79,6 +79,7 @@ function initTabs() {
             if (targetContent) targetContent.classList.add("active");
 
             if (btn.dataset.tab === "pc-status") loadPCStatus();
+            else if (btn.dataset.tab === "projects") loadBackendProjects();
             else if (btn.dataset.tab === "attendance") loadAttendance();
             else if (btn.dataset.tab === "unknown-faces") loadUnknownFaces();
             else if (btn.dataset.tab === "registered-faces") loadRegisteredFaces();
@@ -622,7 +623,7 @@ async function loadAttendance() {
     const tbody = document.getElementById("attendance-tbody");
 
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Loading logs...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Loading logs...</td></tr>';
 
     try {
         let url = "/attendance?";
@@ -631,7 +632,7 @@ async function loadAttendance() {
 
         const data = await apiFetch(url);
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--on-surface-variant); padding: 20px;">No attendance records found for this date.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--on-surface-variant); padding: 20px;">No attendance records found for this date.</td></tr>';
             return;
         }
 
@@ -639,13 +640,14 @@ async function loadAttendance() {
             <tr>
                 <td><strong>${log.name}</strong></td>
                 <td>${log.is_known ? '<span style="color: #16a34a; font-weight: 700;">✓ Known Face</span>' : '<span style="color: #dc2626; font-weight: 700;">⚠ Unknown</span>'}</td>
+                <td>${log.current_project ? `<span class="project-tag" style="background:#eef2ff; color:#4338ca; padding:3px 8px; border-radius:4px; font-weight:600; font-size:12px; display:inline-block; border:1px solid #c7d2fe;">🚀 ${log.current_project}</span>` : '<span style="color:#94a3b8; font-size:12px;">General AI/ML Research</span>'}</td>
                 <td>${log.in_time ? log.in_time.split(" ")[1] : '-'}</td>
                 <td>${log.out_time ? log.out_time.split(" ")[1] : '-'}</td>
                 <td>${log.date}</td>
             </tr>
         `).join("");
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="5" style="color: red; text-align: center;">Error loading logs: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color: red; text-align: center;">Error loading logs: ${e.message}</td></tr>`;
     }
 }
 
@@ -699,11 +701,12 @@ async function loadUnknownFaces() {
         }
 
         grid.innerHTML = data.map(face => {
+            const imgUrl = face.image_base64 || face.url;
             const fallbackSnapshot = getPlaceholderFaceSVG("No Photo");
             return `
             <div class="unknown-card">
-                <div class="unknown-img-wrap" onclick="openLightbox('${face.url}', '${face.filename}', '${face.timestamp}', '${face.date}')">
-                    <img src="${face.url}" alt="Intruder Snapshot" onerror="this.onerror=null; this.src='${fallbackSnapshot}';">
+                <div class="unknown-img-wrap" onclick="openLightbox('${imgUrl}', '${face.filename}', '${face.timestamp}', '${face.date}')">
+                    <img src="${imgUrl}" alt="Intruder Snapshot" onerror="this.onerror=null; this.src='${fallbackSnapshot}';">
                 </div>
                 <div class="unknown-meta">
                     <strong>${face.filename}</strong><br>
@@ -958,7 +961,7 @@ function renderRegisteredDirectory(users) {
         const role = user.role || "Student";
         const roleClass = role.toLowerCase() === "faculty" ? "badge-role-faculty" : role.toLowerCase() === "guest" ? "badge-role-guest" : "badge-role-student";
         const fallbackAvatar = getInitialsAvatarSVG(user.name, role);
-        const avatarUrl = user.avatar_url || fallbackAvatar;
+        const avatarUrl = user.avatar_base64 || user.avatar_url || fallbackAvatar;
 
         return `
             <div class="user-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 14px; display: flex; gap: 12px; align-items: center;">
@@ -1213,3 +1216,215 @@ document.addEventListener("click", (e) => {
         menu.classList.remove("open");
     }
 });
+
+// ═════════════════════════════════════════════════════════════════
+// TAB: RESEARCH & CAPSTONE PROJECTS MANAGEMENT
+// ═════════════════════════════════════════════════════════════════
+let backendProjectsList = [];
+let backendProjectFilterStatus = "all";
+
+async function loadBackendProjects() {
+    const grid = document.getElementById("backend-projects-grid");
+    if (!grid) return;
+
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">Loading projects...</div>';
+
+    try {
+        const data = await apiFetch("/api/projects");
+        backendProjectsList = Array.isArray(data) ? data : [];
+        applyBackendProjectFilters();
+    } catch (e) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; color: var(--error); text-align: center; padding: 30px;">Error loading projects: ${e.message}</div>`;
+    }
+}
+
+function filterBackendProjects(status, btn) {
+    backendProjectFilterStatus = status;
+    const parent = btn.parentElement;
+    if (parent) {
+        parent.querySelectorAll(".chip-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+    }
+    applyBackendProjectFilters();
+}
+
+function onBackendProjectSearch() {
+    applyBackendProjectFilters();
+}
+
+function applyBackendProjectFilters() {
+    const searchVal = (document.getElementById("backend-project-search")?.value || "").toLowerCase().trim();
+    let filtered = backendProjectsList;
+
+    if (backendProjectFilterStatus !== "all") {
+        filtered = filtered.filter(p => (p.status || "").toLowerCase() === backendProjectFilterStatus.toLowerCase());
+    }
+
+    if (searchVal) {
+        filtered = filtered.filter(p => {
+            const title = (p.title || "").toLowerCase();
+            const students = (p.student_names || "").toLowerCase();
+            const details = (p.student_details || "").toLowerCase();
+            const tech = (p.technologies || "").toLowerCase();
+            const desc = (p.description || "").toLowerCase();
+            return title.includes(searchVal) || students.includes(searchVal) || details.includes(searchVal) || tech.includes(searchVal) || desc.includes(searchVal);
+        });
+    }
+
+    renderBackendProjectsGrid(filtered);
+}
+
+function renderBackendProjectsGrid(projects) {
+    const grid = document.getElementById("backend-projects-grid");
+    if (!grid) return;
+
+    if (projects.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant); background: var(--surface); border-radius: 8px; border: 1px dashed var(--outline);">No research projects match current filters. Click "➕ Add New Project" above to create one.</div>';
+        return;
+    }
+
+    grid.innerHTML = projects.map(p => {
+        const statusClass = p.status === "Completed" ? "badge-free" : p.status === "Under Review" ? "badge-away" : "badge-occupied";
+        const reportBadgeClass = p.report_status === "Filed" || p.report_status === "Approved" ? "style=\"background: #dcfce7; color: #15803d; border: 1px solid #86efac;\"" : "style=\"background: #fef3c7; color: #b45309; border: 1px solid #fde68a;\"";
+        
+        const techList = (p.technologies || "").split(",").map(t => t.trim()).filter(Boolean);
+        const techChips = techList.map(t => `<span style="background: var(--surface-variant); color: var(--on-surface-variant); font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 500;">${t}</span>`).join(" ");
+
+        return `
+            <div class="pc-card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--primary); padding: 16px;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                        <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--on-surface); line-height: 1.3;">${p.title}</h3>
+                        <span class="badge ${statusClass}" style="white-space: nowrap; font-size: 11px;">${p.status || 'Ongoing'}</span>
+                    </div>
+
+                    ${p.pc_assigned ? `<div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 6px;">💻 Workstation: ${p.pc_assigned}</div>` : ''}
+
+                    <div style="background: var(--surface-variant); padding: 8px 10px; border-radius: 6px; margin: 8px 0; font-size: 12px;">
+                        <div>👥 <strong>Researchers:</strong> ${p.student_names || 'Unassigned'}</div>
+                        ${p.student_details ? `<div style="color: var(--on-surface-variant); margin-top: 2px; font-size: 11px;">📌 <em>${p.student_details}</em></div>` : ''}
+                        ${p.duration ? `<div style="margin-top: 4px; color: #0284c7; font-weight: 600;">⏱️ ${p.duration}</div>` : ''}
+                    </div>
+
+                    ${p.description ? `<p style="font-size: 12px; color: var(--on-surface-variant); margin: 8px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${p.description}</p>` : ''}
+
+                    ${techChips ? `<div style="display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0;">${techChips}</div>` : ''}
+                </div>
+
+                <div style="margin-top: 14px; border-top: 1px solid var(--outline); padding-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px;">
+                        <span ${reportBadgeClass} style="padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                            📄 Report: ${p.report_status || 'Pending'}
+                        </span>
+                        <div style="display: flex; gap: 6px;">
+                            ${p.deployment_url ? `<a href="${p.deployment_url}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 2px 8px; text-decoration: none;" title="Open Live Deployment">🌐 Live</a>` : ''}
+                            ${p.github_url ? `<a href="${p.github_url}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 2px 8px; text-decoration: none;" title="View Source Code">💻 Code</a>` : ''}
+                            ${p.report_url ? `<a href="${p.report_url}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 2px 8px; text-decoration: none;" title="Download Official Report">📑 PDF</a>` : ''}
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="openBackendProjectModal(${p.id})">✏️ Edit</button>
+                        <button class="btn btn-danger" style="font-size: 11px; padding: 4px 10px;" onclick="deleteBackendProject(${p.id}, '${p.title.replace(/'/g, "\\'")}')">🗑️ Delete</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function openBackendProjectModal(editId = null) {
+    const modal = document.getElementById("backend-project-modal");
+    const titleEl = document.getElementById("backend-project-modal-title");
+    const editIdInput = document.getElementById("proj-edit-id");
+
+    if (editId) {
+        const proj = backendProjectsList.find(p => p.id === editId);
+        if (!proj) return;
+        if (titleEl) titleEl.innerText = "✏️ Edit Research Project";
+        if (editIdInput) editIdInput.value = proj.id;
+
+        document.getElementById("proj-title").value = proj.title || "";
+        document.getElementById("proj-students").value = proj.student_names || "";
+        document.getElementById("proj-details").value = proj.student_details || "";
+        document.getElementById("proj-pc-assigned").value = proj.pc_assigned || "";
+        document.getElementById("proj-status").value = proj.status || "Ongoing";
+        document.getElementById("proj-duration").value = proj.duration || "";
+        document.getElementById("proj-technologies").value = proj.technologies || "";
+        document.getElementById("proj-description").value = proj.description || "";
+        document.getElementById("proj-deployment-url").value = proj.deployment_url || "";
+        document.getElementById("proj-github-url").value = proj.github_url || "";
+        document.getElementById("proj-report-status").value = proj.report_status || "Pending";
+        document.getElementById("proj-report-url").value = proj.report_url || "";
+    } else {
+        if (titleEl) titleEl.innerText = "🚀 Add New Research Project";
+        if (editIdInput) editIdInput.value = "";
+        document.getElementById("backend-project-form").reset();
+    }
+
+    if (modal) modal.style.display = "flex";
+}
+
+function closeBackendProjectModal() {
+    const modal = document.getElementById("backend-project-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitBackendProject(e) {
+    e.preventDefault();
+    const editId = document.getElementById("proj-edit-id")?.value;
+    const saveBtn = document.getElementById("proj-save-btn");
+
+    const payload = {
+        title: document.getElementById("proj-title").value.trim(),
+        student_names: document.getElementById("proj-students").value.trim(),
+        student_details: document.getElementById("proj-details").value.trim(),
+        pc_assigned: document.getElementById("proj-pc-assigned").value,
+        status: document.getElementById("proj-status").value,
+        duration: document.getElementById("proj-duration").value.trim(),
+        technologies: document.getElementById("proj-technologies").value.trim(),
+        description: document.getElementById("proj-description").value.trim(),
+        deployment_url: document.getElementById("proj-deployment-url").value.trim(),
+        github_url: document.getElementById("proj-github-url").value.trim(),
+        report_status: document.getElementById("proj-report-status").value,
+        report_url: document.getElementById("proj-report-url").value.trim()
+    };
+
+    if (!payload.title || !payload.student_names) {
+        alert("Please enter project title and student names.");
+        return;
+    }
+
+    if (saveBtn) saveBtn.innerText = "Saving...";
+
+    try {
+        if (editId) {
+            await apiFetch(`/api/projects/${editId}`, {
+                method: "PUT",
+                body: JSON.stringify(payload)
+            });
+        } else {
+            await apiFetch("/api/projects", {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+        }
+        closeBackendProjectModal();
+        await loadBackendProjects();
+    } catch (err) {
+        alert("Error saving project: " + err.message);
+    } finally {
+        if (saveBtn) saveBtn.innerText = "💾 Save Project";
+    }
+}
+
+async function deleteBackendProject(id, title) {
+    if (!confirm(`Are you sure you want to delete the project "${title}"?`)) return;
+
+    try {
+        await apiFetch(`/api/projects/${id}`, { method: "DELETE" });
+        await loadBackendProjects();
+    } catch (e) {
+        alert("Error deleting project: " + e.message);
+    }
+}

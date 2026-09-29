@@ -426,9 +426,17 @@ def get_unknown_faces() -> List[Dict[str, str]]:
                 filename_no_ext = os.path.splitext(file)[0]
                 timestamp_val = filename_no_ext.replace("_", " ").replace("-", ":")
 
+                image_b64 = ""
+                try:
+                    with open(full_path, "rb") as img_f:
+                        image_b64 = f"data:image/jpeg;base64,{base64.b64encode(img_f.read()).decode('utf-8')}"
+                except Exception:
+                    pass
+
                 images_list.append({
                     "image_path": rel_path.replace("\\", "/"),
                     "url": f"/unknown_faces_static/{static_rel}",
+                    "image_base64": image_b64,
                     "date": date_val,
                     "timestamp": timestamp_val,
                     "filename": file,
@@ -482,6 +490,15 @@ def clear_all_unknown_faces():
 def get_registered_users():
     """Returns complete list of enrolled students from database."""
     users = database.get_registered_users()
+    for user in users:
+        safe_name = "".join([c for c in user.get("name", "") if c.isalnum() or c == " "]).rstrip().replace(" ", "_")
+        avatar_path = os.path.join(AVATARS_DIR, f"{safe_name}.jpg")
+        if os.path.exists(avatar_path):
+            try:
+                with open(avatar_path, "rb") as img_f:
+                    user["avatar_base64"] = f"data:image/jpeg;base64,{base64.b64encode(img_f.read()).decode('utf-8')}"
+            except Exception:
+                pass
     return {"users": users, "count": len(users)}
 
 
@@ -797,6 +814,7 @@ def download_attendance_csv():
         "Log ID", 
         "Student Name", 
         "User Type", 
+        "Project / Research Domain",
         "Entry Time", 
         "Exit Time", 
         "Date",
@@ -805,10 +823,13 @@ def download_attendance_csv():
     
     for row in rows:
         user_type = "Registered User" if row["is_known"] else "Unknown Face"
+        row_dict = dict(row)
+        proj = row_dict.get("current_project") or ""
         writer.writerow([
             row["id"],
             row["name"],
             user_type,
+            proj or "General AI/ML Research",
             row["in_time"] or "N/A",
             row["out_time"] or "Still in Lab",
             row["date"],
@@ -1071,8 +1092,17 @@ def get_latest_unknown_alerts(since: Optional[str] = Query(None, description="Ti
                 face["image_url"] = f"/unknown_faces_static/{rel_path.replace('unknown_faces/', '')}"
             else:
                 face["image_url"] = f"/unknown_faces_static/{rel_path}"
+
+            full_img_p = os.path.join(BASE_DIR, rel_path)
+            if os.path.exists(full_img_p):
+                try:
+                    with open(full_img_p, "rb") as img_f:
+                        face["image_base64"] = f"data:image/jpeg;base64,{base64.b64encode(img_f.read()).decode('utf-8')}"
+                except Exception:
+                    face["image_base64"] = None
         else:
             face["image_url"] = None
+            face["image_base64"] = None
     return {"faces": faces, "count": len(faces)}
 
 

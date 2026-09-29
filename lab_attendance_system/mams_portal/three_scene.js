@@ -930,8 +930,8 @@ function buildAllLabWorkstations() {
     // 1. Left Continuous Wooden Slab (Holds BACKEND near gate, PC-2, PC-3)
     createConnectedBench(-6.0, -1.0, 9.2);
 
-    // 2. Right Extended Continuous Wooden Slab (Front edge aligned with Left table at Z = +3.6, extends to Z = -6.8)
-    createConnectedBench(6.0, -1.6, 10.4);
+    // 2. Right Extended Continuous Wooden Slab (Centered at Z = 0.0, symmetrically flanking the AI LAB Poster)
+    createConnectedBench(6.0, 0.0, 9.6);
 
     // 3. Mount Left Monitors & Accessories on Left Slab
     mountMonitorStation("BACKEND", -6.0, 2.4, Math.PI / 2, tablePosY + slabH / 2, true); // Dedicated Host Server right in front of the gate (where PC-1 used to be)
@@ -939,11 +939,13 @@ function buildAllLabWorkstations() {
     mountMonitorStation("PC-3", -6.0, -4.4, Math.PI / 2, tablePosY + slabH / 2);
 
     // 4. Mount Right Monitors & Accessories on Extended Right Slab:
-    // PC-4, PC-5, PC-6 are perfectly aligned opposite BACKEND, PC-2, PC-3 across the aisle; PC-1 is the 4th PC near outer window
-    mountMonitorStation("PC-4", 6.0, 2.4, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-5", 6.0, -1.0, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-6", 6.0, -4.4, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
-    mountMonitorStation("PC-1", 6.0, -5.9, -Math.PI / 2, tablePosY + slabH / 2); // 4th DGX Workstation shifted to right table near outer window
+    // AI LAB Poster is in the center at Z = 0.0.
+    // Right of the poster (towards gate): PC-4 (Z = 4.0) and new PC-1 (Z = 1.8, directly to the right of the poster)
+    // Left of the poster (towards window): PC-5 (Z = -1.8) and PC-6 (Z = -4.0, Ritik's Workstation)
+    mountMonitorStation("PC-4", 6.0, 4.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-1", 6.0, 1.8, -Math.PI / 2, tablePosY + slabH / 2); // New PC-1 positioned to the right of AI LAB Poster
+    mountMonitorStation("PC-5", 6.0, -1.8, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-6", 6.0, -4.0, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
 
     // 5. PC-7 Table on Front Entrance Wall (X = 2.4, Z = 5.6, rotated Math.PI)
     createStandaloneTable("PC-7", 2.4, 5.6, Math.PI, woodMat, metalLegMat, tablePosY, slabH);

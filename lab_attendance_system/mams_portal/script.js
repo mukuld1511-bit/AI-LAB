@@ -1082,7 +1082,7 @@ async function loadAttendance() {
     try {
         const logs = await apiFetch("/attendance/logs?" + params.toString());
         if (logs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--on-surface-variant); padding: 30px;">No attendance logs found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--on-surface-variant); padding: 30px;">No attendance logs found.</td></tr>`;
             return;
         }
 
@@ -1090,13 +1090,14 @@ async function loadAttendance() {
             <tr>
                 <td><strong>${row.name || "-"}</strong></td>
                 <td>${row.is_known ? '<span class="badge badge-connected">✅ Registered</span>' : '<span class="badge badge-disconnected">❓ Unknown</span>'}</td>
+                <td>${row.current_project ? `<span class="project-tag" style="background:#eef2ff; color:#4338ca; padding:3px 8px; border-radius:4px; font-weight:600; font-size:12px; display:inline-block; border:1px solid #c7d2fe;">🚀 ${row.current_project}</span>` : '<span style="color:#94a3b8; font-size:12px;">General AI/ML Research</span>'}</td>
                 <td>${row.in_time || "-"}</td>
                 <td>${row.out_time || "<span style='color: #15803d; font-weight: bold;'>🟢 Inside Lab</span>"}</td>
                 <td>${row.date || "-"}</td>
             </tr>
         `).join("");
     } catch(e) {
-        tbody.innerHTML = `<tr><td colspan="5" style="color:red">Error: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color:red">Error: ${e.message}</td></tr>`;
     }
 }
 
@@ -1164,7 +1165,7 @@ function renderRegisteredUsersGrid(users) {
     grid.innerHTML = filtered.map(user => {
         const role = (user.role || "Student").capitalize ? user.role.capitalize() : user.role || "Student";
         const fallbackAvatar = getInitialsAvatarSVG(user.name, role);
-        const avatarUrl = user.avatar_url ? `${BASE_URL}${user.avatar_url}` : fallbackAvatar;
+        const avatarUrl = user.avatar_base64 || (user.avatar_url ? `${BASE_URL}${user.avatar_url}` : fallbackAvatar);
         const roleBadgeClass = role.toLowerCase() === "faculty" ? "badge-role-faculty" : role.toLowerCase() === "guest" ? "badge-role-guest" : "badge-role-student";
         const roleIcon = role.toLowerCase() === "faculty" ? "👨‍🏫" : role.toLowerCase() === "guest" ? "👤" : "🎓";
 
@@ -1261,12 +1262,12 @@ async function loadUnknownFaces() {
         }
 
         grid.innerHTML = data.map(face => {
-            const imgUrl = `${BASE_URL}${face.url}`;
+            const imgUrl = face.image_base64 || (face.url ? `${BASE_URL}${face.url}` : "");
             const fallbackSnapshot = getPlaceholderFaceSVG("No Photo");
             return `
                 <div class="unknown-card">
                     <div class="unknown-img-wrap" onclick="openLightbox('${imgUrl}', '${face.filename}', '${face.timestamp}', '${face.date}')">
-                        <img src="${imgUrl}" alt="Intruder Snapshot" onerror="this.onerror=null; this.src='${fallbackSnapshot}';">
+                        <img src="${imgUrl || fallbackSnapshot}" alt="Intruder Snapshot" onerror="this.onerror=null; this.src='${fallbackSnapshot}';">
                     </div>
                     <div class="unknown-meta">
                         <strong>Captured:</strong> ${face.timestamp}<br>
@@ -2068,7 +2069,7 @@ function renderProjectsGrid(projects) {
         return;
     }
 
-    grid.innerHTML = projects.map(proj => {
+    const cardsHtml = projects.map(proj => {
         const isFiled = (proj.report_status || '').toLowerCase() === 'filed';
         const reportBadgeClass = isFiled ? 'badge-success' : 'badge-warning';
         const reportBadgeIcon = isFiled ? '✅' : '⏳';
@@ -2179,6 +2180,12 @@ function renderProjectsGrid(projects) {
             </div>
         `;
     }).join('');
+
+    grid.innerHTML = cardsHtml;
+    const tab1Grid = document.getElementById("tab1-featured-projects-grid");
+    if (tab1Grid) {
+        tab1Grid.innerHTML = cardsHtml;
+    }
 }
 
 function openAddProjectModal() {

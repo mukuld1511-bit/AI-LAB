@@ -135,6 +135,23 @@
         <div id="pc-grid" class="pc-grid">
             <!-- Dynamically populated and synchronized by script.js -->
         </div>
+
+        <!-- Featured Student Research Projects Showcase Section -->
+        <div class="section-header" style="margin-top: 36px;">
+            <div>
+                <h3>🚀 Active Student Research Projects Showcase</h3>
+                <p>Ongoing lab research domains, team members, durations, report statuses, and verified live deployments</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" onclick="switchTab('projects')" style="font-size: 12px; padding: 6px 14px; font-weight: 600; color: #6366f1;">
+                    Open Full Projects Tab &rarr;
+                </button>
+            </div>
+        </div>
+
+        <div id="tab1-featured-projects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; margin-top: 14px;">
+            <!-- Synchronized with Projects list -->
+        </div>
     </main>
 
     <!-- ═══════════════════════════════════════════════════ -->
@@ -214,6 +231,7 @@
                     <tr>
                         <th>Student Name</th>
                         <th>User Type</th>
+                        <th>Project / Domain</th>
                         <th>IN Time</th>
                         <th>OUT Time</th>
                         <th>Date</th>
@@ -820,7 +838,7 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Scripts -->
-    <script src="three_scene.js?v=26"></script>
+    <script src="three_scene.js?v=27"></script>
     <script src="script.js?v=53"></script>
 </body>
 </html>

@@ -541,11 +541,11 @@ def free_pc(pc_id: str) -> bool:
 
 
 def get_attendance_logs(date: Optional[str] = None, name: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Fetch attendance logs with optional date and name filters."""
+    """Fetch attendance logs with optional date and name filters, including student project attribution."""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    query = "SELECT id, name, is_known, image_path, in_time, out_time, date FROM attendance_logs WHERE 1=1"
+    query = "SELECT id, name, is_known, image_path, in_time, out_time, date, current_project FROM attendance_logs WHERE 1=1"
     params = []
 
     if date:
@@ -560,8 +560,26 @@ def get_attendance_logs(date: Optional[str] = None, name: Optional[str] = None) 
 
     cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
+
+    # Preload student projects for automatic lookup if current_project is empty
+    cursor.execute("SELECT title, student_names FROM student_projects")
+    all_projects = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+
+    results = []
+    for row in rows:
+        d = dict(row)
+        proj = (d.get("current_project") or "").strip()
+        if not proj and d.get("name"):
+            student_n = d["name"].lower().strip()
+            for p in all_projects:
+                s_names = (p["student_names"] or "").lower()
+                if student_n in s_names:
+                    proj = p["title"]
+                    break
+        d["current_project"] = proj
+        results.append(d)
+    return results
 
 
 def get_latest_log_today(name: str, today_date: str) -> Optional[Dict[str, Any]]:
@@ -569,7 +587,7 @@ def get_latest_log_today(name: str, today_date: str) -> Optional[Dict[str, Any]]
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, name, is_known, image_path, in_time, out_time, date FROM attendance_logs WHERE name = ? AND date = ? ORDER BY id DESC LIMIT 1",
+        "SELECT id, name, is_known, image_path, in_time, out_time, date, current_project FROM attendance_logs WHERE name = ? AND date = ? ORDER BY id DESC LIMIT 1",
         (name, today_date)
     )
     row = cursor.fetchone()
@@ -581,13 +599,25 @@ def get_latest_log_today(name: str, today_date: str) -> Optional[Dict[str, Any]]
     return None
 
 
-def insert_attendance_log(name: str, is_known: bool, in_time: str, date: str, image_path: Optional[str] = None) -> int:
-    """Inserts a new attendance log entry."""
+def insert_attendance_log(name: str, is_known: bool, in_time: str, date: str, image_path: Optional[str] = None, current_project: str = "") -> int:
+    """Inserts a new attendance log entry with optional project mapping."""
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # If project not specified, attempt to infer from student_projects
+    if not current_project and name:
+        try:
+            cursor.execute("SELECT title, student_names FROM student_projects")
+            for p in cursor.fetchall():
+                if name.lower().strip() in (p["student_names"] or "").lower():
+                    current_project = p["title"]
+                    break
+        except Exception:
+            pass
+
     cursor.execute(
-        "INSERT INTO attendance_logs (name, is_known, image_path, in_time, out_time, date) VALUES (?, ?, ?, ?, NULL, ?)",
-        (name, 1 if is_known else 0, image_path, in_time, date)
+        "INSERT INTO attendance_logs (name, is_known, image_path, in_time, out_time, date, current_project) VALUES (?, ?, ?, ?, NULL, ?, ?)",
+        (name, 1 if is_known else 0, image_path, in_time, date, current_project)
     )
     conn.commit()
     inserted_id = cursor.lastrowid

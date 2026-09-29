@@ -43,6 +43,7 @@
     <nav class="tab-nav">
         <button class="tab-btn active" data-tab="gate-cam">📹 Live Gate Camera & Detection</button>
         <button class="tab-btn" data-tab="pc-status">🖥️ Workstation Tracker</button>
+        <button class="tab-btn" data-tab="projects">🚀 Research Projects</button>
         <button class="tab-btn" data-tab="timetable">📅 Weekly Schedule</button>
         <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
         <button class="tab-btn" data-tab="unknown-faces">⚠️ Intruders & Unknowns <span id="nav-unknown-count" class="pill-count">0</span></button>
@@ -340,6 +341,7 @@ We will notify as soon as a slot frees up.
                     <tr>
                         <th>Attendee Name</th>
                         <th>Face Verified</th>
+                        <th>Project / Domain</th>
                         <th>IN Timestamp</th>
                         <th>OUT Timestamp</th>
                         <th>Date</th>
@@ -572,8 +574,145 @@ We will notify as soon as a slot frees up.
     </main>
 
     <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB: RESEARCH & CAPSTONE PROJECTS                   -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-projects" class="tab-content">
+        <div class="page-title">
+            <div>
+                <h2>🚀 AI/ML Lab Research & Capstone Projects</h2>
+                <p>Manage student projects, live deployment links, research durations, and official project report filings</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" onclick="openBackendProjectModal()">➕ Add New Project</button>
+                <button class="btn btn-secondary" onclick="loadBackendProjects()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="filter-bar" style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <span style="font-size: 13px; font-weight: 600; color: var(--on-surface-variant);">Status:</span>
+                <button class="chip-btn active" onclick="filterBackendProjects('all', this)">All Projects</button>
+                <button class="chip-btn" onclick="filterBackendProjects('Ongoing', this)">🟢 Ongoing</button>
+                <button class="chip-btn" onclick="filterBackendProjects('Completed', this)">🔵 Completed</button>
+                <button class="chip-btn" onclick="filterBackendProjects('Under Review', this)">🟡 Under Review</button>
+            </div>
+            <div style="flex: 1; max-width: 320px;">
+                <input type="text" id="backend-project-search" class="form-input" placeholder="🔍 Search title, student, tech..." oninput="onBackendProjectSearch()">
+            </div>
+        </div>
+
+        <!-- Projects Grid -->
+        <div id="backend-projects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px; margin-top: 16px;">
+            <!-- Populated dynamically by JS -->
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
     <!-- MODALS                                              -->
     <!-- ═══════════════════════════════════════════════════ -->
+
+    <!-- Modal 0: Research Project Add/Edit Modal -->
+    <div id="backend-project-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3 id="backend-project-modal-title" style="margin: 0;">🚀 Add New Research Project</h3>
+                <button class="modal-close-btn" onclick="closeBackendProjectModal()">✕</button>
+            </div>
+            <form id="backend-project-form" onsubmit="submitBackendProject(event)" style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+                <input type="hidden" id="proj-edit-id" value="">
+                
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Project Title: *</label>
+                    <input type="text" id="proj-title" class="form-input" required placeholder="e.g. Autonomous Drone Vision & Precision Landing">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Student Name(s): *</label>
+                        <input type="text" id="proj-students" class="form-input" required placeholder="e.g. Ritik Kumar, Harsh Vardhan">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Assigned Workstation:</label>
+                        <select id="proj-pc-assigned" class="form-select">
+                            <option value="">None / Flexible</option>
+                            <option value="PC-1">PC-1 (Front Right)</option>
+                            <option value="PC-2">PC-2</option>
+                            <option value="PC-3">PC-3</option>
+                            <option value="PC-4">PC-4</option>
+                            <option value="PC-5">PC-5</option>
+                            <option value="PC-6">PC-6 (Front Left)</option>
+                            <option value="PC-7">PC-7</option>
+                            <option value="PC-8">PC-8</option>
+                            <option value="BACKEND">BACKEND (Gate Desk)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Student Details / Roles:</label>
+                    <input type="text" id="proj-details" class="form-input" placeholder="e.g. Ritik (Lead Vision Engineer), Harsh (Edge Deployment)">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Project Status:</label>
+                        <select id="proj-status" class="form-select">
+                            <option value="Ongoing">🟢 Ongoing</option>
+                            <option value="Completed">🔵 Completed</option>
+                            <option value="Under Review">🟡 Under Review</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Duration:</label>
+                        <input type="text" id="proj-duration" class="form-input" placeholder="e.g. 4 Months (Jan 2026 - May 2026)">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Technologies / Tech Stack:</label>
+                    <input type="text" id="proj-technologies" class="form-input" placeholder="e.g. PyTorch, YOLOv10, ROS2, OpenCV, CUDA">
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Research Abstract / Description:</label>
+                    <textarea id="proj-description" class="form-input" rows="3" placeholder="Brief summary of problem statement, methodology, and lab objectives..."></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Live Deployment Link:</label>
+                        <input type="url" id="proj-deployment-url" class="form-input" placeholder="https://myproject.app">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">GitHub Repository URL:</label>
+                        <input type="url" id="proj-github-url" class="form-input" placeholder="https://github.com/org/repo">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Report Filing Status:</label>
+                        <select id="proj-report-status" class="form-select">
+                            <option value="Filed">📄 Report Filed</option>
+                            <option value="Pending">⏳ Pending</option>
+                            <option value="Under Review">🔍 Under Review</option>
+                            <option value="Approved">✅ Approved</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Report URL / PDF File:</label>
+                        <input type="text" id="proj-report-url" class="form-input" placeholder="e.g. /reports/interim_report.pdf or Drive link">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeBackendProjectModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="proj-save-btn">💾 Save Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Modal 1: Lightbox for Intruder Photos -->
     <div id="lightbox-modal" class="modal-overlay" style="display: none;">
