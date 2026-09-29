@@ -67,6 +67,7 @@ function getPlaceholderFaceSVG(text = "Snapshot") {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    populateMembersDatalist();
     initTabs();
     initDropdowns();
 
@@ -2445,5 +2446,27 @@ document.addEventListener("click", (e) => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
+    populateMembersDatalist();
     initTechDropdown();
 });
+
+
+async function populateMembersDatalist() {
+    try {
+        const res = await apiFetch("/api/registered_users");
+        if (res.users) {
+            const datalist = document.getElementById("registered-members-list");
+            if (datalist) {
+                datalist.innerHTML = "";
+                res.users.forEach(user => {
+                    const option = document.createElement("option");
+                    option.value = user.name;
+                    option.text = [] ;
+                    datalist.appendChild(option);
+                });
+            }
+        }
+    } catch (e) {
+        console.warn("Could not load datalist users:", e);
+    }
+}
