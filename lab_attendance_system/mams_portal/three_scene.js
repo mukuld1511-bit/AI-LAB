@@ -940,10 +940,10 @@ function buildAllLabWorkstations() {
 
     // 4. Mount Right Monitors & Accessories on Extended Right Slab:
     // AI LAB Poster is in the center at Z = 0.0.
-    // Right of the poster (towards gate): PC-4 (Z = 4.0) and new PC-1 (Z = 1.8, directly to the right of the poster)
+    // Right of the poster (towards gate): PC-1 (Z = 4.0) and PC-4 (Z = 1.8)
     // Left of the poster (towards window): PC-5 (Z = -1.8) and PC-6 (Z = -4.0, Ritik's Workstation)
-    mountMonitorStation("PC-4", 6.0, 4.0, -Math.PI / 2, tablePosY + slabH / 2);
-    mountMonitorStation("PC-1", 6.0, 1.8, -Math.PI / 2, tablePosY + slabH / 2); // New PC-1 positioned to the right of AI LAB Poster
+    mountMonitorStation("PC-1", 6.0, 4.0, -Math.PI / 2, tablePosY + slabH / 2);
+    mountMonitorStation("PC-4", 6.0, 1.8, -Math.PI / 2, tablePosY + slabH / 2);
     mountMonitorStation("PC-5", 6.0, -1.8, -Math.PI / 2, tablePosY + slabH / 2);
     mountMonitorStation("PC-6", 6.0, -4.0, -Math.PI / 2, tablePosY + slabH / 2); // Ritik's Workstation
 
