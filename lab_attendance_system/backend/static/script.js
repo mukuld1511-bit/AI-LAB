@@ -1440,7 +1440,7 @@ async function populateMembersDatalist() {
                 res.users.forEach(user => {
                     const option = document.createElement("option");
                     option.value = user.name;
-                    option.text = \[\] \;
+                    option.text = `[${user.role || 'Member'}] ${user.name}`;
                     datalist.appendChild(option);
                 });
             }
