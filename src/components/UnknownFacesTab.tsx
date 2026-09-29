@@ -176,7 +176,7 @@ export const UnknownFacesTab: React.FC<UnknownFacesTabProps> = ({ unknownFaces, 
                   type="text"
                   value={enrollName}
                   onChange={(e) => setEnrollName(e.target.value)}
-                  placeholder="e.g. Richa Mam, Dr. Verma, Rahul Sharma..."
+                  placeholder="e.g. Dr. Richa Choudhary, Dr. Verma, Rahul Sharma..."
                   required
                   autoFocus
                   className="w-full px-3.5 py-2.5 bg-[#f9f9ff] border border-[#c7c4d8] rounded-lg text-sm text-[#111c2d] focus:outline-none focus:border-[#3525cd] min-h-[44px]"

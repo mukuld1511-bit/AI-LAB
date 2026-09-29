@@ -36,7 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-[#464555] font-medium">
-                Faculty In-Charge: <span className="text-[#3525cd] font-semibold">Richa Mam</span> • 10 Systems
+                Faculty In-Charge: <span className="text-[#3525cd] font-semibold">Dr. Richa Choudhary</span> • 10 Systems
               </p>
             </div>
           </div>

@@ -64,7 +64,7 @@ export const PCStatusTab: React.FC<PCStatusTabProps> = ({ pcs, onOccupy, onFree 
 The following PCs are currently free — [EDIT: PC LIST]
 Please come to the AI Lab if you'd like to use one.
 
-- Richa Mam`,
+- Dr. Richa Choudhary`,
     },
     {
       id: 2,
@@ -73,7 +73,7 @@ Please come to the AI Lab if you'd like to use one.
 All PCs in the AI Lab are currently occupied.
 Will update once a system is free.
 
-- Richa Mam`,
+- Dr. Richa Choudhary`,
     },
     {
       id: 3,
@@ -81,7 +81,7 @@ Will update once a system is free.
       text: `Hi [EDIT: Faculty Name],
 PC-[EDIT: X] is currently free in the AI Lab. You can come and use it.
 
-- Richa Mam`,
+- Dr. Richa Choudhary`,
     },
     {
       id: 4,
@@ -89,7 +89,7 @@ PC-[EDIT: X] is currently free in the AI Lab. You can come and use it.
       text: `Reminder: If you're done using your PC in the AI Lab,
 please mark it as "Free" on the tracker so others can use it.
 
-- Richa Mam`,
+- Dr. Richa Choudhary`,
     },
   ];
 
@@ -347,7 +347,7 @@ please mark it as "Free" on the tracker so others can use it.
             <div>
               <p className="font-bold">All 10 Lab PCs are currently occupied.</p>
               <p className="text-xs text-amber-800">
-                Please check with Richa Mam or wait for a student/faculty member to free their system.
+                Please check with Dr. Richa Choudhary or wait for a student/faculty member to free their system.
               </p>
             </div>
           </div>
@@ -363,7 +363,7 @@ please mark it as "Free" on the tracker so others can use it.
                 Quick Messages
               </h3>
               <p className="text-xs sm:text-sm text-[#464555]">
-                Static broadcast templates for Richa Mam to copy-paste into WhatsApp / SMS groups:
+                Static broadcast templates for Dr. Richa Choudhary to copy-paste into WhatsApp / SMS groups:
               </p>
             </div>
             <span className="text-xs font-semibold px-2.5 py-1 bg-[#e7eeff] text-[#3525cd] rounded-full">

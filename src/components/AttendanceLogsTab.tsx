@@ -211,7 +211,7 @@ export const AttendanceLogsTab: React.FC<AttendanceLogsTabProps> = ({ logs, onAd
                           <span className="font-bold text-[#111c2d]">
                             {log.name}
                           </span>
-                          {log.name === 'Richa Mam' && (
+                          {log.name === 'Dr. Richa Choudhary' && (
                             <span className="text-[10px] bg-[#e7eeff] text-[#3525cd] font-bold px-1.5 py-0.5 rounded">
                               Faculty In-Charge
                             </span>

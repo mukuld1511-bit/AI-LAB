@@ -323,7 +323,7 @@ export const CameraSimulatorTab: React.FC<CameraSimulatorTabProps> = ({
                 type="text"
                 value={enrollNameInput}
                 onChange={(e) => setEnrollNameInput(e.target.value)}
-                placeholder="Enter person's name (e.g. Richa Mam)..."
+                placeholder="Enter person's name (e.g. Dr. Richa Choudhary)..."
                 className="w-full px-3.5 py-2.5 bg-[#f9f9ff] border border-[#c7c4d8] rounded-lg text-sm text-[#111c2d] focus:outline-none focus:border-[#3525cd]"
               />
               <button

@@ -187,7 +187,7 @@ def enroll():
     print("    AI/ML LAB - FACE ENROLLMENT MODULE (RICHA MAM)")
     print("=" * 60)
 
-    name = input("Enter person's name to register (e.g., Richa Mam, Ayush): ").strip()
+    name = input("Enter person's name to register (e.g., Dr. Richa Choudhary, Ayush): ").strip()
     if not name:
         print("[ERROR] Name cannot be empty.")
         return
@@ -274,7 +274,7 @@ import database
 
 app = FastAPI(
     title="AI/ML Lab Attendance & PC Occupancy System",
-    description="Backend API for Richa Mam's AI Lab Attendance & PC Tracker",
+    description="Backend API for Dr. Richa Choudhary's AI Lab Attendance & PC Tracker",
     version="1.0.0"
 )
 
@@ -519,7 +519,7 @@ st.set_page_config(page_title="AI/ML Lab - PC & Attendance Tracker", page_icon="
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000")
 
 st.sidebar.title("AI/ML Lab Monitor")
-st.sidebar.caption("In-Charge: Richa Mam")
+st.sidebar.caption("In-Charge: Dr. Richa Choudhary")
 page = st.sidebar.radio("Navigation", ["PC Status", "Attendance Logs", "Unknown Faces"])
 
 if page == "PC Status":
@@ -543,23 +543,23 @@ if page == "PC Status":
 The following PCs are currently free — [EDIT: PC LIST]
 Please come to the AI Lab if you'd like to use one.
 
-- Richa Mam""", language="text")
+- Dr. Richa Choudhary""", language="text")
 
     st.code("""Lab PC Availability Update:
 All PCs in the AI Lab are currently occupied.
 Will update once a system is free.
 
-- Richa Mam""", language="text")
+- Dr. Richa Choudhary""", language="text")
 
     st.code("""Hi [EDIT: Faculty Name],
 PC-[EDIT: X] is currently free in the AI Lab. You can come and use it.
 
-- Richa Mam""", language="text")
+- Dr. Richa Choudhary""", language="text")
 
     st.code("""Reminder: If you're done using your PC in the AI Lab,
 please mark it as "Free" on the tracker so others can use it.
 
-- Richa Mam""", language="text")
+- Dr. Richa Choudhary""", language="text")
 
 elif page == "Attendance Logs":
     st.title("📋 Lab Attendance Logs (Face Recognition)")
@@ -659,7 +659,7 @@ python-multipart`,
                 <span className="text-[10px] bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-700">Port 8501</span>
               </div>
               <p className="text-slate-400 text-[11px] mb-2 font-sans">
-                Mobile-friendly dashboard for Richa Mam and faculty phones
+                Mobile-friendly dashboard for Dr. Richa Choudhary and faculty phones
               </p>
               <pre className="bg-black/50 p-2.5 rounded text-indigo-300 overflow-x-auto text-[11px]">
                 streamlit run dashboard/app.py --server.address 0.0.0.0
