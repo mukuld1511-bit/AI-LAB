@@ -92,8 +92,8 @@ def ping_health():
     return False
 
 
-def auto_git_sync(interval=120):
-    log_watchdog("Starting Auto Git Sync thread (every 2 minutes)...")
+def auto_git_sync(interval=15):
+    log_watchdog("Starting Auto Git Sync thread (every 15 seconds)...")
     while True:
         try:
             time.sleep(interval)
@@ -126,7 +126,7 @@ def main():
     time.sleep(4)
     tunnel_proc, tunnel_log = start_tunnel(python_exe)
 
-    sync_thread = threading.Thread(target=auto_git_sync, args=(120,), daemon=True)
+    sync_thread = threading.Thread(target=auto_git_sync, args=(15,), daemon=True)
     sync_thread.start()
 
     health_fail_count = 0
