@@ -7,5 +7,5 @@ coverage/
 .env*
 !.env.example
 *.exe
-*.db
 __pycache__/
+
