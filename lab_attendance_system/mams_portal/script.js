@@ -2200,18 +2200,19 @@ function renderProjectsGrid(projects) {
 function openAddProjectModal() {
     document.getElementById("project-modal-title").innerText = "➕ Add Student Research Project";
     document.getElementById("proj-edit-id").value = "";
-    document.getElementById("proj-title-input").value = "";
+    document.getElementById("proj-title").value = "";
+    document.getElementById("proj-status").value = "Ongoing";
     setStudentSelection("");
-    document.getElementById("proj-details-input").value = "";
-    document.getElementById("proj-desc-input").value = "";
+    document.getElementById("proj-details").value = "";
+    document.getElementById("proj-description").value = "";
     setTechSelection("");
         setStudentSelection("");
     setDurationSelection("");
-    document.getElementById("proj-deploy-input").value = "";
-    document.getElementById("proj-github-input").value = "";
-    document.getElementById("proj-report-status-input").value = "Pending";
-    document.getElementById("proj-report-url-input").value = "";
-    document.getElementById("proj-pc-input").value = "PC-1";
+    document.getElementById("proj-deployment-url").value = "";
+    document.getElementById("proj-github-url").value = "";
+    document.getElementById("proj-report-status").value = "Pending";
+    document.getElementById("proj-report-url").value = "";
+    document.getElementById("proj-pc-assigned").value = "PC-1";
 
     const modal = document.getElementById("project-modal");
     if (modal) modal.style.display = "flex";
@@ -2223,17 +2224,18 @@ function openEditProjectModal(projectId) {
 
     document.getElementById("project-modal-title").innerText = "✏️ Edit Student Research Project";
     document.getElementById("proj-edit-id").value = proj.id;
-    document.getElementById("proj-title-input").value = proj.title || "";
+    document.getElementById("proj-title").value = proj.title || "";
+    document.getElementById("proj-status").value = proj.status || "Ongoing";
     setStudentSelection(proj.student_names || "");
-    document.getElementById("proj-details-input").value = proj.student_details || "";
-    document.getElementById("proj-desc-input").value = proj.description || "";
+    document.getElementById("proj-details").value = proj.student_details || "";
+    document.getElementById("proj-description").value = proj.description || "";
     setTechSelection(proj.technologies || "");
     setDurationSelection(proj.duration || "");
-    document.getElementById("proj-deploy-input").value = proj.deployment_url || "";
-    document.getElementById("proj-github-input").value = proj.github_url || "";
-    document.getElementById("proj-report-status-input").value = proj.report_status || "Pending";
-    document.getElementById("proj-report-url-input").value = proj.report_url || "";
-    document.getElementById("proj-pc-input").value = proj.pc_assigned || "PC-1";
+    document.getElementById("proj-deployment-url").value = proj.deployment_url || "";
+    document.getElementById("proj-github-url").value = proj.github_url || "";
+    document.getElementById("proj-report-status").value = proj.report_status || "Pending";
+    document.getElementById("proj-report-url").value = proj.report_url || "";
+    document.getElementById("proj-pc-assigned").value = proj.pc_assigned || "PC-1";
 
     const modal = document.getElementById("project-modal");
     if (modal) modal.style.display = "flex";
@@ -2246,17 +2248,17 @@ function closeProjectModal() {
 
 async function saveProjectFromModal() {
     const editId = document.getElementById("proj-edit-id").value;
-    const title = document.getElementById("proj-title-input").value.trim();
-    const studentNames = document.getElementById("proj-students-input").value.trim();
-    const studentDetails = document.getElementById("proj-details-input").value.trim();
-    const description = document.getElementById("proj-desc-input").value.trim();
-    const tech = document.getElementById("proj-tech-input").value.trim();
-    const duration = document.getElementById("proj-duration-input").value.trim();
-    const deployUrl = document.getElementById("proj-deploy-input").value.trim();
-    const githubUrl = document.getElementById("proj-github-input").value.trim();
-    const reportStatus = document.getElementById("proj-report-status-input").value;
-    const reportUrl = document.getElementById("proj-report-url-input").value.trim();
-    const pcAssigned = document.getElementById("proj-pc-input").value;
+    const title = document.getElementById("proj-title").value.trim();
+    const studentNames = document.getElementById("proj-students").value.trim();
+    const studentDetails = document.getElementById("proj-details").value.trim();
+    const description = document.getElementById("proj-description").value.trim();
+    const tech = document.getElementById("proj-technologies").value.trim();
+    const duration = document.getElementById("proj-duration").value.trim();
+    const deployUrl = document.getElementById("proj-deployment-url").value.trim();
+    const githubUrl = document.getElementById("proj-github-url").value.trim();
+    const reportStatus = document.getElementById("proj-report-status").value;
+    const reportUrl = document.getElementById("proj-report-url").value.trim();
+    const pcAssigned = document.getElementById("proj-pc-assigned").value;
 
     if (!title) {
         return showToast("Project title is required", "error");
@@ -2274,6 +2276,7 @@ async function saveProjectFromModal() {
         duration,
         deployment_url: deployUrl,
         github_url: githubUrl,
+        status: document.getElementById("proj-status").value,
         report_status: reportStatus,
         report_url: reportUrl,
         pc_assigned: pcAssigned
@@ -2402,7 +2405,7 @@ function filterTechDropdown() {
 
 function updateTechBadges() {
     const badgeContainer = document.getElementById("tech-selected-badges");
-    const hiddenInput = document.getElementById("proj-tech-input");
+    const hiddenInput = document.getElementById("proj-technologies");
     
     if (selectedTechs.size === 0) {
         badgeContainer.innerHTML = "Select technologies...";
@@ -2544,7 +2547,7 @@ function filterStudentDropdown() {
 function updateStudentBadges() {
     const badgeContainer = document.getElementById("student-selected-badges");
     // Find the hidden input (different id between backend and mams_portal)
-    let hiddenInput = document.getElementById("proj-students-input");
+    let hiddenInput = document.getElementById("proj-students");
     if (!hiddenInput) hiddenInput = document.getElementById("proj-students");
     
     if (selectedStudents.size === 0) {
@@ -2598,7 +2601,7 @@ document.addEventListener("click", (e) => {
 function updateDurationString(elem) {
     const start = document.getElementById("proj-duration-start").value;
     const end = document.getElementById("proj-duration-end").value;
-    let hiddenInput = document.getElementById("proj-duration-input");
+    let hiddenInput = document.getElementById("proj-duration");
     if (!hiddenInput) hiddenInput = document.getElementById("proj-duration");
     
     if (!start || !end) {
@@ -2629,7 +2632,7 @@ function updateDurationString(elem) {
 function setDurationSelection(durationString) {
     const startElem = document.getElementById("proj-duration-start");
     const endElem = document.getElementById("proj-duration-end");
-    let hiddenInput = document.getElementById("proj-duration-input");
+    let hiddenInput = document.getElementById("proj-duration");
     if (!hiddenInput) hiddenInput = document.getElementById("proj-duration");
     
     if (!durationString) {

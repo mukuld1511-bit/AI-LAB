@@ -752,61 +752,76 @@
                 <button class="modal-close-btn" onclick="closeProjectModal()">✕</button>
             </div>
 
-            <input type="hidden" id="proj-edit-id" value="">
-
-            <div class="form-group">
-                <label class="form-label">Project Title *:</label>
-                <input type="text" id="proj-title-input" class="form-input" autocomplete="off" placeholder="e.g. Autonomous Drone Vision & Precision Landing">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <input type="hidden" id="proj-edit-id" value="">
+                
                 <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Assigned Students *:</label>
-                    <div class="custom-multi-select" id="student-multi-select" style="position: relative;">
-                        <div class="select-box form-input" onclick="toggleStudentDropdown()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; min-height: 40px; height: auto; padding: 8px 12px;">
-                            <div id="student-selected-badges" class="selected-badges" style="display: flex; flex-wrap: wrap; gap: 5px; color: var(--on-surface-variant);">Select members...</div>
-                            <div class="arrow" style="font-size: 10px; color: var(--on-surface-variant); margin-left: 10px;">▼</div>
-                        </div>
-                        <div class="dropdown-list" id="student-dropdown-list" style="display: none; position: absolute; z-index: 1000; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-top: 5px;">
-                            <div style="position: sticky; top: 0; background: #ffffff; padding: 8px; border-bottom: 1px solid #e2e8f0; z-index: 10;">
-                                <input type="text" id="student-search" class="form-input" placeholder="Search members..." onkeyup="filterStudentDropdown()" style="height: 32px; font-size: 13px;" onclick="event.stopPropagation();">
+                    <label class="form-label">Project Title: *</label>
+                    <input type="text" id="proj-title" class="form-input" required placeholder="e.g. Autonomous Drone Vision & Precision Landing">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Student Name(s): *</label>
+                        <div class="custom-multi-select" id="student-multi-select" style="position: relative;">
+                            <div class="select-box form-input" onclick="toggleStudentDropdown()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; min-height: 40px; height: auto; padding: 8px 12px;">
+                                <div id="student-selected-badges" class="selected-badges" style="display: flex; flex-wrap: wrap; gap: 5px; color: var(--on-surface-variant);">Select members...</div>
+                                <div class="arrow" style="font-size: 10px; color: var(--on-surface-variant); margin-left: 10px;">▼</div>
                             </div>
-                            <div class="options-container" id="student-options-container" style="padding: 8px; background: #ffffff; text-align: left; display: flex; flex-direction: column; align-items: flex-start;">
-                                <!-- Checkboxes injected via JS -->
+                            <div class="dropdown-list" id="student-dropdown-list" style="display: none; position: absolute; z-index: 1000; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-top: 5px;">
+                                <div style="position: sticky; top: 0; background: #ffffff; padding: 8px; border-bottom: 1px solid #e2e8f0; z-index: 10;">
+                                    <input type="text" id="student-search" class="form-input" placeholder="Search members..." onkeyup="filterStudentDropdown()" style="height: 32px; font-size: 13px;" onclick="event.stopPropagation();">
+                                </div>
+                                <div class="options-container" id="student-options-container" style="padding: 8px; background: #ffffff; text-align: left; display: flex; flex-direction: column; align-items: flex-start;">
+                                    <!-- Checkboxes injected via JS -->
+                                </div>
                             </div>
                         </div>
+                        <input type="hidden" id="proj-students">
                     </div>
-                    <input type="hidden" id="proj-students-input">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Assigned Workstation:</label>
+                        <select id="proj-pc-assigned" class="form-select">
+                            <option value="">None / Flexible</option>
+                            <option value="PC-1">PC-1 (Front Right)</option>
+                            <option value="PC-2">PC-2</option>
+                            <option value="PC-3">PC-3</option>
+                            <option value="PC-4">PC-4</option>
+                            <option value="PC-5">PC-5</option>
+                            <option value="PC-6">PC-6 (Front Left)</option>
+                            <option value="PC-7">PC-7</option>
+                            <option value="PC-8">PC-8</option>
+                            <option value="BACKEND">BACKEND (Gate Desk)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Workstation Assigned:</label>
-                    <select id="proj-pc-input" class="form-input">
-                        <option value="PC-1">PC-1 (Outer Window)</option>
-                        <option value="PC-2">PC-2</option>
-                        <option value="PC-3">PC-3</option>
-                        <option value="PC-4">PC-4</option>
-                        <option value="PC-5">PC-5</option>
-                        <option value="PC-6">PC-6 (Ritik)</option>
-                        <option value="PC-7">PC-7 (Mukul)</option>
-                        <option value="PC-8">PC-8</option>
-                        <option value="BACKEND">BACKEND Host Server</option>
-                    </select>
-                </div>
-            </div>
 
-            <div class="form-group">
-                <label class="form-label">Student Details & Roles:</label>
-                <input type="text" id="proj-details-input" class="form-input" placeholder="e.g. Ritik (Lead Vision Researcher), Harsh (Flight Systems)">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Project Description:</label>
-                <textarea id="proj-desc-input" class="form-input" rows="3" placeholder="Summary of objectives, methodology and deliverables..."></textarea>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Technologies Used:</label>
+                    <label class="form-label">Student Details / Roles:</label>
+                    <input type="text" id="proj-details" class="form-input" placeholder="e.g. Ritik (Lead Vision Engineer), Harsh (Edge Deployment)">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Project Status:</label>
+                        <select id="proj-status" class="form-select">
+                            <option value="Ongoing">🟢 Ongoing</option>
+                            <option value="Completed">🔵 Completed</option>
+                            <option value="Under Review">🟡 Under Review</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Duration:</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="month" id="proj-duration-start" class="form-input" style="flex: 1;" onchange="updateDurationString(this)">
+                            <span style="align-self: center; color: var(--on-surface-variant); font-weight: 600;">➔</span>
+                            <input type="month" id="proj-duration-end" class="form-input" style="flex: 1;" onchange="updateDurationString(this)">
+                        </div>
+                        <input type="hidden" id="proj-duration">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Technologies / Tech Stack:</label>
                     <div class="custom-multi-select" id="tech-multi-select" style="position: relative;">
                         <div class="select-box form-input" onclick="toggleTechDropdown()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; min-height: 40px; height: auto; padding: 8px 12px;">
                             <div id="tech-selected-badges" class="selected-badges" style="display: flex; flex-wrap: wrap; gap: 5px; color: var(--on-surface-variant);">Select technologies...</div>
@@ -821,39 +836,35 @@
                             </div>
                         </div>
                     </div>
-                    <input type="hidden" id="proj-tech-input">
+                    <input type="hidden" id="proj-technologies">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Duration / Timeline:</label>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="month" id="proj-duration-start" class="form-input" style="flex: 1;" onchange="updateDurationString(this)">
-                        <span style="align-self: center; color: var(--on-surface-variant); font-weight: 600;">?</span>
-                        <input type="month" id="proj-duration-end" class="form-input" style="flex: 1;" onchange="updateDurationString(this)">
+
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Research Abstract / Description:</label>
+                    <textarea id="proj-description" class="form-input" rows="3" placeholder="Brief summary of problem statement, methodology, and lab objectives..."></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Live Deployment Link:</label>
+                        <input type="url" id="proj-deployment-url" class="form-input" placeholder="https://myproject.app">
                     </div>
-                    <input type="hidden" id="proj-duration-input">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">GitHub Repository URL:</label>
+                        <input type="url" id="proj-github-url" class="form-input" placeholder="https://github.com/org/repo">
+                    </div>
                 </div>
-            </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div class="form-group">
-                    <label class="form-label">Live Deployment Link:</label>
-                    <input type="url" id="proj-deploy-input" class="form-input" placeholder="https://my-project.vercel.app">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">GitHub / Code Repo:</label>
-                    <input type="url" id="proj-github-input" class="form-input" placeholder="https://github.com/my-lab/project">
-                </div>
-            </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Report Filing Status:</label>
+                        <select id="proj-report-status" class="form-select">
+                            <option value="Filed">📄 Report Filed</option>
+                            <option value="Pending">⏳ Pending</option>
+                            <option value="Under Review">🔍 Under Review</option>
+                            <option value="Approved">✅ Approved</option>
+                        </select>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div class="form-group">
-                    <label class="form-label">Report Status *:</label>
-                    <select id="proj-report-status-input" class="form-input">
-                        <option value="Filed">✅ Filed</option>
-                        <option value="Pending">⏳ Pending</option>
-                        <option value="Under Review">🔍 Under Review</option>
-                    </select>
-                </div>
                 <div class="form-group">
                     <label class="form-label">Report Document / Drive URL:</label>
                     <input type="text" id="proj-report-url-input" class="form-input" placeholder="e.g. /reports/my_report.pdf or Google Drive link">
