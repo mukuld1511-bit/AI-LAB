@@ -2206,7 +2206,7 @@ function openAddProjectModal() {
     document.getElementById("proj-desc-input").value = "";
     setTechSelection("");
         setStudentSelection("");
-    document.getElementById("proj-duration-input").value = "";
+    setDurationSelection("");
     document.getElementById("proj-deploy-input").value = "";
     document.getElementById("proj-github-input").value = "";
     document.getElementById("proj-report-status-input").value = "Pending";
@@ -2228,7 +2228,7 @@ function openEditProjectModal(projectId) {
     document.getElementById("proj-details-input").value = proj.student_details || "";
     document.getElementById("proj-desc-input").value = proj.description || "";
     setTechSelection(proj.technologies || "");
-    document.getElementById("proj-duration-input").value = proj.duration || "";
+    setDurationSelection(proj.duration || "");
     document.getElementById("proj-deploy-input").value = proj.deployment_url || "";
     document.getElementById("proj-github-input").value = proj.github_url || "";
     document.getElementById("proj-report-status-input").value = proj.report_status || "Pending";
@@ -2592,3 +2592,66 @@ document.addEventListener("click", (e) => {
         list.style.display = "none";
     }
 });
+
+
+// --- Custom Duration Calendar Logic ---
+function updateDurationString(elem) {
+    const start = document.getElementById("proj-duration-start").value;
+    const end = document.getElementById("proj-duration-end").value;
+    let hiddenInput = document.getElementById("proj-duration-input");
+    if (!hiddenInput) hiddenInput = document.getElementById("proj-duration");
+    
+    if (!start || !end) {
+        hiddenInput.value = "";
+        return;
+    }
+    
+    const d1 = new Date(start + "-01");
+    const d2 = new Date(end + "-01");
+    
+    if (d2 < d1) {
+        alert("End date cannot be before start date!");
+        elem.value = "";
+        hiddenInput.value = "";
+        return;
+    }
+    
+    let months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    if (months === 0) months = 1; // if same month, count as 1 month
+    
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const startStr = monthNames[d1.getMonth()] + " " + d1.getFullYear();
+    const endStr = monthNames[d2.getMonth()] + " " + d2.getFullYear();
+    
+    hiddenInput.value = months + " Months (" + startStr + " - " + endStr + ")";
+}
+
+function setDurationSelection(durationString) {
+    const startElem = document.getElementById("proj-duration-start");
+    const endElem = document.getElementById("proj-duration-end");
+    let hiddenInput = document.getElementById("proj-duration-input");
+    if (!hiddenInput) hiddenInput = document.getElementById("proj-duration");
+    
+    if (!durationString) {
+        startElem.value = "";
+        endElem.value = "";
+        hiddenInput.value = "";
+        return;
+    }
+    
+    // Fallback: just set hidden input
+    hiddenInput.value = durationString;
+    
+    // Try to parse "4 Months (Jan 2026 - May 2026)"
+    const match = durationString.match(/\((.*) - (.*)\)/);
+    if (match && match.length === 3) {
+        try {
+            const d1 = new Date(match[1]);
+            const d2 = new Date(match[2]);
+            if (!isNaN(d1) && !isNaN(d2)) {
+                startElem.value = d1.toISOString().slice(0, 7);
+                endElem.value = d2.toISOString().slice(0, 7);
+            }
+        } catch(e) {}
+    }
+}

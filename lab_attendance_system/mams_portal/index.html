@@ -825,7 +825,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Duration / Timeline:</label>
-                    <input type="text" id="proj-duration-input" class="form-input" autocomplete="off" placeholder="e.g. 4 Months (Jan 2026 - May 2026)">
+                    <div style="display: flex; gap: 8px;">
+                        <input type="month" id="proj-duration-start" class="form-input" style="flex: 1;" onchange="updateDurationString(this)">
+                        <span style="align-self: center; color: var(--on-surface-variant); font-weight: 600;">?</span>
+                        <input type="month" id="proj-duration-end" class="form-input" style="flex: 1;" onchange="updateDurationString(this)">
+                    </div>
+                    <input type="hidden" id="proj-duration-input">
                 </div>
             </div>
 
