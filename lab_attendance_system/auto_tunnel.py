@@ -173,6 +173,21 @@ def run_cloudflared_tunnel():
                     print(f"[INFO] Saved active URL to {TUNNEL_FILE}")
                 except Exception as e:
                     print(f"[WARN] Could not write {TUNNEL_FILE}: {e}")
+                    
+                # Auto-update MAMS Portal script.js with new Cloudflare URL
+                try:
+                    import os, re
+                    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mams_portal", "script.js")
+                    if os.path.exists(script_path):
+                        with open(script_path, "r", encoding="utf-8") as f:
+                            script_content = f.read()
+                        script_content = re.sub(r'const ACTIVE_TUNNEL_FALLBACK = ".*?";', f'const ACTIVE_TUNNEL_FALLBACK = "{url.strip()}";', script_content)
+                        with open(script_path, "w", encoding="utf-8") as f:
+                            f.write(script_content)
+                        print(f"[INFO] Automatically updated ACTIVE_TUNNEL_FALLBACK in mams_portal/script.js")
+                except Exception as e:
+                    print(f"[WARN] Could not update mams_portal/script.js: {e}")
+
                 copy_to_clipboard(url)
 
     proc.wait()
