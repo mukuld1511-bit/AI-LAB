@@ -1126,12 +1126,12 @@ function renderTimetableGrid() {
 
     timetableSlots.forEach(slot => {
         bodyHTML += `<tr>`;
-        bodyHTML += `<td class="tt-slot-label">${slot.label || 'L' + slot.slot_number}<span class="slot-time">${slot.start_time || ''} – ${slot.end_time || ''}</span></td>`;
+        bodyHTML += `<td class="tt-slot-label">${slot.label || 'L' + slot.slot}<span class="slot-time">${slot.start || ''} – ${slot.end || ''}</span></td>`;
 
         timetableDays.forEach(day => {
             // Find booking for this cell
             const booking = timetableBookings.find(b =>
-                b.day_of_week === day && b.slot_number === slot.slot_number
+                b.day_of_week === day && b.slot_number === slot.slot
             );
 
             if (booking) {
@@ -1140,10 +1140,10 @@ function renderTimetableGrid() {
                 bodyHTML += `<td class="${cellClass}" title="${booking.student_name}">${booking.student_name}</td>`;
 
                 if (isMe) {
-                    myBookingChips.push(`<span class="tt-booking-chip">📌 ${day} • ${slot.label || 'L' + slot.slot_number} (${slot.start_time || ''})</span>`);
+                    myBookingChips.push(`<span class="tt-booking-chip">📌 ${day} • ${slot.label || 'L' + slot.slot} (${slot.start || ''})</span>`);
                 }
             } else {
-                bodyHTML += `<td class="tt-cell-available" onclick="bookTimetableSlot('${day}', ${slot.slot_number})" title="Click to book">+ Book</td>`;
+                bodyHTML += `<td class="tt-cell-available" onclick="bookTimetableSlot('${day}', ${slot.slot})" title="Click to book">+ Book</td>`;
             }
         });
 
