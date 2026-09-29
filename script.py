@@ -1,6 +1,6 @@
 import os
 
-path = 'lab_attendance_system/backend/static/script.js'
+path = 'lab_attendance_system/mams_portal/script.js'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()
 
@@ -27,6 +27,8 @@ function initTechDropdown() {
     predefinedTechs.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())).forEach(tech => {
         const label = document.createElement("label");
         label.style.display = "flex";
+        label.style.justifyContent = "flex-start";
+        label.style.flexDirection = "row";
         label.style.alignItems = "center";
         label.style.gap = "8px";
         label.style.padding = "6px";
@@ -38,6 +40,7 @@ function initTechDropdown() {
         cb.type = "checkbox";
         cb.value = tech;
         cb.className = "tech-cb";
+        cb.style.margin = "0";
         cb.onclick = (e) => {
             e.stopPropagation();
             if (cb.checked) selectedTechs.add(tech);
@@ -74,7 +77,7 @@ function filterTechDropdown() {
 
 function updateTechBadges() {
     const badgeContainer = document.getElementById("tech-selected-badges");
-    const hiddenInput = document.getElementById("proj-technologies");
+    const hiddenInput = document.getElementById("proj-tech-input");
     
     if (selectedTechs.size === 0) {
         badgeContainer.innerHTML = "Select technologies...";
@@ -131,14 +134,14 @@ document.addEventListener("DOMContentLoaded", () => {
 if 'function initTechDropdown' not in content:
     content += "\n" + tech_js
 
-# Ensure edit project modal sets the tech selection properly
-# Let's find openBackendProjectModal to replace proj-technologies.value with setTechSelection
-if 'document.getElementById("proj-technologies").value = tech;' in content:
-    content = content.replace('document.getElementById("proj-technologies").value = tech;', 'setTechSelection(tech);')
-else:
-    # generic fix: if not found, we will manually replace in edit modal
-    pass
+if 'document.getElementById("proj-tech-input").value = proj.technologies || "";' in content:
+    content = content.replace('document.getElementById("proj-tech-input").value = proj.technologies || "";', 'setTechSelection(proj.technologies || "");')
+
+# In openAddProjectModal we should clear it
+# Search for document.getElementById("proj-tech-input").value = "";
+if 'document.getElementById("proj-tech-input").value = "";' in content:
+    content = content.replace('document.getElementById("proj-tech-input").value = "";', 'setTechSelection("");')
 
 with open(path, 'w', encoding='utf-8') as f:
     f.write(content)
-print("Done adding tech JS")
+print("Done adding tech JS to mams_portal")

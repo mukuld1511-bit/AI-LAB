@@ -1500,7 +1500,7 @@ function initTechDropdown() {
         container.appendChild(label);
         
         // Add hover effect via JS since inline styles are easy
-        label.onmouseenter = () => label.style.background = "var(--surface-container-highest)";
+        label.onmouseenter = () => label.style.background = "#f1f5f9";
         label.onmouseleave = () => label.style.background = "transparent";
     });
 }
