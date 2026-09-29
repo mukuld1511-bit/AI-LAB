@@ -16,6 +16,7 @@ import signal
 import urllib.request
 import json
 from datetime import datetime
+import threading
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGS_DIR = os.path.join(CURRENT_DIR, "logs")
@@ -91,6 +92,27 @@ def ping_health():
     return False
 
 
+def auto_git_sync(interval=120):
+    log_watchdog("Starting Auto Git Sync thread (every 2 minutes)...")
+    while True:
+        try:
+            time.sleep(interval)
+            
+            # Pull latest changes from remote (important to prevent push conflicts)
+            subprocess.run(["git", "pull", "--rebase", "origin", "main"], cwd=CURRENT_DIR, capture_output=True)
+            
+            status_proc = subprocess.run(["git", "status", "--porcelain"], cwd=CURRENT_DIR, capture_output=True, text=True)
+            if status_proc.stdout.strip():
+                log_watchdog("Git changes detected. Auto-syncing to Vercel/GitHub...")
+                subprocess.run(["git", "add", "-A"], cwd=CURRENT_DIR)
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                subprocess.run(["git", "commit", "-m", f"auto-sync: {timestamp}"], cwd=CURRENT_DIR)
+                subprocess.run(["git", "push", "origin", "main"], cwd=CURRENT_DIR)
+                log_watchdog("Git sync complete.")
+        except Exception as e:
+            log_watchdog(f"Git auto-sync error: {e}")
+
+
 def main():
     log_watchdog("=" * 65)
     log_watchdog("AI/ML LAB 24/7 PRODUCTION SUPERVISOR INITIALIZING")
@@ -103,6 +125,9 @@ def main():
     # Give backend 4 seconds to spin up camera and models
     time.sleep(4)
     tunnel_proc, tunnel_log = start_tunnel(python_exe)
+
+    sync_thread = threading.Thread(target=auto_git_sync, args=(120,), daemon=True)
+    sync_thread.start()
 
     health_fail_count = 0
     running = True
