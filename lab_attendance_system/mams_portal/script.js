@@ -2154,11 +2154,7 @@ function renderProjectsGrid(projects) {
                         </div>
                         <div>
                             <strong>📄 Report Status:</strong><br>
-                            ${isFiled && proj.report_url ? `
-                                <a href="${escapeHtml(proj.report_url)}" target="_blank" style="color: #10b981; font-weight: 700; text-decoration: underline;">
-                                    Filed (View Doc ↗)
-                                </a>
-                            ` : `<span style="font-weight: 600; color: ${isFiled ? '#10b981' : '#f59e0b'};">${escapeHtml(reportText)}</span>`}
+                            <span style="font-weight: 600; color: ${isFiled ? '#10b981' : (proj.report_status === 'Approved' ? '#3b82f6' : '#f59e0b')};">${escapeHtml(proj.report_status || reportText)}</span>
                         </div>
                     </div>
                 </div>
@@ -2174,6 +2170,11 @@ function renderProjectsGrid(projects) {
                         ${proj.github_url ? `
                             <a href="${escapeHtml(proj.github_url)}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
                                 💻 Code ↗
+                            </a>
+                        ` : ''}
+                        ${proj.report_url ? `
+                            <a href="${escapeHtml(proj.report_url)}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                ?? Report ?
                             </a>
                         ` : ''}
                     </div>
