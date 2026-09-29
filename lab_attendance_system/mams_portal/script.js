@@ -2516,7 +2516,7 @@ function initStudentDropdown(users) {
         };
         
         label.appendChild(cb);
-        label.appendChild(document.createTextNode([] ));
+        label.appendChild(document.createTextNode("[" + (user.role || "Member") + "] " + user.name));
         container.appendChild(label);
         
         label.onmouseenter = () => label.style.background = "#f1f5f9";
