@@ -791,9 +791,23 @@
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div class="form-group">
+                <div class="form-group" style="margin: 0;">
                     <label class="form-label">Technologies Used:</label>
-                    <input type="text" id="proj-tech-input" class="form-input" placeholder="e.g. PyTorch, YOLOv10, ROS2, CUDA">
+                    <div class="custom-multi-select" id="tech-multi-select" style="position: relative;">
+                        <div class="select-box form-input" onclick="toggleTechDropdown()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; min-height: 40px; height: auto; padding: 8px 12px;">
+                            <div id="tech-selected-badges" class="selected-badges" style="display: flex; flex-wrap: wrap; gap: 5px; color: var(--on-surface-variant);">Select technologies...</div>
+                            <div class="arrow" style="font-size: 10px; color: var(--on-surface-variant); margin-left: 10px;">▼</div>
+                        </div>
+                        <div class="dropdown-list" id="tech-dropdown-list" style="display: none; position: absolute; z-index: 1000; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-top: 5px;">
+                            <div style="position: sticky; top: 0; background: #ffffff; padding: 8px; border-bottom: 1px solid #e2e8f0; z-index: 10;">
+                                <input type="text" id="tech-search" class="form-input" placeholder="Search tools..." onkeyup="filterTechDropdown()" style="height: 32px; font-size: 13px;" onclick="event.stopPropagation();">
+                            </div>
+                            <div class="options-container" id="tech-options-container" style="padding: 8px; background: #ffffff;">
+                                <!-- Checkboxes will be injected here via JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="proj-tech-input">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Duration / Timeline:</label>
