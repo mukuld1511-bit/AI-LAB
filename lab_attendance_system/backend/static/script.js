@@ -1232,7 +1232,7 @@ async function loadBackendProjects() {
 
     try {
         const data = await apiFetch("/api/projects");
-        backendProjectsList = Array.isArray(data) ? data : [];
+        backendProjectsList = data.projects ? data.projects : (Array.isArray(data) ? data : []);
         applyBackendProjectFilters();
     } catch (e) {
         grid.innerHTML = `<div style="grid-column: 1/-1; color: var(--error); text-align: center; padding: 30px;">Error loading projects: ${e.message}</div>`;
