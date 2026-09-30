@@ -1226,10 +1226,12 @@ function renderRegisteredUsersGrid(users) {
                     </div>
                 </div>
                 
-                <div class="student-actions">
-                    <button class="btn btn-primary" style="flex: 1; font-size: 12px; padding: 6px 8px;" onclick="allotPCToStudent('${user.name}', '${user.email || ''}', '${role}')">
+                <div class="student-actions" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 4px;" onclick="allotPCToStudent('${user.name}', '${user.email || ''}', '${role}')">
                         💻 Allot PC
                     </button>
+                    <button class="btn btn-primary" style="font-size: 11px; padding: 4px; background: #16a34a;" onclick="markManualDirect('${user.name}', 'IN')">✅ IN</button>
+                    <button class="btn btn-secondary" style="font-size: 11px; padding: 4px;" onclick="markManualDirect('${user.name}', 'OUT')">🚪 OUT</button>
                     ${user.email ? `
                         <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="openDirectEmailModal('${user.email}', '${user.name}')" title="Email Member">
                             ✉️
