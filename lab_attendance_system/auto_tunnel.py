@@ -203,6 +203,42 @@ def run_tunnel():
         run_cloudflared_tunnel()
         return
 
+    if tunnel_provider == "tailscale":
+        print("\n" + "=" * 65)
+        print("  [SUCCESS] 24/7 TAILSCALE FUNNEL ONLINE!")
+        print(f"  >> Public Cloud URL: https://labg418pc12.tailc8c1f6.ts.net")
+        print(f"  >> Faculty Portal  : https://labg418pc12.tailc8c1f6.ts.net/mams_portal/index.html")
+        print("  >> Completely UNLIMITED Bandwidth & Permanent Domain")
+        print("=" * 65 + "\n")
+        
+        try:
+            with open(TUNNEL_FILE, "w", encoding="utf-8") as f:
+                f.write("https://labg418pc12.tailc8c1f6.ts.net")
+            print(f"[INFO] Saved active URL to {TUNNEL_FILE}")
+        except Exception as e:
+            print(f"[WARN] Could not write {TUNNEL_FILE}: {e}")
+
+        # Auto-update MAMS Portal script.js with new Tailscale URL
+        try:
+            import re
+            script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mams_portal", "script.js")
+            if os.path.exists(script_path):
+                with open(script_path, "r", encoding="utf-8") as f:
+                    script_content = f.read()
+                script_content = re.sub(r'const ACTIVE_TUNNEL_FALLBACK = ".*?";', f'const ACTIVE_TUNNEL_FALLBACK = "https://labg418pc12.tailc8c1f6.ts.net";', script_content)
+                with open(script_path, "w", encoding="utf-8") as f:
+                    f.write(script_content)
+                print(f"[INFO] Automatically updated ACTIVE_TUNNEL_FALLBACK to Tailscale in mams_portal/script.js")
+        except Exception as e:
+            print(f"[WARN] Could not update mams_portal/script.js: {e}")
+
+        copy_to_clipboard("https://labg418pc12.tailc8c1f6.ts.net")
+        
+        # Keep process alive so watchdog doesn't restart it
+        while True:
+            time.sleep(3600)
+        return
+
     print("=" * 65)
     print("   AI/ML LAB 24/7 PERMANENT TUNNEL MANAGER")
     print(f"   Target Port  : {NGROK_PORT}")
