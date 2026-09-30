@@ -977,9 +977,9 @@ function renderRegisteredDirectory(users) {
                     <div style="font-size: 11px; color: #64748b;">${user.email ? `✉️ ${user.email}` : 'No email'}</div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <button class="btn btn-primary" style="font-size: 10px; padding: 4px; background: #16a34a;" onclick="markManualDirect('', 'IN')" title="Mark IN">✅ IN</button>
-                    <button class="btn btn-secondary" style="font-size: 10px; padding: 4px;" onclick="markManualDirect('', 'OUT')" title="Mark OUT">🚪 OUT</button>
-                    <button class="btn btn-secondary" style="font-size: 10px; padding: 4px; color: var(--error);" onclick="deleteRegisteredMember('')" title="Unregister Member">🗑️ Del</button>
+                    <button class="btn btn-primary" style="font-size: 10px; padding: 4px; background: #16a34a;" onclick="markManualDirect('${user.name}', 'IN')" title="Mark IN">✅ IN</button>
+                    <button class="btn btn-secondary" style="font-size: 10px; padding: 4px;" onclick="markManualDirect('${user.name}', 'OUT')" title="Mark OUT">🚪 OUT</button>
+                    <button class="btn btn-secondary" style="font-size: 10px; padding: 4px; color: var(--error);" onclick="deleteRegisteredMember('${user.name}')" title="Unregister Member">🗑️ Del</button>
                 </div>
             </div>
         `;

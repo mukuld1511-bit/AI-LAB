@@ -1227,9 +1227,9 @@ function renderRegisteredUsersGrid(users) {
                 </div>
                 
                 <div class="student-actions" style="display: flex; gap: 4px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 4px;" onclick="allotPCToStudent('', '', '')">💻 Allot PC</button>
-                    <button class="btn btn-primary" style="font-size: 11px; padding: 4px; background: #16a34a;" onclick="markManualDirect('', 'IN')">✅ IN</button>
-                    <button class="btn btn-secondary" style="font-size: 11px; padding: 4px;" onclick="markManualDirect('', 'OUT')">🚪 OUT</button>
+                    <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 4px;" onclick="allotPCToStudent('${user.name}', '${user.email || \'\'}', '${role}')">💻 Allot PC</button>
+                    <button class="btn btn-primary" style="font-size: 11px; padding: 4px; background: #16a34a;" onclick="markManualDirect('${user.name}', 'IN')">✅ IN</button>
+                    <button class="btn btn-secondary" style="font-size: 11px; padding: 4px;" onclick="markManualDirect('${user.name}', 'OUT')">🚪 OUT</button>
                 </div>
 
                     <!-- Tech Stack Badges -->
