@@ -793,6 +793,8 @@ def clear_student_timetable(student_name: str, week_label: str = "recurring") ->
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM weekly_schedules WHERE UPPER(student_name) = UPPER(?) AND week_label = ?", (student_name.strip(), week_label))
+    count = cursor.rowcount
+    conn.commit()
     conn.close()
     return count
 
