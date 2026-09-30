@@ -176,7 +176,7 @@ def run_cloudflared_tunnel():
                     
                 # Auto-update MAMS Portal script.js with new Cloudflare URL
                 try:
-                    import os, re
+                    import re
                     script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mams_portal", "script.js")
                     if os.path.exists(script_path):
                         with open(script_path, "r", encoding="utf-8") as f:
