@@ -1202,7 +1202,7 @@ async function clearMySchedule() {
     if (!confirm(`Clear all timetable bookings for "${name}"?`)) return;
 
     try {
-        await apiFetch(`/api/timetable/clear?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+        await apiFetch(`/api/timetable/clear/${encodeURIComponent(name)}`, { method: "DELETE" });
         await loadTimetable();
     } catch (e) {
         alert("Failed to clear schedule: " + e.message);
