@@ -335,8 +335,9 @@ class GateCameraManager:
             time.sleep(0.12)
 
 
-def generate_live_stream_frames():
+async def generate_live_stream_frames():
     """Generator for streaming live MJPEG frames to browser clients."""
+    import asyncio
     mgr = GateCameraManager()
     mgr.start()
     try:
@@ -346,7 +347,7 @@ def generate_live_stream_frames():
                 jpeg = create_standby_frame("INITIALIZING...")
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + jpeg + b'\r\n')
-            time.sleep(0.035)
+            await asyncio.sleep(0.035)
     finally:
         mgr.stop()
 
