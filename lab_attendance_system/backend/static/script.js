@@ -975,8 +975,10 @@ function renderRegisteredDirectory(users) {
                     ${user.roll_no ? `<div style="font-size: 11px; color: #475569; font-weight: 600;">🆔 ${user.roll_no}</div>` : ''}
                     <div style="font-size: 11px; color: #64748b;">${user.email ? `✉️ ${user.email}` : 'No email'}</div>
                 </div>
-                <div>
-                    <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: var(--error);" onclick="deleteRegisteredMember('${user.name}')" title="Unregister Member">🗑️</button>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <button class="btn btn-primary" style="font-size: 10px; padding: 4px; background: #16a34a;" onclick="markManualDirect('', 'IN')" title="Mark IN">✅ IN</button>
+                    <button class="btn btn-secondary" style="font-size: 10px; padding: 4px;" onclick="markManualDirect('', 'OUT')" title="Mark OUT">🚪 OUT</button>
+                    <button class="btn btn-secondary" style="font-size: 10px; padding: 4px; color: var(--error);" onclick="deleteRegisteredMember('')" title="Unregister Member">🗑️ Del</button>
                 </div>
             </div>
         `;
@@ -1761,5 +1763,19 @@ function setDurationSelection(durationString) {
                 endElem.value = d2.toISOString().slice(0, 7);
             }
         } catch(e) {}
+    }
+}
+
+
+async function markManualDirect(name, action) {
+    try {
+        await apiFetch("/attendance/manual", {
+            method: "POST",
+            body: JSON.stringify({ name, action })
+        });
+        alert(${name} marked  successfully!);
+        if (typeof loadAttendance === "function") loadAttendance();
+    } catch (e) {
+        alert(Failed to mark : );
     }
 }
