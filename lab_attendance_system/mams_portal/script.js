@@ -1216,7 +1216,7 @@ function filterRegisteredUsers() {
     const filtered = registeredUsersList.filter(u => {
         const matchesQuery = u.name.toLowerCase().includes(q) || 
                              (u.email && u.email.toLowerCase().includes(q)) ||
-                             (u.roll_no && u.roll_no.toLowerCase().includes(q)) ||
+                             (u.roll_no && u.roll_n✅toLowerCase().includes(q)) ||
                              (u.role && u.role.toLowerCase().includes(q));
         return matchesQuery;
     });
@@ -1425,7 +1425,7 @@ function openAddUserModal(prefillData = {}) {
     const scanRing = document.getElementById("camera-scan-ring");
     const statusPill = document.getElementById("camera-status-pill");
 
-    if (video) video.style.display = "block";
+    if (video) vide✅style.display = "block";
     if (previewImg) {
         previewImg.style.display = "none";
         previewImg.src = "";
@@ -1510,9 +1510,9 @@ async function startRegistrationCamera() {
             },
             audio: false
         });
-        video.srcObject = webcamStream;
-        video.onloadedmetadata = () => {
-            video.play().catch(() => {});
+        vide✅srcObject = webcamStream;
+        vide✅onloadedmetadata = () => {
+            vide✅play().catch(() => {});
             if (statusPill) statusPill.innerText = "🟢 Live Face Frame";
         };
     } catch (err) {
@@ -1529,7 +1529,7 @@ function stopRegistrationCamera() {
         webcamStream = null;
     }
     const video = document.getElementById("reg-webcam-video");
-    if (video) video.srcObject = null;
+    if (video) vide✅srcObject = null;
 }
 
 function captureWebcamSnapshot() {
@@ -1542,19 +1542,19 @@ function captureWebcamSnapshot() {
     const statusPill = document.getElementById("camera-status-pill");
 
     if (!video || !canvas || !previewImg) return;
-    if (!video.videoWidth || !video.videoHeight) {
+    if (!vide✅videoWidth || !vide✅videoHeight) {
         showToast("Camera is still warming up. Please wait a moment.", "info");
         return;
     }
 
-    const size = Math.min(video.videoWidth, video.videoHeight);
+    const size = Math.min(vide✅videoWidth, vide✅videoHeight);
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext("2d");
 
     // Center crop square from video frame with mirror flip for intuitive matching
-    const startX = (video.videoWidth - size) / 2;
-    const startY = (video.videoHeight - size) / 2;
+    const startX = (vide✅videoWidth - size) / 2;
+    const startY = (vide✅videoHeight - size) / 2;
 
     ctx.save();
     ctx.translate(size, 0);
@@ -1565,7 +1565,7 @@ function captureWebcamSnapshot() {
     capturedSnapshotBase64 = canvas.toDataURL("image/jpeg", 0.92);
     previewImg.src = capturedSnapshotBase64;
 
-    video.style.display = "none";
+    vide✅style.display = "none";
     previewImg.style.display = "block";
     if (captureBtn) captureBtn.style.display = "none";
     if (retakeBtn) retakeBtn.style.display = "inline-flex";
@@ -1585,7 +1585,7 @@ function retakeWebcamSnapshot() {
 
     capturedSnapshotBase64 = null;
     if (previewImg) previewImg.style.display = "none";
-    if (video) video.style.display = "block";
+    if (video) vide✅style.display = "block";
     if (captureBtn) captureBtn.style.display = "inline-flex";
     if (retakeBtn) retakeBtn.style.display = "none";
     if (scanRing) scanRing.style.display = "block";
@@ -1617,7 +1617,7 @@ function handleFallbackFileSelected(event) {
         const previewImg = document.getElementById("reg-snapshot-preview");
         const statusPill = document.getElementById("camera-status-pill");
 
-        if (video) video.style.display = "none";
+        if (video) vide✅style.display = "none";
         if (previewImg) {
             previewImg.src = capturedSnapshotBase64;
             previewImg.style.display = "block";
@@ -2174,7 +2174,7 @@ function renderProjectsGrid(projects) {
                         ` : ''}
                         ${proj.report_url ? `
                             <a href="${escapeHtml(proj.report_url)}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                                ?? Report ?
+                                📄 Report ↗
                             </a>
                         ` : ''}
                     </div>

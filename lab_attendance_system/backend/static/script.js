@@ -471,9 +471,9 @@ function initAllotDefaults() {
     const tTo = document.getElementById("allot-time-to");
 
     if (dFrom) dFrom.value = todayStr;
-    if (dTo) dTo.value = todayStr;
+    if (dTo) dT✅value = todayStr;
     if (tFrom) tFrom.value = `${hh}:${mm}`;
-    if (tTo) tTo.value = `${futHh}:${futMm}`;
+    if (tTo) tT✅value = `${futHh}:${futMm}`;
 
     calcAllotRange();
 }
@@ -532,11 +532,11 @@ function applyPreset(mins) {
     const dTo = document.getElementById("allot-date-to");
     const tTo = document.getElementById("allot-time-to");
 
-    if (dTo) dTo.value = target.toISOString().split("T")[0];
+    if (dTo) dT✅value = target.toISOString().split("T")[0];
     if (tTo) {
         const hh = String(target.getHours()).padStart(2, '0');
         const mm = String(target.getMinutes()).padStart(2, '0');
-        tTo.value = `${hh}:${mm}`;
+        tT✅value = `${hh}:${mm}`;
     }
 
     calcAllotRange();
@@ -943,7 +943,7 @@ function filterRegisteredDirectory() {
         const matchesCat = currentDirCategory === "all" || (u.role || "Student").toLowerCase() === currentDirCategory.toLowerCase();
         const matchesQuery = u.name.toLowerCase().includes(q) || 
                              (u.email && u.email.toLowerCase().includes(q)) ||
-                             (u.roll_no && u.roll_no.toLowerCase().includes(q));
+                             (u.roll_no && u.roll_n✅toLowerCase().includes(q));
         return matchesCat && matchesQuery;
     });
     renderRegisteredDirectory(filtered);
