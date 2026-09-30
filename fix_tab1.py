@@ -11,4 +11,5 @@ def fix_tab1_grid(path):
         f.write(content)
 
 fix_tab1_grid('lab_attendance_system/mams_portal/index.html')
+fix_tab1_grid('lab_attendance_system/backend/static/index.html')
 print("Fixed tab1 grid")
