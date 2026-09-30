@@ -1394,3 +1394,46 @@ body {
     border-color: #6366f1;
 }
 
+
+/* === MOBILE OPTIMIZATIONS === */
+#attendance-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .data-table th, .data-table td {
+        font-size: 12px;
+        padding: 10px 8px;
+    }
+    
+    .student-card {
+        padding: 12px;
+    }
+    
+    .student-actions {
+        flex-direction: column;
+    }
+    .student-actions .btn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+        padding: 10px !important;
+        font-size: 13px !important;
+    }
+    
+    .project-card {
+        padding: 14px;
+    }
+    
+    .header-sub {
+        font-size: 11px;
+    }
+    
+    .logo-badge {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
+}
