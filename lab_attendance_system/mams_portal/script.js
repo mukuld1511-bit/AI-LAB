@@ -113,7 +113,7 @@ async function apiFetch(endpoint, options = {}) {
     const isGet = !options.method || options.method.toUpperCase() === "GET";
     
     try {
-        const response = await fetch(${BASE_URL}, {
+        const response = await fetch(`${BASE_URL}${endpoint}`, {
             ...options,
             headers: {
                 "ngrok-skip-browser-warning": "true",
@@ -125,7 +125,7 @@ async function apiFetch(endpoint, options = {}) {
         
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.detail || HTTP error );
+            throw new Error(errData.detail || `HTTP error ${response.status}`);
         }
         
         const data = await response.json();
@@ -147,7 +147,7 @@ async function apiFetch(endpoint, options = {}) {
             if (cachedStr) {
                 try {
                     const cachedObj = JSON.parse(cachedStr);
-                    console.warn([Offline Cache] Serving  from cache ());
+                    console.warn(`[Offline Cache] Serving ${endpoint} from cache (${cachedObj.timestamp})`);
                     if (typeof setOfflineStatus === "function") setOfflineStatus(true, cachedObj.timestamp);
                     return cachedObj.data;
                 } catch (parseErr) {}
@@ -1226,11 +1226,947 @@ function renderRegisteredUsersGrid(users) {
                     </div>
                 </div>
                 
-                <div class="student-actions" style="display: flex; gap: 4px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 4px;" onclick="allotPCToStudent('${user.name}', '${user.email || \'\'}', '${role}')">💻 Allot PC</button>
-                    <button class="btn btn-primary" style="font-size: 11px; padding: 4px; background: #16a34a;" onclick="markManualDirect('${user.name}', 'IN')">✅ IN</button>
-                    <button class="btn btn-secondary" style="font-size: 11px; padding: 4px;" onclick="markManualDirect('${user.name}', 'OUT')">🚪 OUT</button>
+                <div class="student-actions">
+                    <button class="btn btn-primary" style="flex: 1; font-size: 12px; padding: 6px 8px;" onclick="allotPCToStudent('${user.name}', '${user.email || ''}', '${role}')">
+                        💻 Allot PC
+                    </button>
+                    ${user.email ? `
+                        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="openDirectEmailModal('${user.email}', '${user.name}')" title="Email Member">
+                            ✉️
+                        </button>
+                    ` : ''}
+                    <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 8px; color: var(--error);" onclick="deleteStudent('${user.name}')" title="Unregister Member">
+                        🗑️
+                    </button>
                 </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function filterRegisteredUsers() {
+    const q = (document.getElementById("search-reg-input")?.value || "").toLowerCase();
+    const filtered = registeredUsersList.filter(u => {
+        const matchesQuery = u.name.toLowerCase().includes(q) || 
+                             (u.email && u.email.toLowerCase().includes(q)) ||
+                             (u.roll_no && u.roll_no.toLowerCase().includes(q)) ||
+                             (u.role && u.role.toLowerCase().includes(q));
+        return matchesQuery;
+    });
+    renderRegisteredUsersGrid(filtered);
+}
+
+function allotPCToStudent(name, email, role = "Student") {
+    // Find first available PC
+    const firstFree = allPCsState.find(p => p.status.toLowerCase() === "free");
+    const targetPC = firstFree ? firstFree.pc_id : "PC-1";
+    
+    handlePCClick(targetPC, true);
+    
+    // Auto-fill member info and select their role
+    setTimeout(() => {
+        selectUserRole(role);
+        const nameInput = document.getElementById("modal-student-name");
+        const emailInput = document.getElementById("modal-student-email");
+        if (nameInput) nameInput.value = name;
+        if (emailInput) emailInput.value = email;
+    }, 50);
+}
+
+async function deleteStudent(name) {
+    if (!confirm(`Are you sure you want to unregister ${name}? This will remove facial recognition biometric data as well.`)) return;
+    try {
+        await apiFetch(`/api/registered_users/${encodeURIComponent(name)}`, { method: "DELETE" });
+        showToast(`Member '${name}' unregistered.`, "success");
+        await loadRegisteredFaces();
+    } catch (e) {
+        showToast("Error deleting member: " + e.message, "error");
+    }
+}
+
+// ── Unknown Faces / Intruders Tab ──
+
+async function loadUnknownFaces() {
+    if (!BASE_URL) return;
+    const grid = document.getElementById("unknown-grid");
+    const countBadge = document.getElementById("nav-unknown-count");
+    if (!grid) return;
+    
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><span class="spinner"></span> Loading intruder captures...</div>';
+    
+    try {
+        const data = await apiFetch("/unknown_faces");
+        if (countBadge) countBadge.innerText = data.length;
+        
+        if (data.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No unwanted or unknown visitors detected! 🎉</div>';
+            return;
+        }
+
+        grid.innerHTML = data.map(face => {
+            const imgUrl = face.image_base64 || (face.url ? `${BASE_URL}${face.url}` : "");
+            const fallbackSnapshot = getPlaceholderFaceSVG("No Photo");
+            return `
+                <div class="unknown-card">
+                    <div class="unknown-img-wrap" onclick="openLightbox('${imgUrl}', '${face.filename}', '${face.timestamp}', '${face.date}')">
+                        <img src="${imgUrl || fallbackSnapshot}" alt="Intruder Snapshot" onerror="this.onerror=null; this.src='${fallbackSnapshot}';">
+                    </div>
+                    <div class="unknown-meta">
+                        <strong>Captured:</strong> ${face.timestamp}<br>
+                        <p>Date: ${face.date}</p>
+                    </div>
+                    <div class="unknown-actions">
+                        <button class="btn btn-secondary" style="flex: 1; font-size: 11px; padding: 5px 6px;" onclick="openLightbox('${imgUrl}', '${face.filename}', '${face.timestamp}', '${face.date}')">
+                            🔍 Zoom
+                        </button>
+                        <button class="btn btn-secondary" style="font-size: 11px; padding: 5px 8px; color: var(--error);" onclick="deleteUnknownPhoto('${face.filename}')" title="Delete Image">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    } catch(e) {
+        grid.innerHTML = `<p style="color:red; grid-column: 1/-1;">Error loading unknown faces: ${e.message}</p>`;
+    }
+}
+
+async function deleteUnknownPhoto(filename) {
+    if (!confirm(`Delete this photo snapshot?`)) return;
+    try {
+        await apiFetch(`/unknown_faces/${encodeURIComponent(filename)}`, { method: "DELETE" });
+        showToast("Photo deleted successfully.", "success");
+        closeLightbox();
+        await loadUnknownFaces();
+    } catch (e) {
+        showToast("Failed to delete photo: " + e.message, "error");
+    }
+}
+
+async function clearAllUnknownPhotos() {
+    if (!confirm("Are you sure you want to clear ALL intruder face photos?")) return;
+    try {
+        await apiFetch("/api/unknown_faces/clear_all", { method: "DELETE" });
+        showToast("All unknown photos cleared.", "success");
+        await loadUnknownFaces();
+    } catch (e) {
+        showToast("Error clearing photos: " + e.message, "error");
+    }
+}
+
+// Lightbox modal for Unknown Faces
+let currentLightboxFile = null;
+function openLightbox(url, filename, timestamp, date) {
+    currentLightboxFile = filename;
+    const modal = document.getElementById("lightbox-modal");
+    const img = document.getElementById("lightbox-img");
+    const meta = document.getElementById("lightbox-meta");
+    const deleteBtn = document.getElementById("lightbox-delete-btn");
+    const registerBtn = document.getElementById("lightbox-register-btn");
+
+    if (!modal) return;
+    img.src = url;
+    meta.innerHTML = `<strong>Snapshot:</strong> ${filename} &bull; <strong>Time:</strong> ${timestamp} &bull; <strong>Date:</strong> ${date}`;
+    
+    deleteBtn.onclick = () => deleteUnknownPhoto(filename);
+    registerBtn.onclick = () => {
+        closeLightbox();
+        openAddStudentModal();
+    };
+
+    modal.style.display = "flex";
+}
+
+function closeLightbox() {
+    const modal = document.getElementById("lightbox-modal");
+    if (modal) modal.style.display = "none";
+}
+
+// ── Direct Email / Notice Modal ──
+
+function openDirectEmailModal(recipientEmail = "", recipientName = "") {
+    const modal = document.getElementById("direct-email-modal");
+    if (!modal) return;
+    
+    document.getElementById("direct-email-to").value = recipientEmail;
+    document.getElementById("direct-email-name").value = recipientName;
+    document.getElementById("direct-email-body").value = "";
+    
+    modal.style.display = "flex";
+}
+
+function closeDirectEmailModal() {
+    const modal = document.getElementById("direct-email-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitDirectEmail() {
+    const to = document.getElementById("direct-email-to").value.trim();
+    const name = document.getElementById("direct-email-name").value.trim();
+    const subject = document.getElementById("direct-email-subject").value.trim();
+    const body = document.getElementById("direct-email-body").value.trim();
+    const btn = document.getElementById("send-direct-email-btn");
+
+    if (!to || !body) {
+        showToast("Please provide recipient email and message.", "error");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Sending...";
+
+    try {
+        const result = await apiFetch("/api/send_email", {
+            method: "POST",
+            body: JSON.stringify({
+                to_email: to,
+                recipient_name: name,
+                subject: subject,
+                message: body
+            })
+        });
+
+        showToast(result.message || "Email sent successfully!", "success");
+        closeDirectEmailModal();
+    } catch (e) {
+        showToast("Failed to send email: " + e.message, "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Send Email";
+    }
+}
+
+// ── Live Circular Webcam Face Registration Module ──
+
+function openAddUserModal(prefillData = {}) {
+    const modal = document.getElementById("add-student-modal");
+    if (!modal) return;
+    modal.style.display = "flex";
+
+    selectRegRole(prefillData.role || "Student");
+    capturedSnapshotBase64 = null;
+
+    document.getElementById("new-student-name").value = prefillData.name || "";
+    document.getElementById("new-student-email").value = prefillData.email || "";
+    document.getElementById("new-user-roll-dept").value = prefillData.roll_no || "";
+
+    // Reset camera preview & snapshot elements
+    const video = document.getElementById("reg-webcam-video");
+    const previewImg = document.getElementById("reg-snapshot-preview");
+    const captureBtn = document.getElementById("btn-capture-snapshot");
+    const retakeBtn = document.getElementById("btn-retake-snapshot");
+    const scanRing = document.getElementById("camera-scan-ring");
+    const statusPill = document.getElementById("camera-status-pill");
+
+    if (video) video.style.display = "block";
+    if (previewImg) {
+        previewImg.style.display = "none";
+        previewImg.src = "";
+    }
+    if (captureBtn) captureBtn.style.display = "inline-flex";
+    if (retakeBtn) retakeBtn.style.display = "none";
+    if (scanRing) scanRing.style.display = "block";
+    if (statusPill) statusPill.innerText = "🟢 Initializing Camera...";
+
+    startRegistrationCamera();
+}
+
+// Alias for legacy calls
+function openAddStudentModal() {
+    openAddUserModal();
+}
+
+function closeAddUserModal() {
+    const modal = document.getElementById("add-student-modal");
+    if (modal) modal.style.display = "none";
+    stopRegistrationCamera();
+    capturedSnapshotBase64 = null;
+}
+
+function closeAddStudentModal() {
+    closeAddUserModal();
+}
+
+function selectRegRole(role) {
+    selectedRegRole = role || "Student";
+    const chips = document.querySelectorAll("[data-regrole]");
+    chips.forEach(c => {
+        if (c.dataset.regrole === selectedRegRole) {
+            c.classList.add("active");
+        } else {
+            c.classList.remove("active");
+        }
+    });
+
+    const idLabel = document.getElementById("new-user-id-label");
+    const idInput = document.getElementById("new-user-roll-dept");
+    const nameLabel = document.getElementById("new-user-name-label");
+    const nameInput = document.getElementById("new-student-name");
+
+    if (selectedRegRole === "Student") {
+        if (nameLabel) nameLabel.innerText = "Student Full Name:";
+        if (nameInput) nameInput.placeholder = "e.g. Ayush Sharma";
+        if (idLabel) idLabel.innerText = "Roll Number / Batch:";
+        if (idInput) idInput.placeholder = "e.g. 21BCSE101";
+    } else if (selectedRegRole === "Faculty") {
+        if (nameLabel) nameLabel.innerText = "Faculty Name & Title:";
+        if (nameInput) nameInput.placeholder = "e.g. Dr. Sharma, Prof. Verma";
+        if (idLabel) idLabel.innerText = "Designation / Department:";
+        if (idInput) idInput.placeholder = "e.g. Associate Professor (CSE)";
+    } else if (selectedRegRole === "Guest") {
+        if (nameLabel) nameLabel.innerText = "Guest / Visitor Name:";
+        if (nameInput) nameInput.placeholder = "e.g. Rahul Verma (External Researcher)";
+        if (idLabel) idLabel.innerText = "Organization / Purpose:";
+        if (idInput) idInput.placeholder = "e.g. Visiting Scholar / Workshop";
+    }
+}
+
+async function startRegistrationCamera() {
+    const video = document.getElementById("reg-webcam-video");
+    const statusPill = document.getElementById("camera-status-pill");
+    if (!video) return;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (statusPill) statusPill.innerText = "⚠️ Camera not supported";
+        showToast("Camera API not available in this browser. You can use the photo upload option.", "info");
+        toggleUploadFallback(true);
+        return;
+    }
+
+    try {
+        stopRegistrationCamera();
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: "user",
+                width: { ideal: 640 },
+                height: { ideal: 640 }
+            },
+            audio: false
+        });
+        video.srcObject = webcamStream;
+        video.onloadedmetadata = () => {
+            video.play().catch(() => {});
+            if (statusPill) statusPill.innerText = "🟢 Live Face Frame";
+        };
+    } catch (err) {
+        console.warn("Webcam access error:", err);
+        if (statusPill) statusPill.innerText = "⚠️ Camera Access Denied";
+        showToast("Camera access was blocked or unavailable. Falling back to file upload.", "info");
+        toggleUploadFallback(true);
+    }
+}
+
+function stopRegistrationCamera() {
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+    }
+    const video = document.getElementById("reg-webcam-video");
+    if (video) video.srcObject = null;
+}
+
+function captureWebcamSnapshot() {
+    const video = document.getElementById("reg-webcam-video");
+    const canvas = document.getElementById("reg-webcam-canvas");
+    const previewImg = document.getElementById("reg-snapshot-preview");
+    const captureBtn = document.getElementById("btn-capture-snapshot");
+    const retakeBtn = document.getElementById("btn-retake-snapshot");
+    const scanRing = document.getElementById("camera-scan-ring");
+    const statusPill = document.getElementById("camera-status-pill");
+
+    if (!video || !canvas || !previewImg) return;
+    if (!video.videoWidth || !video.videoHeight) {
+        showToast("Camera is still warming up. Please wait a moment.", "info");
+        return;
+    }
+
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+
+    // Center crop square from video frame with mirror flip for intuitive matching
+    const startX = (video.videoWidth - size) / 2;
+    const startY = (video.videoHeight - size) / 2;
+
+    ctx.save();
+    ctx.translate(size, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, startX, startY, size, size, 0, 0, size, size);
+    ctx.restore();
+
+    capturedSnapshotBase64 = canvas.toDataURL("image/jpeg", 0.92);
+    previewImg.src = capturedSnapshotBase64;
+
+    video.style.display = "none";
+    previewImg.style.display = "block";
+    if (captureBtn) captureBtn.style.display = "none";
+    if (retakeBtn) retakeBtn.style.display = "inline-flex";
+    if (scanRing) scanRing.style.display = "none";
+    if (statusPill) statusPill.innerText = "✨ Snapshot Captured";
+
+    showToast("📸 Face snapshot captured! Ready to enroll.", "success");
+}
+
+function retakeWebcamSnapshot() {
+    const video = document.getElementById("reg-webcam-video");
+    const previewImg = document.getElementById("reg-snapshot-preview");
+    const captureBtn = document.getElementById("btn-capture-snapshot");
+    const retakeBtn = document.getElementById("btn-retake-snapshot");
+    const scanRing = document.getElementById("camera-scan-ring");
+    const statusPill = document.getElementById("camera-status-pill");
+
+    capturedSnapshotBase64 = null;
+    if (previewImg) previewImg.style.display = "none";
+    if (video) video.style.display = "block";
+    if (captureBtn) captureBtn.style.display = "inline-flex";
+    if (retakeBtn) retakeBtn.style.display = "none";
+    if (scanRing) scanRing.style.display = "block";
+    if (statusPill) statusPill.innerText = "🟢 Live Face Frame";
+
+    if (!webcamStream || !webcamStream.active) {
+        startRegistrationCamera();
+    }
+}
+
+function toggleUploadFallback(forceOpen = false) {
+    const wrap = document.getElementById("file-upload-fallback-wrap");
+    if (!wrap) return;
+    if (forceOpen) {
+        wrap.style.display = "block";
+    } else {
+        wrap.style.display = wrap.style.display === "none" ? "block" : "none";
+    }
+}
+
+function handleFallbackFileSelected(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        capturedSnapshotBase64 = e.target.result;
+        const video = document.getElementById("reg-webcam-video");
+        const previewImg = document.getElementById("reg-snapshot-preview");
+        const statusPill = document.getElementById("camera-status-pill");
+
+        if (video) video.style.display = "none";
+        if (previewImg) {
+            previewImg.src = capturedSnapshotBase64;
+            previewImg.style.display = "block";
+        }
+        if (statusPill) statusPill.innerText = "📁 File Uploaded";
+        showToast("Photo loaded into preview circle.", "success");
+    };
+    reader.readAsDataURL(file);
+}
+
+function toggleServerConfigBar() {
+    const connUI = document.getElementById("connection-ui");
+    if (connUI) {
+        connUI.style.display = connUI.style.display === "none" ? "flex" : "none";
+    }
+}
+
+async function submitNewStudent() {
+    const name = document.getElementById("new-student-name").value.trim();
+    const email = document.getElementById("new-student-email").value.trim();
+    const rollNo = document.getElementById("new-user-roll-dept")?.value.trim() || "";
+    const fileInput = document.getElementById("new-student-photo");
+    const btn = document.getElementById("save-student-btn");
+
+    if (!name) {
+        showToast("Please enter the member's full name.", "error");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Enrolling...";
+
+    try {
+        let finalImageBase64 = capturedSnapshotBase64;
+
+        if (!finalImageBase64 && fileInput && fileInput.files && fileInput.files[0]) {
+            finalImageBase64 = await new Promise((resolve) => {
+                const r = new FileReader();
+                r.onload = (e) => resolve(e.target.result);
+                r.readAsDataURL(fileInput.files[0]);
+            });
+        }
+
+        if (finalImageBase64) {
+            await apiFetch("/enroll", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    role: selectedRegRole,
+                    roll_no: rollNo,
+                    department: rollNo,
+                    image_base64: finalImageBase64
+                })
+            });
+            showToast(`✅ ${selectedRegRole} '${name}' registered with biometric facial profile!`, "success");
+        } else {
+            // Register member record without face embedding
+            await apiFetch("/api/registered_users", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    role: selectedRegRole,
+                    roll_no: rollNo,
+                    department: rollNo
+                })
+            });
+            showToast(`✅ ${selectedRegRole} '${name}' registered in directory.`, "success");
+        }
+
+        closeAddUserModal();
+        await loadRegisteredFaces();
+    } catch (e) {
+        showToast("Registration failed: " + e.message, "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Save & Enroll Member";
+    }
+}
+
+// ── Email Settings Modal ──
+
+async function openEmailSettingsModal() {
+    const modal = document.getElementById("email-settings-modal");
+    if (!modal) return;
+
+    modal.style.display = "flex";
+
+    if (BASE_URL) {
+        try {
+            const data = await apiFetch("/api/email_settings");
+            document.getElementById("smtp-user-input").value = data.smtp_user || "";
+            document.getElementById("smtp-sender-name-input").value = data.sender_name || "";
+            document.getElementById("smtp-host-input").value = data.smtp_host || "smtp.gmail.com";
+            document.getElementById("smtp-port-input").value = data.smtp_port || 587;
+            
+            if (data.is_configured) {
+                document.getElementById("smtp-pass-input").placeholder = "•••••••••••• (Password configured)";
+            }
+        } catch (e) {
+            console.error("Failed to load email settings", e);
+        }
+    }
+}
+
+function closeEmailSettingsModal() {
+    const modal = document.getElementById("email-settings-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function saveEmailSettings() {
+    const user = document.getElementById("smtp-user-input").value.trim();
+    const pass = document.getElementById("smtp-pass-input").value.trim();
+    const name = document.getElementById("smtp-sender-name-input").value.trim();
+    const host = document.getElementById("smtp-host-input").value.trim();
+    const port = parseInt(document.getElementById("smtp-port-input").value) || 587;
+    const btn = document.getElementById("save-smtp-btn");
+
+    if (!user || !pass) {
+        showToast("Please provide your Gmail address and App Password.", "error");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Saving...";
+
+    try {
+        await apiFetch("/api/email_settings", {
+            method: "POST",
+            body: JSON.stringify({
+                smtp_user: user,
+                smtp_password: pass,
+                smtp_host: host,
+                smtp_port: port,
+                sender_name: name,
+                sender_email: user
+            })
+        });
+
+        showToast("Email settings saved! Live emails are now enabled.", "success");
+        closeEmailSettingsModal();
+    } catch (e) {
+        showToast("Failed to save settings: " + e.message, "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Save Settings";
+    }
+}
+
+async function sendTestEmail() {
+    const testEmail = document.getElementById("smtp-test-email-input").value.trim();
+    if (!testEmail || !testEmail.includes("@")) {
+        showToast("Please enter a valid recipient email to test.", "error");
+        return;
+    }
+
+    showToast("Sending test email...", "info");
+
+    try {
+        const result = await apiFetch("/api/email_settings/test", {
+            method: "POST",
+            body: JSON.stringify({ test_email: testEmail })
+        });
+        showToast("Test email sent! Please check your inbox / spam folder.", "success");
+    } catch (e) {
+        showToast("Test failed: " + e.message, "error");
+    }
+}
+
+// ── Database Downloads ──
+
+function downloadAttendanceCSV() {
+    if (!BASE_URL) return showToast("Not connected to backend", "error");
+    window.open(`${BASE_URL}/db/download/csv`, "_blank");
+    showToast("Downloading Attendance Logs CSV...", "success");
+}
+
+function downloadAllotmentsCSV() {
+    if (!BASE_URL) return showToast("Not connected to backend", "error");
+    window.open(`${BASE_URL}/db/download/allotments`, "_blank");
+    showToast("Downloading PC Allotment History CSV...", "success");
+}
+
+function downloadSQLiteDB() {
+    if (!BASE_URL) return showToast("Not connected to backend", "error");
+    window.open(`${BASE_URL}/db/download/sqlite`, "_blank");
+    showToast("Downloading raw SQLite Database (.db)...", "success");
+}
+
+// ── Toast Utility ──
+
+function showToast(message, type = "info") {
+    const container = document.getElementById("toast-container");
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type === 'success' ? 'toast-success' : type === 'error' ? 'toast-error' : ''}`;
+    toast.innerText = message;
+
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateX(40px)";
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// ── Gate Camera Live Stream & Power Controls (Modal 6) ──
+
+let gateCameraStatusPollInterval = null;
+
+function openGateCameraModal() {
+    const modal = document.getElementById("gate-camera-modal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    
+    // Set live stream URL
+    const streamImg = document.getElementById("portal-camera-stream");
+    const fallback = document.getElementById("portal-camera-fallback");
+    if (streamImg) {
+        streamImg.style.display = "block";
+        if (fallback) fallback.style.display = "none";
+        streamImg.src = `${BASE_URL}/video_feed?t=${Date.now()}`;
+    }
+
+    // Refresh current power status
+    loadGateCameraStatusFromPortal();
+
+    // Start 4-second status poll while modal is open
+    if (!gateCameraStatusPollInterval) {
+        gateCameraStatusPollInterval = setInterval(loadGateCameraStatusFromPortal, 4000);
+    }
+}
+
+function closeGateCameraModal() {
+    const modal = document.getElementById("gate-camera-modal");
+    if (modal) modal.style.display = "none";
+    
+    // Stop image stream fetching to save client bandwidth
+    const streamImg = document.getElementById("portal-camera-stream");
+    if (streamImg) {
+        streamImg.src = "";
+    }
+
+    if (gateCameraStatusPollInterval) {
+        clearInterval(gateCameraStatusPollInterval);
+        gateCameraStatusPollInterval = null;
+    }
+}
+
+async function loadGateCameraStatusFromPortal() {
+    try {
+        const res = await apiFetch("/api/camera/status");
+        updateGateCameraPortalUI(res.enabled);
+    } catch (e) {
+        // Backend might be offline
+    }
+}
+
+async function toggleGateCameraFromPortal() {
+    const toggleBtn = document.getElementById("portal-toggle-camera-btn");
+    if (toggleBtn) {
+        toggleBtn.disabled = true;
+        toggleBtn.innerText = "Switching...";
+    }
+    try {
+        const res = await apiFetch("/api/camera/toggle", { method: "POST" });
+        updateGateCameraPortalUI(res.enabled);
+        showToast(res.message || "Camera power updated", "info");
+        
+        // Refresh stream image
+        setTimeout(() => {
+            const streamImg = document.getElementById("portal-camera-stream");
+            if (streamImg && streamImg.style.display !== "none") {
+                streamImg.src = `${BASE_URL}/video_feed?t=${Date.now()}`;
+            }
+        }, 500);
+    } catch (e) {
+        showToast("Failed to switch camera: " + e.message, "error");
+    } finally {
+        if (toggleBtn) toggleBtn.disabled = false;
+    }
+}
+
+function updateGateCameraPortalUI(isEnabled) {
+    const toggleBtn = document.getElementById("portal-toggle-camera-btn");
+    const headerPill = document.getElementById("portal-cam-pill");
+    const modalBadge = document.getElementById("modal-camera-badge");
+    const powerText = document.getElementById("camera-power-text");
+    const recDot = document.getElementById("portal-camera-rec-dot");
+    const recText = document.getElementById("portal-camera-rec-text");
+
+    if (isEnabled) {
+        if (toggleBtn) {
+            toggleBtn.className = "btn btn-danger";
+            toggleBtn.innerHTML = "🛑 Turn Camera OFF";
+        }
+        if (headerPill) {
+            headerPill.innerText = "ON";
+            headerPill.style.background = "#22c55e";
+        }
+        if (modalBadge) {
+            modalBadge.className = "badge badge-success";
+            modalBadge.innerText = "ONLINE";
+        }
+        if (powerText) {
+            powerText.innerText = "Camera Hardware State: Active (ON)";
+        }
+        if (recDot) {
+            recDot.style.background = "#4ade80";
+            recDot.style.boxShadow = "0 0 8px #4ade80";
+        }
+        if (recText) {
+            recText.innerText = "LIVE MJPEG FEED";
+            recText.style.color = "#4ade80";
+        }
+    } else {
+        if (toggleBtn) {
+            toggleBtn.className = "btn btn-primary";
+            toggleBtn.innerHTML = "🟢 Turn Camera ON";
+        }
+        if (headerPill) {
+            headerPill.innerText = "OFF";
+            headerPill.style.background = "#ef4444";
+        }
+        if (modalBadge) {
+            modalBadge.className = "badge badge-danger";
+            modalBadge.innerText = "OFFLINE / PAUSED";
+        }
+        if (powerText) {
+            powerText.innerText = "Camera Hardware State: OFF (Standby / Released)";
+        }
+        if (recDot) {
+            recDot.style.background = "#ef4444";
+            recDot.style.boxShadow = "0 0 8px #ef4444";
+        }
+        if (recText) {
+            recText.innerText = "CAMERA OFF (STANDBY)";
+            recText.style.color = "#ef4444";
+        }
+    }
+}
+
+function handleStreamImageError() {
+    const streamImg = document.getElementById("portal-camera-stream");
+    const fallback = document.getElementById("portal-camera-fallback");
+    if (streamImg) streamImg.style.display = "none";
+    if (fallback) fallback.style.display = "block";
+}
+
+async function triggerKioskScanFromModal() {
+    const resultBox = document.getElementById("modal-scan-result-box");
+    if (resultBox) {
+        resultBox.style.display = "block";
+        resultBox.style.background = "rgba(99, 102, 241, 0.1)";
+        resultBox.style.border = "1px solid #6366f1";
+        resultBox.style.color = "#818cf8";
+        resultBox.innerHTML = "⚡ Scanning gate camera frame for faces...";
+    }
+    try {
+        const res = await apiFetch("/api/scan_entry", { method: "POST" });
+        if (resultBox) {
+            resultBox.style.background = "rgba(34, 197, 94, 0.1)";
+            resultBox.style.border = "1px solid #22c55e";
+            resultBox.style.color = "#4ade80";
+            resultBox.innerHTML = `✅ Face Recognized: <strong>${res.student_name || 'Verified'}</strong> (Attendance Logged)`;
+        }
+        showToast(`Attendance scanned: ${res.student_name || 'Success'}`, "success");
+        loadAttendance();
+    } catch (e) {
+        if (resultBox) {
+            resultBox.style.background = "rgba(239, 68, 68, 0.1)";
+            resultBox.style.border = "1px solid #ef4444";
+            resultBox.style.color = "#f87171";
+            resultBox.innerHTML = `⚠️ Scan error: ${e.message}`;
+        }
+        showToast("Scan error: " + e.message, "error");
+    }
+}
+
+// ── Student Research Projects & Deployments (Tab 2) ──
+
+let allProjectsData = [];
+let currentProjectFilter = "all";
+
+async function loadStudentProjects() {
+    try {
+        const res = await apiFetch("/api/projects");
+        allProjectsData = res.projects || [];
+        updateProjectMetrics();
+        renderProjectsGrid(allProjectsData);
+    } catch (e) {
+        console.warn("Failed to load projects:", e);
+        const grid = document.getElementById("projects-grid");
+        if (grid && allProjectsData.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">⚠️ Could not load projects. Please verify backend connection.</div>`;
+        }
+    }
+}
+
+function updateProjectMetrics() {
+    const activeCount = allProjectsData.filter(p => (p.status || '').toLowerCase() === 'ongoing' || !p.status).length;
+    const deployedCount = allProjectsData.filter(p => !!(p.deployment_url || '').trim()).length;
+    const filedCount = allProjectsData.filter(p => (p.report_status || '').toLowerCase() === 'filed').length;
+    const pendingCount = allProjectsData.filter(p => (p.report_status || '').toLowerCase() !== 'filed').length;
+
+    const navBadge = document.getElementById("nav-project-count");
+    if (navBadge) navBadge.innerText = allProjectsData.length;
+
+    const statActive = document.getElementById("stat-proj-active");
+    if (statActive) statActive.innerText = activeCount || allProjectsData.length;
+
+    const statDeployed = document.getElementById("stat-proj-deployed");
+    if (statDeployed) statDeployed.innerText = deployedCount;
+
+    const statReports = document.getElementById("stat-proj-reports");
+    if (statReports) statReports.innerText = filedCount;
+
+    const fAll = document.getElementById("filter-cnt-all");
+    if (fAll) fAll.innerText = allProjectsData.length;
+
+    const fFiled = document.getElementById("filter-cnt-filed");
+    if (fFiled) fFiled.innerText = filedCount;
+
+    const fPending = document.getElementById("filter-cnt-pending");
+    if (fPending) fPending.innerText = pendingCount;
+}
+
+function filterProjectsList(filter) {
+    currentProjectFilter = filter;
+    document.querySelectorAll("[data-proj-filter]").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-proj-filter") === filter);
+    });
+
+    let filtered = allProjectsData;
+    if (filter === "filed") {
+        filtered = allProjectsData.filter(p => (p.report_status || '').toLowerCase() === 'filed');
+    } else if (filter === "pending") {
+        filtered = allProjectsData.filter(p => (p.report_status || '').toLowerCase() !== 'filed');
+    }
+    renderProjectsGrid(filtered);
+}
+
+function renderProjectsGrid(projects) {
+    const grid = document.getElementById("projects-grid");
+    if (!grid) return;
+
+    if (!projects || projects.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 48px; background: var(--surface); border-radius: 12px; border: 1px dashed var(--border);">
+                <div style="font-size: 36px; margin-bottom: 8px;">🚀</div>
+                <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">No Projects Found</div>
+                <div style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 16px;">Add a new project or adjust filters to view research records.</div>
+                <button class="btn btn-primary" onclick="openAddProjectModal()">➕ Add First Project</button>
+            </div>
+        `;
+        return;
+    }
+
+    const cardsHtml = projects.map(proj => {
+        const isFiled = (proj.report_status || '').toLowerCase() === 'filed';
+        const reportBadgeClass = isFiled ? 'badge-success' : 'badge-warning';
+        const reportBadgeIcon = isFiled ? '✅' : '⏳';
+        const reportText = isFiled ? 'Report Filed' : (proj.report_status || 'Report Pending');
+
+        const studentsArr = (proj.student_names || '').split(',').map(s => s.trim()).filter(Boolean);
+        const techArr = (proj.technologies || '').split(',').map(t => t.trim()).filter(Boolean);
+
+        return `
+            <div class="project-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.05);" onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform='none'">
+                <div>
+                    <!-- Top Badges Row -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 6px;">
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #6366f1; font-weight: 700; border: 1px solid rgba(99, 102, 241, 0.25);">
+                                🖥️ ${escapeHtml(proj.pc_assigned || 'Unassigned')}
+                            </span>
+                            <span class="badge badge-success" style="font-size: 11px;">
+                                ● ${escapeHtml(proj.status || 'Ongoing')}
+                            </span>
+                        </div>
+                        <span class="badge ${reportBadgeClass}" style="font-weight: 700; font-size: 11px; padding: 3px 8px;">
+                            ${reportBadgeIcon} ${escapeHtml(reportText)}
+                        </span>
+                    </div>
+
+                    <!-- Project Title -->
+                    <h3 style="margin: 0 0 8px 0; font-size: 17px; font-weight: 700; color: var(--on-surface); line-height: 1.35;">
+                        ${escapeHtml(proj.title)}
+                    </h3>
+
+                    <!-- Project Description -->
+                    <p style="margin: 0 0 14px 0; font-size: 12.5px; color: var(--on-surface-variant); line-height: 1.5;">
+                        ${escapeHtml(proj.description || 'No description provided.')}
+                    </p>
+
+                    <!-- Assigned Students -->
+                    <div style="margin-bottom: 12px; padding: 10px 12px; background: var(--surface-variant); border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--on-surface-variant); letter-spacing: 0.5px; margin-bottom: 6px;">
+                            👥 Assigned Students & Roles
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            ${studentsArr.map(st => `
+                                <span style="background: var(--surface); border: 1px solid var(--border); padding: 3px 9px; border-radius: 14px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                                    <span style="width: 7px; height: 7px; border-radius: 50%; background: #6366f1;"></span>
+                                    ${escapeHtml(st)}
+                                </span>
+                            `).join('')}
+                        </div>
+                        ${proj.student_details ? `
+                            <div style="font-size: 11px; color: var(--on-surface-variant); margin-top: 6px; font-style: italic;">
+                                💡 ${escapeHtml(proj.student_details)}
+                            </div>
+                        ` : ''}
+                    </div>
 
                     <!-- Tech Stack Badges -->
                     ${techArr.length > 0 ? `
@@ -1271,7 +2207,7 @@ function renderRegisteredUsersGrid(users) {
                         ` : ''}
                         ${proj.report_url ? `
                             <a href="${escapeHtml(proj.report_url)}" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 5px 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                                📄 Report ↗
+                                ?? Report ?
                             </a>
                         ` : ''}
                     </div>
