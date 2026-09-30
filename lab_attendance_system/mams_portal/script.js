@@ -2146,9 +2146,14 @@ function renderProjectsGrid(projects) {
                     </h3>
 
                     <!-- Project Description -->
-                    <p style="margin: 0 0 14px 0; font-size: 12.5px; color: var(--on-surface-variant); line-height: 1.5;">
-                        ${escapeHtml(proj.description || 'No description provided.')}
-                    </p>
+                    <div style="margin: 0 0 14px 0;">
+                        <p id="desc-${proj.id || Math.random().toString(36).substr(2, 9)}" style="margin: 0; font-size: 12.5px; color: var(--on-surface-variant); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: all 0.3s ease;">
+                            ${escapeHtml(proj.description || 'No description provided.')}
+                        </p>
+                        ${(proj.description && proj.description.length > 100) ? `
+                            <button onclick="const p = this.previousElementSibling; if(p.style.webkitLineClamp === 'unset') { p.style.webkitLineClamp = '2'; this.innerText = 'Read More ▾'; } else { p.style.webkitLineClamp = 'unset'; this.innerText = 'Read Less ▴'; }" style="background: none; border: none; color: #6366f1; font-size: 11px; padding: 4px 0 0 0; cursor: pointer; font-weight: 700; text-decoration: none;">Read More ▾</button>
+                        ` : ''}
+                    </div>
 
                     <!-- Assigned Students -->
                     <div style="margin-bottom: 12px; padding: 10px 12px; background: var(--surface-variant); border-radius: 8px; border: 1px solid var(--border);">
