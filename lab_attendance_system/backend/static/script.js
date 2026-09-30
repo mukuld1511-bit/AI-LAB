@@ -1774,10 +1774,10 @@ async function markManualDirect(name, action) {
             method: "POST",
             body: JSON.stringify({ name, action })
         });
-        alert(${name} marked  successfully!);
+        alert(`${name} marked ${action} successfully!`);
         if (typeof loadAttendance === "function") loadAttendance();
     } catch (e) {
-        alert(Failed to mark : );
+        alert(`Failed to mark ${action}: ${e.message}`);
     }
 }
 
@@ -1792,11 +1792,11 @@ async function submitManualAttendanceFast(action) {
             method: "POST",
             body: JSON.stringify({ name, action })
         });
-        if (msg) msg.innerHTML = <span style="color: #16a34a; font-weight: 600;">Log recorded:  marked .</span>;
+        if (msg) msg.innerHTML = `<span style="color: #16a34a; font-weight: 600;">Log recorded: ${name} marked ${action}.</span>`;
         document.getElementById("manual-name").value = "";
         await loadAttendance();
     } catch (e) {
-        if (msg) msg.innerHTML = <span style="color: #dc2626;">Error: </span>;
+        if (msg) msg.innerHTML = `<span style="color: #dc2626;">Error: ${e.message}</span>`;
     }
 }
 

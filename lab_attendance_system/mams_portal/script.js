@@ -1764,9 +1764,9 @@ async function markManualDirect(name, action) {
             method: "POST",
             body: JSON.stringify({ name, action })
         });
-        showToast(${name} marked  successfully!, "success");
+        showToast(`${name} marked ${action} successfully!`, "success");
         if (typeof fetchAttendanceLogs === "function") fetchAttendanceLogs();
     } catch (e) {
-        showToast(Failed to mark : , "error");
+        showToast(`Failed to mark ${action}: ${e.message}`, "error");
     }
 }
