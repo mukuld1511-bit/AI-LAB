@@ -84,9 +84,16 @@ def get_avatar_image(filename: str):
     return Response(content=svg, media_type="image/svg+xml")
 
 
-# Mount unknown faces and static directories
+DGX_DIR = os.path.join(BASE_DIR, "dgx_agent")
+CLIENT_AGENT_DIR = os.path.join(BASE_DIR, "client_agent")
+
+# Mount unknown faces, static, and agent distribution directories
 app.mount("/unknown_faces_static", StaticFiles(directory=UNKNOWN_FACES_DIR), name="unknown_faces_static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_dir")
+if os.path.exists(DGX_DIR):
+    app.mount("/dgx_agent", StaticFiles(directory=DGX_DIR), name="dgx_agent_dir")
+if os.path.exists(CLIENT_AGENT_DIR):
+    app.mount("/client_agent", StaticFiles(directory=CLIENT_AGENT_DIR), name="client_agent_dir")
 
 
 # ── Pydantic Models ──

@@ -427,7 +427,7 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
         raw_gpu_name = item.get("gpu_name") or ""
         os_str = str(item.get("os_info", "")).lower()
         if not raw_gpu_name:
-            if pid == "PC-7" or "nvidia" in os_str:
+            if pid in ("PC-3", "PC-7") or "nvidia" in os_str or "dgx" in os_str:
                 raw_gpu_name = "NVIDIA DGX Station A100"
                 if not item.get("gpu_vram_total_mb"):
                     item["gpu_vram_total_mb"] = 32768.0

@@ -33,6 +33,8 @@ else
 fi
 chmod +x "$INSTALL_DIR/dgx_telemetry_agent.py"
 
+PYTHON_BIN="$(which python3 2>/dev/null || echo /usr/bin/python3)"
+
 # 2. Generate Systemd Service
 cat <<EOF > /etc/systemd/system/$SERVICE_NAME
 [Unit]
@@ -43,7 +45,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/python3 $INSTALL_DIR/dgx_telemetry_agent.py --pc-id $PC_ID --url $BACKEND_URL
+ExecStart=$PYTHON_BIN $INSTALL_DIR/dgx_telemetry_agent.py --pc-id $PC_ID --url $BACKEND_URL
 Restart=always
 RestartSec=5
 TimeoutStopSec=10
