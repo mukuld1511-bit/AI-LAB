@@ -20,6 +20,15 @@ if (storedUrl && storedUrl.includes("tailc8c1f6.ts.net")) {
     localStorage.setItem("lab_backend_url", ACTIVE_TUNNEL_FALLBACK);
 }
 
+function resolveImageUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+        return url;
+    }
+    const base = (typeof BASE_URL !== 'undefined' && BASE_URL) ? BASE_URL.replace(/\/$/, '') : '';
+    return `${base}${url}`;
+}
+
 // Global cached states
 let registeredUsersList = [];
 let allPCsState = [];
@@ -905,7 +914,7 @@ function handlePCClick(pcId, isFree) {
     const thumbPlh = document.getElementById("modal-screen-placeholder");
     if (thumbImg && thumbPlh) {
         if (pcData.screenshot_url) {
-            thumbImg.src = pcData.screenshot_url;
+            thumbImg.src = resolveImageUrl(pcData.screenshot_url);
             thumbImg.style.display = "block";
             thumbPlh.style.display = "none";
         } else {
@@ -3019,7 +3028,7 @@ function renderMonitoringGrid(pcs) {
         if (isDistraction && isOnline) alertCount++;
 
         const topProcs = p.top_processes || [];
-        const snapUrl = p.screenshot_url;
+        const snapUrl = p.screenshot_url ? resolveImageUrl(p.screenshot_url) : null;
 
         return `
             <div class="mon-card ${isOnline ? 'mon-online' : 'mon-offline'}" id="mon-card-${p.pc_id}">
@@ -3216,23 +3225,189 @@ async function requestAllScreenshots() {
     });
 }
 
+function formatUptime(bootTimeStr) {
+    if (!bootTimeStr) return "N/A";
+    try {
+        const boot = new Date(bootTimeStr.replace(" ", "T"));
+        const now = new Date();
+        const diffMs = now - boot;
+        if (diffMs <= 0 || isNaN(diffMs)) return "Just started";
+        const totalMins = Math.floor(diffMs / 60000);
+        const hrs = Math.floor(totalMins / 60);
+        const mins = totalMins % 60;
+        const days = Math.floor(hrs / 24);
+        if (days > 0) return `${days}d ${hrs % 24}h ${mins}m`;
+        if (hrs > 0) return `${hrs}h ${mins}m`;
+        return `${mins}m`;
+    } catch (e) {
+        return bootTimeStr;
+    }
+}
+
+function formatWorkTime(sinceTimeStr) {
+    if (!sinceTimeStr) return "No active session";
+    try {
+        const since = new Date(sinceTimeStr.replace(" ", "T"));
+        const now = new Date();
+        const diffMs = now - since;
+        if (diffMs <= 0 || isNaN(diffMs)) return "Just assigned";
+        const totalMins = Math.floor(diffMs / 60000);
+        const hrs = Math.floor(totalMins / 60);
+        const mins = totalMins % 60;
+        const days = Math.floor(hrs / 24);
+        if (days > 0) return `${days}d ${hrs % 24}h ${mins}m`;
+        if (hrs > 0) return `${hrs}h ${mins}m`;
+        return `${mins}m Active`;
+    } catch (e) {
+        return sinceTimeStr;
+    }
+}
+
 function openScreenLightbox(pcId, imgUrl, activeWin) {
     const modal = document.getElementById("screen-lightbox-modal");
-    const img = document.getElementById("screen-lightbox-img");
-    const title = document.getElementById("screen-lightbox-title");
-    const sub = document.getElementById("screen-lightbox-subtitle");
-    if (!modal || !img) return;
+    if (!modal) return;
 
-    if (!imgUrl) {
-        showToast(`No screenshot taken yet for ${pcId}. Click 'Grab Live Screen' first.`, "info");
-        return;
+    const cleanId = (pcId || "").toUpperCase();
+    const pc = (typeof lastMonitoringPCs !== 'undefined' && lastMonitoringPCs.find(p => p.pc_id === cleanId)) || 
+               (allPCsState || []).find(p => p.pc_id === cleanId) || 
+               { pc_id: cleanId };
+
+    modal.dataset.currentPc = cleanId;
+
+    // Title & Header Badges
+    const title = document.getElementById("screen-lightbox-title");
+    if (title) title.innerText = `Workstation ${cleanId} — Complete Briefing`;
+
+    const onlineBadge = document.getElementById("brief-online-badge");
+    const isOnline = pc.is_online === 1 || pc.is_online === true;
+    if (onlineBadge) {
+        onlineBadge.innerText = isOnline ? "🟢 ONLINE" : "⚫ OFFLINE";
+        onlineBadge.style.color = isOnline ? "#4ade80" : "#94a3b8";
+        onlineBadge.style.background = isOnline ? "rgba(34, 197, 94, 0.2)" : "rgba(100, 116, 139, 0.2)";
     }
 
-    title.innerText = `Workstation: ${pcId}`;
-    sub.innerText = `Active: ${activeWin || 'Desktop'} • Captured On-Demand`;
-    img.src = imgUrl;
+    const statusPill = document.getElementById("brief-status-pill");
+    const isFree = !pc.is_backend && (pc.status || "free").toLowerCase() === "free";
+    if (statusPill) {
+        statusPill.innerText = pc.is_backend ? "24/7 Host" : isFree ? "🟢 Free" : "🔴 Occupied";
+        statusPill.style.color = isFree ? "#4ade80" : "#f87171";
+        statusPill.style.background = isFree ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.2)";
+    }
+
+    // Active Window
+    const winText = activeWin || pc.active_window || (isOnline ? "Active Desktop / Idle" : "System Offline");
+    const winEl = document.getElementById("brief-active-win");
+    if (winEl) winEl.innerText = winText;
+
+    const snapTimeEl = document.getElementById("brief-snap-timestamp");
+    if (snapTimeEl) {
+        snapTimeEl.innerText = pc.last_screenshot_at ? `🕒 ${pc.last_screenshot_at.split(' ')[1] || pc.last_screenshot_at}` : "🕒 No snap yet";
+    }
+
+    // Image & Fallback
+    const img = document.getElementById("screen-lightbox-img");
+    const fallback = document.getElementById("brief-screen-fallback");
+    const resolvedUrl = imgUrl ? resolveImageUrl(imgUrl) : (pc.screenshot_url ? resolveImageUrl(pc.screenshot_url) : "");
+
+    if (img && fallback) {
+        if (resolvedUrl) {
+            img.src = resolvedUrl;
+            img.style.display = "block";
+            fallback.style.display = "none";
+        } else {
+            img.style.display = "none";
+            fallback.style.display = "flex";
+        }
+    }
+
+    // Uptime & Boot Time
+    const uptimeEl = document.getElementById("brief-uptime");
+    if (uptimeEl) uptimeEl.innerText = formatUptime(pc.boot_time);
+
+    const bootTimeEl = document.getElementById("brief-boot-time");
+    if (bootTimeEl) bootTimeEl.innerText = pc.boot_time ? `Boot: ${pc.boot_time.split(' ')[1] || pc.boot_time}` : "Boot time: N/A";
+
+    // Work Time & Since Time
+    const workTimeEl = document.getElementById("brief-work-time");
+    if (workTimeEl) workTimeEl.innerText = formatWorkTime(pc.since_time);
+
+    const sinceTimeEl = document.getElementById("brief-since-time");
+    if (sinceTimeEl) sinceTimeEl.innerText = pc.since_time ? `Assigned: ${pc.since_time.split(' ')[1] || pc.since_time}` : "No active session";
+
+    // Occupant and Project
+    const userEl = document.getElementById("brief-user-name");
+    if (userEl) userEl.innerText = pc.occupied_by || "Available / None Assigned";
+
+    const projEl = document.getElementById("brief-project-name");
+    if (projEl) projEl.innerText = pc.current_project || "General Lab Work";
+
+    const timeLeftEl = document.getElementById("brief-time-left");
+    if (timeLeftEl) {
+        if (pc.is_backend) {
+            timeLeftEl.innerText = "24/7 Dedicated Server";
+        } else if (isFree) {
+            timeLeftEl.innerText = "Ready for Allotment";
+        } else if (pc.end_time) {
+            const rem = calculateTimeRemaining(pc.end_time);
+            timeLeftEl.innerText = rem ? rem.formatted : "Active Session";
+        } else {
+            timeLeftEl.innerText = "Active Session";
+        }
+    }
+
+    // Hardware Gauges
+    const cpuEl = document.getElementById("brief-cpu-val");
+    if (cpuEl) cpuEl.innerText = `${pc.cpu_percent || 0}%`;
+
+    const ramEl = document.getElementById("brief-ram-val");
+    if (ramEl) ramEl.innerText = `${pc.ram_percent || 0}%`;
+
+    const ramSub = document.getElementById("brief-ram-sub");
+    if (ramSub) ramSub.innerText = `RAM (${pc.ram_used_gb || 0} / ${pc.ram_total_gb || 0}G)`;
+
+    const gpuEl = document.getElementById("brief-gpu-val");
+    if (gpuEl) gpuEl.innerText = `${pc.gpu_percent || 0}%`;
+
+    const gpuSub = document.getElementById("brief-gpu-sub");
+    if (gpuSub) gpuSub.innerText = `GPU (${pc.gpu_temp || 0}°C)`;
+
+    const gpuNameEl = document.getElementById("brief-gpu-name");
+    if (gpuNameEl) {
+        gpuNameEl.innerText = `${pc.gpu_name || 'Host Accelerator'} • VRAM: ${pc.gpu_vram_used_mb || 0} / ${pc.gpu_vram_total_mb || 0} MB`;
+    }
+
+    // Top Processes Table
+    const tasksCount = document.getElementById("brief-tasks-count");
+    const tasksCont = document.getElementById("brief-tasks-container");
+    const procs = pc.top_processes || [];
+    if (tasksCount) tasksCount.innerText = `${procs.length} reported`;
+    if (tasksCont) {
+        if (procs.length > 0) {
+            tasksCont.innerHTML = procs.map(pr => `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 11px;">
+                    <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+                        <strong style="color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;" title="${escapeHtml(pr.name)}">
+                            ${escapeHtml(pr.name)}
+                        </strong>
+                        <span style="color: #64748b; font-size: 10px;">(PID: ${pr.pid || 'N/A'})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #38bdf8; font-weight: 700;">${pr.cpu}% C</span>
+                        <span style="color: #a78bfa;">${pr.ram}% M</span>
+                        ${pr.pid ? `
+                            <button class="mon-kill-btn" title="Kill PID ${pr.pid}" onclick="killWorkstationTask('${cleanId}', ${pr.pid}, '${escapeHtml(pr.name)}')">
+                                ✖
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join("");
+        } else {
+            tasksCont.innerHTML = `<div style="color: #94a3b8; font-size: 11px; text-align: center; padding: 12px;">${isOnline ? 'No heavy tasks reported' : 'PC Offline • No process data'}</div>`;
+        }
+    }
+
     modal.style.display = "flex";
-    modal.dataset.currentPc = pcId;
 }
 
 function closeScreenLightbox(e) {
@@ -3250,7 +3425,7 @@ function requestLightboxFreshSnap() {
         requestScreenGrab(pcId);
         setTimeout(() => {
             const img = document.getElementById("screen-lightbox-img");
-            if (img) img.src = `/static/screenshots/${pcId.toLowerCase()}.jpg?t=${Date.now()}`;
+            if (img) img.src = resolveImageUrl(`/static/screenshots/${pcId.toLowerCase()}.jpg?t=${Date.now()}`);
         }, 3000);
     }
 }
@@ -3276,7 +3451,7 @@ function requestModalScreenGrab() {
         const thumbImg = document.getElementById("modal-screen-thumb");
         const thumbPlh = document.getElementById("modal-screen-placeholder");
         if (thumbImg) {
-            thumbImg.src = `/static/screenshots/${currentPCId.toLowerCase()}.jpg?t=${Date.now()}`;
+            thumbImg.src = resolveImageUrl(`/static/screenshots/${currentPCId.toLowerCase()}.jpg?t=${Date.now()}`);
             thumbImg.style.display = "block";
             if (thumbPlh) thumbPlh.style.display = "none";
         }

@@ -2022,3 +2022,9 @@ body {
     background: #fee2e2;
 }
 
+@media (max-width: 900px) {
+    .briefing-grid-layout {
+        grid-template-columns: 1fr !important;
+    }
+}
+
