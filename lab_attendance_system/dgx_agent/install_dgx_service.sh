@@ -25,12 +25,8 @@ fi
 
 # 1. Create Destination Directory and Fetch Python Agent
 mkdir -p "$INSTALL_DIR"
-if [ -f "$(dirname "$0")/dgx_telemetry_agent.py" ]; then
-  cp "$(dirname "$0")/dgx_telemetry_agent.py" "$INSTALL_DIR/dgx_telemetry_agent.py"
-else
-  echo "📥 Downloading telemetry agent from $BACKEND_URL/dgx_agent/dgx_telemetry_agent.py..."
-  curl -sSL "$BACKEND_URL/dgx_agent/dgx_telemetry_agent.py" -o "$INSTALL_DIR/dgx_telemetry_agent.py"
-fi
+echo "📥 Fetching latest telemetry agent from $BACKEND_URL/dgx_agent/dgx_telemetry_agent.py..."
+curl -sSL "$BACKEND_URL/dgx_agent/dgx_telemetry_agent.py" -o "$INSTALL_DIR/dgx_telemetry_agent.py"
 chmod +x "$INSTALL_DIR/dgx_telemetry_agent.py"
 
 PYTHON_BIN="$(which python3 2>/dev/null || echo /usr/bin/python3)"
