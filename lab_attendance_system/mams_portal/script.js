@@ -2982,13 +2982,15 @@ function toggleMonitoringAutoRefresh() {
 }
 
 async function loadMonitoringData(silent = false) {
-    if (!BASE_URL) return;
+    if (!BASE_URL) return [];
     try {
         const res = await apiFetch("/api/pc/monitoring");
         const pcs = res.workstations || [];
         renderMonitoringGrid(pcs);
+        return pcs;
     } catch (e) {
         if (!silent) console.error("Failed to load monitoring data", e);
+        return [];
     }
 }
 
@@ -3158,25 +3160,44 @@ async function requestScreenGrab(pcId) {
     showToast(`📸 Requesting screen snapshot from ${cleanId}...`, "info");
 
     try {
-        await apiFetch(`/api/pc/${cleanId}/request_screenshot`, {
+        const resp = await apiFetch(`/api/pc/${cleanId}/request_screenshot`, {
             method: "POST",
             body: JSON.stringify({ command: "capture_screen" })
         });
 
-        // Poll for new image after 2s and 4s
+        // Instant capture for BACKEND
+        if (resp && resp.url) {
+            await loadMonitoringData(true);
+            if (btn) {
+                btn.innerText = "📸 Grab Live Screen";
+                btn.disabled = false;
+            }
+            showToast(`✅ Live snapshot ready for ${cleanId}!`, "success");
+            return;
+        }
+
+        // Poll for new image uploaded by client PC
         let attempts = 0;
         const checkPoll = setInterval(async () => {
             attempts++;
-            await loadMonitoringData(true);
-            if (attempts >= 3) {
+            const pcs = await loadMonitoringData(true);
+            const target = pcs.find(p => p.pc_id === cleanId);
+            if (target && target.screenshot_url) {
                 clearInterval(checkPoll);
                 if (btn) {
                     btn.innerText = "📸 Grab Live Screen";
                     btn.disabled = false;
                 }
                 showToast(`✅ Live snapshot ready for ${cleanId}!`, "success");
+            } else if (attempts >= 4) {
+                clearInterval(checkPoll);
+                if (btn) {
+                    btn.innerText = "📸 Grab Live Screen";
+                    btn.disabled = false;
+                }
+                showToast(`⚠️ ${cleanId} par updated agent script nahi chal rahi (purani script active hai). Please run updated script command on ${cleanId}.`, "warning");
             }
-        }, 1800);
+        }, 1500);
     } catch (e) {
         showToast(`Failed to request screen: ${e.message}`, "error");
         if (btn) {
