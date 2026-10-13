@@ -6,12 +6,13 @@ Designed specifically for NVIDIA DGX Stations / Linux GPU Servers / Lab PCs:
 - Zero pip dependencies (Uses pure Python standard library + native nvidia-smi)
 - Streams: Online Status, CPU Load, RAM (Used/Total), Multi-GPU utilization & VRAM
 - Auto-registers with Lab Central Backend via permanent Tailscale Funnel / LAN IP
+- Real Desktop Graphical Screen Capture (Wayland GNOME / X11 / Xorg)
 - Clean Shutdown / SIGTERM offline notification hook
 
 Usage:
     python3 dgx_telemetry_agent.py
-    python3 dgx_telemetry_agent.py --pc-id DGX-1
-    python3 dgx_telemetry_agent.py --pc-id PC-2 --url https://labg418pc12.tailc8c1f6.ts.net
+    python3 dgx_telemetry_agent.py --pc-id PC-5
+    python3 dgx_telemetry_agent.py --pc-id DGX-1 --url https://labg418pc12.tailc8c1f6.ts.net
 """
 
 import os
@@ -24,6 +25,8 @@ import atexit
 import signal
 import subprocess
 import argparse
+import shutil
+import glob
 from datetime import datetime
 import urllib.request
 import urllib.error
@@ -38,7 +41,6 @@ def get_cpu_and_uptime():
     cpu_percent = 0.0
     boot_time_str = ""
     try:
-        # Method 1: Read /proc/stat (Delta load)
         def read_stat():
             with open("/proc/stat", "r") as f:
                 fields = [float(x) for x in f.readline().strip().split()[1:8]]
@@ -54,7 +56,6 @@ def get_cpu_and_uptime():
         if d_total > 0:
             cpu_percent = round(100.0 * (1.0 - (d_idle / d_total)), 1)
     except Exception:
-        # Fallback to load average
         try:
             load1 = os.getloadavg()[0]
             cores = os.cpu_count() or 1
@@ -98,7 +99,7 @@ def get_memory_info():
             ram_percent = round((used_kb / total_kb) * 100.0, 1)
             ram_used_gb = round(used_kb / (1024.0 * 1024.0), 1)
             ram_total_gb = round(total_kb / (1024.0 * 1024.0), 1)
-    except Exception as e:
+    except Exception:
         pass
     return ram_percent, ram_used_gb, ram_total_gb
 
@@ -122,7 +123,6 @@ def get_nvidia_dgx_gpu_info():
         if not nvsmi:
             nvsmi = "nvidia-smi"
 
-        # Query comma-separated GPU name, utilization, temperature, memory.used, memory.total
         cmd = [
             nvsmi,
             "--query-gpu=name,utilization.gpu,temperature.gpu,memory.used,memory.total",
@@ -153,13 +153,11 @@ def get_nvidia_dgx_gpu_info():
                 else:
                     gpu_data["gpu_name"] = names[0]
 
-                # Average GPU load and temperature across accelerators
                 gpu_data["gpu_percent"] = round(sum(utils) / len(utils), 1) if utils else 0.0
                 gpu_data["gpu_temp"] = round(max(temps), 1) if temps else 0.0
                 gpu_data["gpu_vram_used_mb"] = round(vram_used, 0)
                 gpu_data["gpu_vram_total_mb"] = round(vram_total, 0)
     except Exception:
-        # Non-NVIDIA host or driver not loaded
         pass
 
     return gpu_data
@@ -235,28 +233,373 @@ def get_linux_top_processes():
     return procs
 
 
-def get_linux_active_info():
-    """Gets logged in users and active foreground session info."""
-    user = os.environ.get("USER") or os.environ.get("LOGNAME") or ""
-    active_win = ""
+def get_desktop_session_info():
+    """
+    Finds the active graphical desktop user and environment variables.
+    Detects user, UID, DISPLAY, WAYLAND_DISPLAY, XAUTHORITY, DBUS_SESSION_BUS_ADDRESS.
+    """
+    info = {
+        "user": None,
+        "uid": None,
+        "env": os.environ.copy()
+    }
+
+    # Strategy 1: Scan running GUI desktop processes (GNOME, Wayland, Xorg, KDE, XFCE)
     try:
-        # Check active X11 window if xdotool exists
-        proc = subprocess.run(["xdotool", "getwindowfocus", "getwindowname"], capture_output=True, text=True, timeout=1)
-        if proc.returncode == 0 and proc.stdout.strip():
-            active_win = proc.stdout.strip()
+        proc = subprocess.run(
+            ["pgrep", "-f", "gnome-shell|gnome-session|plasmashell|xfce4-session|Xorg|Xwayland|mutter|kwin|sway|cinnamon|desktop"],
+            capture_output=True, text=True, timeout=2
+        )
+        if proc.returncode == 0:
+            pids = proc.stdout.strip().split()
+            for pid in pids:
+                try:
+                    stat_info = os.stat(f"/proc/{pid}")
+                    proc_uid = stat_info.st_uid
+                    env_file = f"/proc/{pid}/environ"
+                    if os.path.exists(env_file):
+                        with open(env_file, "rb") as f:
+                            raw = f.read().decode("utf-8", errors="ignore")
+                        p_env = {}
+                        for item in raw.split("\0"):
+                            if "=" in item:
+                                k, v = item.split("=", 1)
+                                if k in ("DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR", "USER", "LOGNAME"):
+                                    p_env[k] = v
+
+                        if p_env.get("DISPLAY") or p_env.get("WAYLAND_DISPLAY") or p_env.get("DBUS_SESSION_BUS_ADDRESS"):
+                            info["uid"] = proc_uid
+                            try:
+                                import pwd
+                                info["user"] = pwd.getpwuid(proc_uid).pw_name
+                            except Exception:
+                                info["user"] = p_env.get("USER") or p_env.get("LOGNAME")
+                            info["env"].update(p_env)
+                            break
+                except Exception:
+                    pass
     except Exception:
         pass
 
+    # Strategy 2: If user not resolved, check loginctl
+    if not info["user"]:
+        try:
+            proc = subprocess.run(["loginctl", "list-sessions", "--no-legend"], capture_output=True, text=True, timeout=2)
+            if proc.returncode == 0:
+                for line in proc.stdout.strip().splitlines():
+                    parts = line.strip().split()
+                    if len(parts) >= 3 and parts[1].isdigit():
+                        u_id = int(parts[1])
+                        if u_id >= 1000:
+                            info["uid"] = u_id
+                            try:
+                                import pwd
+                                info["user"] = pwd.getpwuid(u_id).pw_name
+                            except Exception:
+                                pass
+                            break
+        except Exception:
+            pass
+
+    # Strategy 3: Check /run/user/<uid>
+    if not info["uid"]:
+        run_dirs = glob.glob("/run/user/[0-9]*")
+        for rd in run_dirs:
+            try:
+                u_id = int(os.path.basename(rd))
+                if u_id >= 1000:
+                    info["uid"] = u_id
+                    try:
+                        import pwd
+                        info["user"] = pwd.getpwuid(u_id).pw_name
+                    except Exception:
+                        pass
+                    break
+            except Exception:
+                pass
+
+    # Fallback to current process user
+    if not info["user"]:
+        info["user"] = os.environ.get("USER") or os.environ.get("LOGNAME") or "root"
+    if not info["uid"] and hasattr(os, "getuid"):
+        info["uid"] = os.getuid()
+
+    # Fill default runtime dir and DBUS address if uid exists
+    uid = info["uid"]
+    if uid:
+        if not info["env"].get("XDG_RUNTIME_DIR") and os.path.exists(f"/run/user/{uid}"):
+            info["env"]["XDG_RUNTIME_DIR"] = f"/run/user/{uid}"
+        if not info["env"].get("DBUS_SESSION_BUS_ADDRESS"):
+            bus_sock = f"/run/user/{uid}/bus"
+            if os.path.exists(bus_sock):
+                info["env"]["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={bus_sock}"
+
+    if not info["env"].get("DISPLAY"):
+        info["env"]["DISPLAY"] = ":0"
+
+    # Search for Xauthority if missing
+    if not info["env"].get("XAUTHORITY") and info["user"]:
+        u = info["user"]
+        for cand in [f"/run/user/{uid}/gdm/Xauthority", f"/run/user/{uid}/.Xauthority", f"/home/{u}/.Xauthority", "/root/.Xauthority"]:
+            m = glob.glob(cand)
+            if m and os.path.exists(m[0]):
+                info["env"]["XAUTHORITY"] = m[0]
+                break
+
+    return info
+
+
+def run_in_desktop_context(cmd_list, session_info, timeout=5):
+    """
+    Executes a shell command inside the active desktop user's context.
+    If the agent runs as root, bridges into the desktop user session via runuser/su
+    to ensure full access to the DBus session and graphical compositor.
+    """
+    user = session_info.get("user")
+    env = session_info.get("env", {})
+
+    # If running as root and desktop user is non-root, run as desktop user
+    if hasattr(os, "geteuid") and os.geteuid() == 0 and user and user != "root":
+        # 1. Try runuser
+        try:
+            r_cmd = ["runuser", "-u", user, "--"] + cmd_list
+            res = subprocess.run(r_cmd, env=env, capture_output=True, timeout=timeout)
+            if res.returncode == 0:
+                return res
+        except Exception:
+            pass
+
+        # 2. Try su
+        try:
+            import shlex
+            cmd_str = " ".join(shlex.quote(c) for c in cmd_list)
+            s_cmd = ["su", user, "-c", cmd_str]
+            res = subprocess.run(s_cmd, env=env, capture_output=True, timeout=timeout)
+            if res.returncode == 0:
+                return res
+        except Exception:
+            pass
+
+    # Direct execution
+    try:
+        return subprocess.run(cmd_list, env=env, capture_output=True, timeout=timeout)
+    except Exception:
+        return None
+
+
+def get_linux_active_info():
+    """Gets logged in users and active foreground session info."""
+    desktop_session = get_desktop_session_info()
+    user = desktop_session.get("user") or os.environ.get("USER") or os.environ.get("LOGNAME") or "root"
+    active_win = ""
+
+    # Try xdotool inside desktop session context
+    try:
+        proc = run_in_desktop_context(["xdotool", "getwindowfocus", "getwindowname"], desktop_session, timeout=1)
+        if proc and proc.returncode == 0 and proc.stdout.decode("utf-8", errors="ignore").strip():
+            active_win = proc.stdout.decode("utf-8", errors="ignore").strip()
+    except Exception:
+        pass
+
+    # Try who -u if window name not resolved
     if not active_win:
         try:
             proc = subprocess.run(["who", "-u"], capture_output=True, text=True, timeout=1)
             if proc.returncode == 0 and proc.stdout.strip():
                 first_line = proc.stdout.strip().splitlines()[0]
-                active_win = f"Terminal / SSH: {first_line.split()[0]}"
+                parts = first_line.split()
+                if len(parts) >= 1:
+                    active_win = f"Active Desktop Session ({parts[0]})"
         except Exception:
             pass
 
     return user, active_win or "Linux DGX Workspace"
+
+
+def compress_and_b64(img_path):
+    """Compresses an image file to max 1600x900 JPEG quality 65 and returns base64."""
+    import base64
+    try:
+        from PIL import Image
+        import io
+        with Image.open(img_path) as im:
+            im.thumbnail((1600, 900))
+            buf = io.BytesIO()
+            im.convert("RGB").save(buf, format="JPEG", quality=65)
+            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+        try:
+            os.remove(img_path)
+        except Exception:
+            pass
+        return b64
+    except Exception:
+        try:
+            with open(img_path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("utf-8")
+            try:
+                os.remove(img_path)
+            except Exception:
+                pass
+            return b64
+        except Exception:
+            return None
+
+
+def capture_linux_screen(pc_id):
+    """
+    Captures real desktop display on Linux using a multi-tiered cascade:
+    1. GNOME Shell DBus API via gdbus (Native on Ubuntu 20.04/22.04/24.04 Wayland & X11)
+    2. GNOME Shell DBus API via dbus-send
+    3. gnome-screenshot CLI
+    4. scrot CLI
+    5. ImageMagick import
+    6. xwd + convert
+    7. ffmpeg x11grab
+    8. grim (Wayland)
+    9. PIL ImageGrab
+    """
+    session = get_desktop_session_info()
+    tmp_png = f"/tmp/snap_{pc_id}.png"
+    tmp_jpg = f"/tmp/snap_{pc_id}.jpg"
+    tmp_xwd = f"/tmp/snap_{pc_id}.xwd"
+
+    # Clean old files and allow write access
+    for p in (tmp_png, tmp_jpg, tmp_xwd):
+        if os.path.exists(p):
+            try:
+                os.remove(p)
+            except Exception:
+                pass
+
+    # Strategy 1: gdbus (Ubuntu default CLI for GNOME Shell Wayland & X11)
+    try:
+        cmd = [
+            "gdbus", "call", "--session",
+            "--dest", "org.gnome.Shell.Screenshot",
+            "--object-path", "/org/gnome/Shell/Screenshot",
+            "--method", "org.gnome.Shell.Screenshot.Screenshot",
+            "false", "false", tmp_png
+        ]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
+            b64 = compress_and_b64(tmp_png)
+            if b64:
+                print(f"[CAPTURE] Successfully captured via GNOME Shell DBus (gdbus) for user '{session.get('user')}'")
+                return b64
+    except Exception:
+        pass
+
+    # Strategy 2: dbus-send (Alternative DBus utility)
+    try:
+        cmd = [
+            "dbus-send", "--session", "--type=method_call", "--print-reply",
+            "--dest=org.gnome.Shell.Screenshot",
+            "/org/gnome/Shell/Screenshot",
+            "org.gnome.Shell.Screenshot.Screenshot",
+            "boolean:false", "boolean:false", f"string:{tmp_png}"
+        ]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
+            b64 = compress_and_b64(tmp_png)
+            if b64:
+                print(f"[CAPTURE] Successfully captured via GNOME Shell DBus (dbus-send)")
+                return b64
+    except Exception:
+        pass
+
+    # Strategy 3: gnome-screenshot
+    try:
+        cmd = ["gnome-screenshot", "-f", tmp_png]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
+            b64 = compress_and_b64(tmp_png)
+            if b64:
+                print(f"[CAPTURE] Successfully captured via gnome-screenshot")
+                return b64
+    except Exception:
+        pass
+
+    # Strategy 4: scrot
+    try:
+        cmd = ["scrot", "-q", "65", tmp_jpg]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
+            b64 = compress_and_b64(tmp_jpg)
+            if b64:
+                print(f"[CAPTURE] Successfully captured via scrot")
+                return b64
+    except Exception:
+        pass
+
+    # Strategy 5: ImageMagick import
+    try:
+        cmd = ["import", "-window", "root", "-quality", "65", tmp_jpg]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
+            b64 = compress_and_b64(tmp_jpg)
+            if b64:
+                print(f"[CAPTURE] Successfully captured via ImageMagick import")
+                return b64
+    except Exception:
+        pass
+
+    # Strategy 6: xwd + convert
+    try:
+        cmd = ["xwd", "-root", "-silent", "-out", tmp_xwd]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_xwd) and os.path.getsize(tmp_xwd) > 1000:
+            subprocess.run(["convert", tmp_xwd, tmp_jpg], timeout=3)
+            try:
+                os.remove(tmp_xwd)
+            except Exception:
+                pass
+            if os.path.exists(tmp_jpg):
+                b64 = compress_and_b64(tmp_jpg)
+                if b64:
+                    print(f"[CAPTURE] Successfully captured via xwd")
+                    return b64
+    except Exception:
+        pass
+
+    # Strategy 7: ffmpeg x11grab
+    try:
+        disp = session["env"].get("DISPLAY", ":0")
+        cmd = ["ffmpeg", "-f", "x11grab", "-i", disp, "-vframes", "1", "-q:v", "3", tmp_jpg, "-y"]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
+            b64 = compress_and_b64(tmp_jpg)
+            if b64:
+                print(f"[CAPTURE] Successfully captured via ffmpeg")
+                return b64
+    except Exception:
+        pass
+
+    # Strategy 8: grim (Wayland)
+    try:
+        cmd = ["grim", tmp_png]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
+            b64 = compress_and_b64(tmp_png)
+            if b64:
+                print(f"[CAPTURE] Successfully captured via grim")
+                return b64
+    except Exception:
+        pass
+
+    # Strategy 9: PIL ImageGrab
+    try:
+        from PIL import ImageGrab
+        img = ImageGrab.grab()
+        import io
+        import base64
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=60)
+        print(f"[CAPTURE] Successfully captured via PIL ImageGrab")
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
+    except Exception:
+        pass
+
+    return None
 
 
 def execute_remote_command(cmd, pc_id, backend_url):
@@ -281,24 +624,12 @@ def execute_remote_command(cmd, pc_id, backend_url):
 
     elif cmd == "capture_screen":
         try:
-            import base64
-            # Attempt to capture display if scrot or xwd or import exists
-            img_b64 = None
-            tmp_path = f"/tmp/snap_{pc_id}.jpg"
-            for cap_tool in [["scrot", "-q", "50", tmp_path], ["import", "-window", "root", "-quality", "50", tmp_path]]:
-                try:
-                    res = subprocess.run(cap_tool, capture_output=True, timeout=3)
-                    if res.returncode == 0 and os.path.exists(tmp_path):
-                        with open(tmp_path, "rb") as f:
-                            img_b64 = base64.b64encode(f.read()).decode("utf-8")
-                        os.remove(tmp_path)
-                        break
-                except Exception:
-                    pass
+            print(f"[CAPTURE] 📸 On-demand desktop screen grab requested for {pc_id}...")
+            img_b64 = capture_linux_screen(pc_id)
 
             if not img_b64:
-                # Render SVG/text fallback card
-                from PIL import Image, ImageDraw, ImageFont
+                print(f"[CAPTURE-WARN] No graphical display detected. Generating system telemetry card.")
+                from PIL import Image, ImageDraw
                 img = Image.new("RGB", (700, 400), color=(15, 23, 42))
                 draw = ImageDraw.Draw(img)
                 draw.rectangle([(10, 10), (690, 390)], outline=(56, 189, 248), width=3)
@@ -306,8 +637,9 @@ def execute_remote_command(cmd, pc_id, backend_url):
                 draw.text((30, 90), f"Status     : ACTIVE & ONLINE", fill=(34, 197, 94))
                 draw.text((30, 130), f"Host System: {platform.system()} {platform.release()}", fill=(226, 232, 240))
                 draw.text((30, 170), f"Timestamp  : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", fill=(148, 163, 184))
-                draw.text((30, 220), "Headless DGX Session • CLI / SSH Active", fill=(251, 191, 36))
+                draw.text((30, 220), "CLI / SSH Active (No Display Server Attached)", fill=(251, 191, 36))
                 import io
+                import base64
                 buf = io.BytesIO()
                 img.save(buf, format="JPEG", quality=60)
                 img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
@@ -315,7 +647,7 @@ def execute_remote_command(cmd, pc_id, backend_url):
             if img_b64:
                 upload_url = f"{backend_url}/api/pc/screenshot"
                 send_post(upload_url, {"pc_id": pc_id, "image_base64": img_b64}, timeout=6)
-                print(f"[CAPTURE] Live screen grab uploaded for {pc_id}")
+                print(f"[CAPTURE] 🚀 Live screen grab uploaded successfully to server for {pc_id}!")
         except Exception as e:
             print(f"[CAPTURE-ERR] {e}")
 
@@ -334,7 +666,6 @@ def resolve_pc_id(arg_id=None):
         if f"PC-{i}" in hostname or f"PC{i}" in hostname or f"DGX-{i}" in hostname or f"DGX{i}" in hostname:
             return f"PC-{i}"
 
-    # Default if undetectable
     return hostname
 
 
@@ -353,7 +684,7 @@ def main():
     offline_url = f"{backend_url}/api/pc/offline"
 
     print("=" * 68)
-    print(f"🚀 AI/ML LAB DGX & WORKSTATION TELEMETRY AGENT v2.0")
+    print(f"🚀 AI/ML LAB DGX & WORKSTATION TELEMETRY AGENT v2.1")
     print(f"🖥️ Target PC ID : {pc_id}")
     print(f"🌐 Backend URL  : {backend_url}")
     print(f"⏱️ Interval     : {interval} seconds")
@@ -368,6 +699,8 @@ def main():
     atexit.register(on_exit)
     signal.signal(signal.SIGTERM, lambda s, f: sys.exit(0))
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
+
+    last_auto_snap = 0
 
     while True:
         try:
@@ -402,8 +735,20 @@ def main():
 
             if success:
                 gpu_tag = f" | GPU: {gpu_stats['gpu_percent']}% ({gpu_stats['gpu_name']})" if gpu_stats['gpu_name'] else ""
-                print(f"[{t_now}] 🟢 [{pc_id}] OK | CPU: {cpu_pct}% | RAM: {ram_pct}% ({ram_used}/{ram_total} GB){gpu_tag}")
-                
+                print(f"[{t_now}] 🟢 [{pc_id}] OK | User: {user_str} | CPU: {cpu_pct}% | RAM: {ram_pct}% ({ram_used}/{ram_total} GB){gpu_tag}")
+
+                # Automatic periodic background desktop snapshot every 90 seconds
+                now_ts = time.time()
+                if now_ts - last_auto_snap >= 90:
+                    last_auto_snap = now_ts
+                    try:
+                        snap_b64 = capture_linux_screen(pc_id)
+                        if snap_b64:
+                            send_post(f"{backend_url}/api/pc/screenshot", {"pc_id": pc_id, "image_base64": snap_b64}, timeout=6)
+                            print(f"[{t_now}] 📸 Background desktop snapshot uploaded for {pc_id}")
+                    except Exception:
+                        pass
+
                 cmd = resp_data.get("command") if isinstance(resp_data, dict) else None
                 if cmd:
                     execute_remote_command(cmd, pc_id, backend_url)
