@@ -7,7 +7,9 @@
     <meta name="description" content="Master Operations Dashboard, Live Gate Camera Detection, PC Allocation, and Attendance Control Center for AI/ML Lab">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🔬</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=30">
+    <link rel="stylesheet" href="style.css?v=31">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
@@ -136,10 +138,29 @@
     <main id="tab-pc-status" class="tab-content">
         <div class="page-title">
             <div>
-                <h2>🖥️ Lab Workstations Overview</h2>
-                <p>Real-time status, active durations, and flexible From-To time range scheduling</p>
+                <h2>🖥️ 3D AI LAB Digital Twin & Workstations Tracker</h2>
+                <p>Interactive spatial layout with real-time countdowns • Click any PC to allocate with duration & email</p>
             </div>
-            <button class="btn btn-secondary" onclick="loadPCStatus()">🔄 Refresh Status</button>
+            <div class="view-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button id="rotate-90-btn" class="btn btn-secondary">🔄 Rotate 90°</button>
+                <button id="gate-view-btn" class="btn btn-secondary">🚪 Gate View</button>
+                <button id="top-view-btn" class="btn btn-secondary">🔝 Top View</button>
+                <button id="reset-cam-btn" class="btn btn-secondary">🎯 Reset</button>
+                <button class="btn btn-secondary" onclick="loadPCStatus()">🔄 Refresh PCs</button>
+            </div>
+        </div>
+
+        <!-- 3D Digital Twin Canvas Viewport -->
+        <div id="canvas-3d-container" class="canvas-3d-wrapper">
+            <canvas id="lab-3d-canvas"></canvas>
+            <div class="canvas-3d-controls-hint">
+                <span>⌨️ WASD Walk</span> • 
+                <span>🔄 Q / E Rotate</span> • 
+                <span>🖱️ Drag Orbit</span> • 
+                <span>🚪 Tap Gate</span> • 
+                <span>⚡ Tap Switch</span> • 
+                <span>👆 Tap PC to Allot</span>
+            </div>
         </div>
 
         <!-- Metrics Row -->
@@ -610,6 +631,174 @@ We will notify as soon as a slot frees up.
     <!-- MODALS                                              -->
     <!-- ═══════════════════════════════════════════════════ -->
 
+    <!-- MODAL 1: PC TIME-BASED ALLOTMENT & WORKSTATION HUD -->
+    <div id="pc-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modal-title" style="margin: 0; font-size: 20px;">Assign Workstation</h3>
+                    <p id="modal-desc" style="margin: 4px 0 0 0; font-size: 13px; color: var(--on-surface-variant);">Configure time duration and notify student via email</p>
+                </div>
+                <button class="modal-close-btn" onclick="closePCModal()">✕</button>
+            </div>
+            
+            <div id="modal-occupy-form">
+                <!-- User Category / Role Selection -->
+                <div class="form-group">
+                    <label class="form-label">Who is using this Workstation?</label>
+                    <div class="role-selector-chips">
+                        <button type="button" class="role-chip-btn active" data-role="Student" onclick="selectUserRole('Student')">
+                            🎓 Registered Student
+                        </button>
+                        <button type="button" class="role-chip-btn" data-role="Faculty" onclick="selectUserRole('Faculty')">
+                            👨‍🏫 Faculty Member
+                        </button>
+                        <button type="button" class="role-chip-btn" data-role="Guest" onclick="selectUserRole('Guest')">
+                            👤 Unregistered / Guest
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section A: Registered Student Dropdown -->
+                <div class="form-group" id="reg-student-group">
+                    <label class="form-label">Select Registered Student / Teammate:</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="modal-student-select" class="form-select" onchange="onStudentSelectChange()" style="flex: 1;">
+                            <option value="">-- Choose from Registered Database --</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" onclick="appendStudentPartner()" title="Add another student to this PC" style="white-space: nowrap; font-size: 12px;">➕ Add Teammate</button>
+                    </div>
+                </div>
+
+                <!-- Section B: Name Input -->
+                <div class="form-group">
+                    <label class="form-label" id="modal-name-label">Student(s) / Team Members:</label>
+                    <input type="text" id="modal-student-name" class="form-input" placeholder="e.g. Ayush, Priya, Rohan (Group work allowed)">
+                    <small style="display: block; margin-top: 4px; color: var(--on-surface-variant); font-size: 11px;">
+                        👥 <strong>Multi-Person Allowed:</strong> Enter multiple names separated by commas (e.g. <em>Ayush, Priya, Rohan</em>) or pick from above and click "➕ Add Teammate".
+                    </small>
+                </div>
+
+                <!-- Section C: Dynamic Date & Time Range (From-To) -->
+                <div class="allotment-range-box">
+                    <div class="range-grid">
+                        <div class="form-group">
+                            <label class="form-label">📅 Date From (Start):</label>
+                            <input type="date" id="modal-date-from" class="form-input" onchange="onAllotmentRangeChange()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">📅 Date To (End):</label>
+                            <input type="date" id="modal-date-to" class="form-input" onchange="onAllotmentRangeChange()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">⏰ Time From (Start):</label>
+                            <input type="time" id="modal-time-from" class="form-input" onchange="onAllotmentRangeChange()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">⏰ Time To (End):</label>
+                            <input type="time" id="modal-time-to" class="form-input" onchange="onAllotmentRangeChange()">
+                        </div>
+                    </div>
+
+                    <!-- Quick Preset Duration Shortcuts -->
+                    <div class="quick-preset-row">
+                        <span class="preset-label">Quick End Time Presets:</span>
+                        <div class="duration-chips">
+                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset(15)">+15m</button>
+                            <button type="button" class="chip-btn active" onclick="applyQuickTimePreset(30)">+30m</button>
+                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset(60)">+1h</button>
+                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset(120)">+2h</button>
+                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset(240)">+4h</button>
+                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset('eod')">Full Day (6 PM)</button>
+                        </div>
+                    </div>
+
+                    <!-- Calculated Duration & Expiry Banner -->
+                    <div class="preview-banner" id="allotment-duration-preview" style="margin-top: 10px;">
+                        ⏳ <strong>Calculated Duration:</strong> <span id="calc-duration-text" style="color: var(--primary); font-weight: 700;">30 Mins</span>
+                        &bull; Slot expires: <span id="calc-expiry-text" style="font-weight: 600;">--:--</span>
+                    </div>
+                </div>
+
+                <!-- Email Notification Options -->
+                <div class="form-group">
+                    <div class="toggle-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="modal-send-email" checked>
+                            <span>📧 Send Automated Email Notification to Student</span>
+                        </label>
+                    </div>
+                    
+                    <div id="email-input-wrap" style="margin-top: 8px;">
+                        <input type="email" id="modal-student-email" class="form-input" placeholder="student.email@example.com">
+                        <small style="display: block; margin-top: 4px; color: var(--on-surface-variant); font-size: 11px;">
+                            The student will receive an email confirmation with PC number, allocated time, and lab guidelines.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Section: Project Currently Working On -->
+                <div class="form-group" style="margin-top: 14px;">
+                    <label class="form-label">💼 Project Currently Working On:</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+                        <select id="modal-project-select" class="form-select" onchange="onProjectSelectChange()" style="flex: 1;">
+                            <option value="">-- Select Lab Project or Enter Title Below --</option>
+                        </select>
+                    </div>
+                    <input type="text" id="modal-current-project" class="form-input" placeholder="e.g. YOLOv8 Surveillance, LLM Fine-Tuning, Autonomous Vision, Edge AI">
+                </div>
+
+                <!-- Optional Faculty Note -->
+                <div class="form-group">
+                    <label class="form-label">Optional Note / Instructions from Dr. Richa Choudhary:</label>
+                    <input type="text" id="modal-faculty-notes" class="form-input" placeholder="e.g. Please run your GPU training scripts on PC-3">
+                </div>
+            </div>
+
+            <!-- Free PC Section (when PC is already occupied) -->
+            <div id="modal-free-section" style="display: none;">
+                <div class="alert-box alert-warning" style="margin-bottom: 16px;">
+                    <div style="font-size: 28px;">⚠️</div>
+                    <div>
+                        <strong id="modal-free-pc-title">PC-1 is Currently Occupied</strong>
+                        <p id="modal-free-pc-desc" style="margin: 4px 0 0 0; font-size: 13px;">Occupied by Ayush. Would you like to deselect and free this slot?</p>
+                    </div>
+                </div>
+
+                <div id="modal-free-details" style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 16px;"></div>
+
+                <!-- Quick Inline Project Update for Active Session -->
+                <div class="project-update-card" style="padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <span>💼 Active Project:</span>
+                        <span id="modal-active-project-badge" style="color: #4338ca; font-weight: 600;">None specified</span>
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="modal-edit-project-input" class="form-input" placeholder="Update project name for this session..." style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" onclick="submitQuickProjectUpdate()" style="white-space: nowrap;">💾 Save Project</button>
+                    </div>
+                </div>
+
+                <!-- Add Partner / Teammate to Active PC Session -->
+                <div class="partner-add-card" style="padding: 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; margin-bottom: 16px;">
+                    <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #166534; display: flex; align-items: center; gap: 6px;">
+                        <span>👥 Add Partner / Teammate to this Workstation:</span>
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="modal-add-partner-input" class="form-input" placeholder="Enter student name to add to this PC..." style="flex: 1;">
+                        <button type="button" class="btn btn-secondary" onclick="submitAddPartnerToPC()" style="white-space: nowrap; background: #ffffff; border-color: #86efac; color: #15803d; font-weight: 700;">➕ Add Partner</button>
+                    </div>
+                    <div id="modal-current-partners-list" style="margin-top: 8px; font-size: 12px; color: #1e293b;"></div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                <button class="btn btn-secondary" onclick="closePCModal()">Cancel</button>
+                <button id="modal-action-btn" class="btn btn-primary" onclick="handleModalActionSubmit()">Confirm Allotment</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal 0: Research Project Add/Edit Modal -->
     <div id="backend-project-modal" class="modal-overlay" style="display: none;">
         <div class="modal-card" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
@@ -794,7 +983,12 @@ We will notify as soon as a slot frees up.
         <p>AI/ML Lab Master Operations System • Built for Dr. Richa Choudhary • High-Speed Root Controller</p>
     </footer>
 
-    <script src="script.js?v=37"></script>
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="three_scene.js?v=36"></script>
+    <script src="script.js?v=38"></script>
     <datalist id="registered-members-list"></datalist>
 </body>
 </html>

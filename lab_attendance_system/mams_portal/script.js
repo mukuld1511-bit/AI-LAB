@@ -908,10 +908,11 @@ function handlePCClick(pcId, isFree) {
         document.getElementById("modal-faculty-notes").value = "";
         document.getElementById("modal-student-select").value = "";
         
-        // Reset and populate project dropdown
+        // Reset and populate project & registered student dropdowns
         const curProjInput = document.getElementById("modal-current-project");
         if (curProjInput) curProjInput.value = "";
         populateProjectSelect();
+        populateStudentSelect();
         
         // Initialize Date From-To & Time From-To Range with current dynamic times
         initAllotmentRangeDefaults();
@@ -1073,21 +1074,38 @@ function applyQuickTimePreset(mins) {
 }
 
 // Populate Registered Members Dropdown for Allotment
-function populateStudentSelect() {
+async function populateStudentSelect() {
     const select = document.getElementById("modal-student-select");
     if (!select) return;
 
-    select.innerHTML = '<option value="">-- Choose Registered Lab Member --</option>';
+    if (!registeredUsersList || registeredUsersList.length === 0) {
+        try {
+            const data = await apiFetch("/api/registered_users");
+            registeredUsersList = data.users || [];
+        } catch (e) {
+            console.warn("Failed to fetch registered users for modal select", e);
+        }
+    }
+
+    select.innerHTML = '<option value="">-- Choose from Registered Database --</option>';
     registeredUsersList.forEach(user => {
         const opt = document.createElement("option");
         opt.value = user.name;
         const role = user.role || "Student";
         const icon = role.toLowerCase() === "faculty" ? "👨‍🏫" : role.toLowerCase() === "guest" ? "👤" : "🎓";
-        opt.innerText = `${icon} [${role}] ${user.name}${user.email ? ` (${user.email})` : ''}`;
+        const rollStr = user.roll_no ? ` (${user.roll_no})` : "";
+        const emailStr = user.email ? ` • ${user.email}` : "";
+        opt.innerText = `${icon} [${role}] ${user.name}${rollStr}${emailStr}`;
         opt.dataset.email = user.email || "";
         opt.dataset.role = role;
         select.appendChild(opt);
     });
+
+    // Also populate registered-members-list datalist
+    const datalist = document.getElementById("registered-members-list");
+    if (datalist && registeredUsersList.length > 0) {
+        datalist.innerHTML = registeredUsersList.map(u => `<option value="${escapeHtml(u.name)}">${escapeHtml(u.role || 'Student')}${u.roll_no ? ` (${escapeHtml(u.roll_no)})` : ''}</option>`).join("");
+    }
 }
 
 function onStudentSelectChange() {
@@ -1099,6 +1117,36 @@ function onStudentSelectChange() {
         document.getElementById("modal-student-email").value = email;
         const role = selectedOpt.dataset.role || "Student";
         selectUserRole(role);
+    }
+}
+
+function appendStudentPartner() {
+    const select = document.getElementById("modal-student-select");
+    if (!select || !select.value) {
+        showToast("Please choose a member from the dropdown first to add as teammate", "info");
+        return;
+    }
+    const nameInput = document.getElementById("modal-student-name");
+    if (!nameInput) return;
+    const currentVal = nameInput.value.trim();
+    if (currentVal) {
+        const parts = currentVal.split(",").map(s => s.trim().toLowerCase());
+        if (!parts.includes(select.value.toLowerCase())) {
+            nameInput.value = currentVal + ", " + select.value;
+            showToast(`Added ${select.value} as partner`, "success");
+        } else {
+            showToast(`${select.value} is already added`, "info");
+        }
+    } else {
+        nameInput.value = select.value;
+        showToast(`Selected ${select.value}`, "success");
+    }
+    const selectedOpt = select.options[select.selectedIndex];
+    if (selectedOpt && selectedOpt.dataset.email) {
+        const emailInput = document.getElementById("modal-student-email");
+        if (emailInput && !emailInput.value.trim()) {
+            emailInput.value = selectedOpt.dataset.email;
+        }
     }
 }
 
@@ -1296,6 +1344,7 @@ async function loadRegisteredFaces() {
         if (countBadge) countBadge.innerText = registeredUsersList.length;
         updateCategoryCounts(registeredUsersList);
         renderRegisteredUsersGrid(registeredUsersList);
+        populateStudentSelect();
     } catch(e) {
         console.error("Failed to load registered users", e);
     }

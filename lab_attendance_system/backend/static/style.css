@@ -1650,3 +1650,156 @@ body {
     .range-grid { grid-template-columns: 1fr; }
     .tt-legend { flex-direction: column; gap: 10px; }
 }
+
+/* ═══════════════════════════════════════════════════
+   3D DIGITAL TWIN & MODERN WORKSTATION STYLES
+   ═══════════════════════════════════════════════════ */
+.canvas-3d-wrapper {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    background: #0f172a;
+    border-radius: var(--radius-lg, 12px);
+    overflow: hidden;
+    box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+    border: 1px solid #334155;
+    margin-bottom: 24px;
+}
+
+#lab-3d-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.canvas-3d-controls-hint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    color: #e2e8f0;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    gap: 12px;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.view-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.modal-content {
+    background: var(--surface, #ffffff);
+    border-radius: 16px;
+    padding: 24px 28px;
+    width: 100%;
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-content.modal-large {
+    max-width: 680px;
+}
+
+.allotment-range-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.countdown-box {
+    margin-top: 10px;
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid #fecaca;
+}
+
+.countdown-free-ready {
+    background: #f0fdf4;
+    color: #15803d;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #bbf7d0;
+}
+
+.alert-box {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    align-items: flex-start;
+}
+
+.alert-warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+/* ── Toast Notifications ── */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: slideInRight 0.25s ease-out;
+    max-width: 360px;
+    border-left: 4px solid #4f46e5;
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast-success {
+    border-left-color: #22c55e;
+}
+
+.toast-error {
+    border-left-color: #ef4444;
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
