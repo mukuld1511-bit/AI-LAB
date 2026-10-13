@@ -130,7 +130,9 @@ function init3DLabScene() {
     scene.fog = new THREE.FogExp2(0xf1f5f9, 0.008);
 
     // 2. Camera (Isometric View)
-    const aspect = container.clientWidth / container.clientHeight;
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 480;
+    const aspect = width / height;
     camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 100);
     setDefaultCameraPosition();
 
@@ -141,7 +143,7 @@ function init3DLabScene() {
         alpha: false,
         powerPreference: "high-performance"
     });
-    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1127,13 +1129,13 @@ function mountMonitorStation(pcId, posX, posZ, rotY, surfaceY, isServer = false)
 /**
  * Generates high-DPI canvas texture for 3D floating sprite badge
  */
-function createStatusSprite(pcId, statusText, isFree) {
+function createStatusSprite(pcId, statusText, isFree, pcData = null) {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 400;
     const ctx = canvas.getContext("2d");
 
-    drawSpriteCanvas(ctx, pcId, statusText, isFree);
+    drawSpriteCanvas(ctx, pcId, statusText, isFree, pcData);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
@@ -1144,8 +1146,13 @@ function createStatusSprite(pcId, statusText, isFree) {
     return sprite;
 }
 
-function drawSpriteCanvas(ctx, pcId, statusText, isFree) {
+function drawSpriteCanvas(ctx, pcId, statusText, isFree, pcData = null) {
     ctx.clearRect(0, 0, 1024, 400);
+
+    // If pcData not passed directly, look up from global workstation map
+    if (!pcData && typeof pcWorkstations !== "undefined" && pcWorkstations && pcWorkstations[pcId]) {
+        pcData = pcWorkstations[pcId].pcData;
+    }
 
     const isBackend = pcId === "BACKEND";
 
@@ -1256,7 +1263,7 @@ function updatePCStatusIn3D(pcs) {
         if (item.sprite && item.sprite.userData) {
             const { ctx, texture } = item.sprite.userData;
             const statusLabel = isBackend ? "24/7 SERVER" : isFree ? "AVAILABLE" : (pc.occupied_by || "IN USE");
-            drawSpriteCanvas(ctx, pc.pc_id, statusLabel, isFree);
+            drawSpriteCanvas(ctx, pc.pc_id, statusLabel, isFree, pc);
             texture.needsUpdate = true;
         }
     });
