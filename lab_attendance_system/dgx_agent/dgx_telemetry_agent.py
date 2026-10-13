@@ -700,7 +700,6 @@ def main():
     signal.signal(signal.SIGTERM, lambda s, f: sys.exit(0))
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
 
-    last_auto_snap = 0
 
     while True:
         try:
@@ -736,18 +735,6 @@ def main():
             if success:
                 gpu_tag = f" | GPU: {gpu_stats['gpu_percent']}% ({gpu_stats['gpu_name']})" if gpu_stats['gpu_name'] else ""
                 print(f"[{t_now}] 🟢 [{pc_id}] OK | User: {user_str} | CPU: {cpu_pct}% | RAM: {ram_pct}% ({ram_used}/{ram_total} GB){gpu_tag}")
-
-                # Automatic periodic background desktop snapshot every 90 seconds
-                now_ts = time.time()
-                if now_ts - last_auto_snap >= 90:
-                    last_auto_snap = now_ts
-                    try:
-                        snap_b64 = capture_linux_screen(pc_id)
-                        if snap_b64:
-                            send_post(f"{backend_url}/api/pc/screenshot", {"pc_id": pc_id, "image_base64": snap_b64}, timeout=6)
-                            print(f"[{t_now}] 📸 Background desktop snapshot uploaded for {pc_id}")
-                    except Exception:
-                        pass
 
                 cmd = resp_data.get("command") if isinstance(resp_data, dict) else None
                 if cmd:
