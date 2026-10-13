@@ -1155,45 +1155,88 @@ function drawSpriteCanvas(ctx, pcId, statusText, isFree, pcData = null) {
     }
 
     const isBackend = pcId === "BACKEND";
+    const isOnline = isBackend || (pcData && (pcData.is_online === 1 || pcData.is_online === true));
 
-    // Card background pill (High-DPI 1024x400)
-    const radius = 42;
-    const bgColor = isBackend ? "rgba(14, 165, 233, 0.95)" : isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)";
+    // Outer Card Pill (High-DPI 1024x400)
+    const radius = 36;
     ctx.fillStyle = "rgba(15, 23, 42, 0.96)";
-    roundRect(ctx, 24, 24, 976, 352, radius);
+    roundRect(ctx, 24, 20, 976, 360, radius);
     ctx.fill();
 
-    ctx.strokeStyle = isBackend ? "#38bdf8" : isFree ? "#10b981" : "#ef4444";
-    ctx.lineWidth = 10;
-    roundRect(ctx, 24, 24, 976, 352, radius);
+    const borderColor = isBackend ? "#38bdf8" : (isOnline ? (isFree ? "#10b981" : "#ef4444") : "#64748b");
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 8;
+    roundRect(ctx, 24, 20, 976, 360, radius);
     ctx.stroke();
 
-    // PC Name (Top)
+    // 1. Header Row (PC Identifier)
     ctx.fillStyle = "#ffffff";
-    ctx.font = isBackend ? "bold 78px 'Inter', -apple-system, sans-serif" : "bold 96px 'Inter', -apple-system, sans-serif";
+    ctx.font = isBackend ? "bold 70px 'Inter', -apple-system, sans-serif" : "bold 82px 'Inter', -apple-system, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(isBackend ? "🖥️ BACKEND SERVER" : `💻 ${pcId}`, 512, 135);
+    ctx.fillText(isBackend ? "🖥️ BACKEND SERVER" : `💻 ${pcId}`, 512, 85);
 
-    // Status Pill (Bottom)
-    ctx.fillStyle = bgColor;
-    roundRect(ctx, 70, 215, 884, 124, 30);
+    // 2. Middle Row (Status Pill)
+    const statusBgColor = isBackend ? "rgba(14, 165, 233, 0.95)" : (isOnline ? (isFree ? "rgba(16, 185, 129, 0.95)" : "rgba(239, 68, 68, 0.95)") : "rgba(71, 85, 105, 0.95)");
+    ctx.fillStyle = statusBgColor;
+    roundRect(ctx, 60, 142, 904, 78, 22);
     ctx.fill();
 
     ctx.fillStyle = "#ffffff";
+    let statusLabel = "";
     if (isBackend) {
-        ctx.font = "bold 56px 'Inter', -apple-system, sans-serif";
-        ctx.fillText("⚡ 24/7 DEDICATED HOST", 512, 277);
+        statusLabel = "⚡ 24/7 DEDICATED HOST • ACTIVE";
+    } else if (isOnline) {
+        statusLabel = isFree ? "🟢 ONLINE • AVAILABLE" : `🔴 IN USE • ${statusText}`;
     } else {
-        const isOnline = pcData && (pcData.is_online === 1 || pcData.is_online === true);
-        const onlinePrefix = isOnline ? "🟢 " : "⚫ ";
-        let label = isFree ? (isOnline ? "🟢 AVAILABLE (ON)" : "⚫ AVAILABLE (OFF)") : `🔴 ${statusText}`;
-        if (isOnline && pcData && pcData.cpu_percent) {
-            label += ` • CPU ${pcData.cpu_percent}%`;
-        }
-        const fontSize = label.length > 24 ? 40 : label.length > 16 ? 48 : 58;
-        ctx.font = `bold ${fontSize}px 'Inter', -apple-system, sans-serif`;
-        ctx.fillText(label, 512, 277);
+        statusLabel = isFree ? "⚫ OFFLINE • AVAILABLE" : `⚫ OFFLINE • ${statusText}`;
+    }
+    const statusFontSize = statusLabel.length > 28 ? 38 : (statusLabel.length > 20 ? 44 : 50);
+    ctx.font = `bold ${statusFontSize}px 'Inter', -apple-system, sans-serif`;
+    ctx.fillText(statusLabel, 512, 181);
+
+    // 3. Bottom Row (Live Telemetry Capsule: CPU, RAM, GPU, Temp)
+    ctx.fillStyle = "rgba(30, 41, 59, 0.95)";
+    roundRect(ctx, 60, 236, 904, 120, 22);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+    ctx.lineWidth = 3;
+    roundRect(ctx, 60, 236, 904, 120, 22);
+    ctx.stroke();
+
+    if (isOnline && pcData) {
+        const cpu = pcData.cpu_percent || 0;
+        const ram = pcData.ram_percent || 0;
+        const gpu = pcData.gpu_percent || 0;
+        const temp = pcData.gpu_temp || 0;
+        const gpuName = pcData.gpu_name ? pcData.gpu_name.split(' ')[0] : 'GPU';
+
+        // Line 1: CPU, RAM, and GPU Load
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "bold 32px 'JetBrains Mono', monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(`⚡ CPU: ${cpu}%  •  🧠 RAM: ${ram}%  •  🎮 ${gpuName}: ${gpu}%`, 512, 268);
+
+        // Line 2: GPU Temperature and VRAM / State
+        ctx.fillStyle = temp > 75 ? "#ef4444" : temp > 60 ? "#f59e0b" : "#38bdf8";
+        const tempBadge = temp > 0 ? `🔥 TEMP: ${temp}°C` : `🔥 TEMP: NORMAL`;
+        const vramStr = (pcData.gpu_vram_total_mb && pcData.gpu_vram_total_mb > 0)
+            ? `💾 VRAM: ${Math.round(pcData.gpu_vram_used_mb || 0)}/${Math.round(pcData.gpu_vram_total_mb)}MB`
+            : `⚡ CLUSTER COMPUTE NODE`;
+        ctx.font = "bold 28px 'JetBrains Mono', monospace";
+        ctx.fillText(`${tempBadge}   |   ${vramStr}`, 512, 320);
+    } else if (isBackend) {
+        ctx.fillStyle = "#38bdf8";
+        ctx.font = "bold 34px 'JetBrains Mono', monospace";
+        ctx.textAlign = "center";
+        const cpu = (pcData && pcData.cpu_percent) || 5;
+        const ram = (pcData && pcData.ram_percent) || 45;
+        ctx.fillText(`⚡ CPU: ${cpu}%   •   🧠 RAM: ${ram}%   •   🌐 100% HEALTHY`, 512, 296);
+    } else {
+        ctx.fillStyle = "#64748b";
+        ctx.font = "bold 34px 'Inter', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("⚫ SYSTEM POWERED DOWN / STANDBY", 512, 296);
     }
 }
 

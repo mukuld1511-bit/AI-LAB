@@ -40,8 +40,11 @@ except Exception:
     HAS_NVML = False
 
 
+import subprocess
+import shutil
+
 def load_config():
-    """Loads pc_id and backend_url from agent_config.json or generates default."""
+    """Loads pc_id and backend_url from agent_config.json, CLI args, or generates default."""
     config = {
         "pc_id": "PC-1",
         "backend_url": DEFAULT_BACKEND_URL,
@@ -61,11 +64,26 @@ def load_config():
             if f"PC-{i}" in hostname or f"PC{i}" in hostname:
                 config["pc_id"] = f"PC-{i}"
                 break
-        try:
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(config, f, indent=4)
-        except Exception:
-            pass
+
+    # Command-line arguments override (e.g. python pc_telemetry_agent.py PC-2)
+    if len(sys.argv) > 1:
+        for i, arg in enumerate(sys.argv[1:], 1):
+            upper_arg = arg.strip().upper()
+            if upper_arg in ("--PC-ID", "-P") and i < len(sys.argv) - 1:
+                config["pc_id"] = sys.argv[i + 1].strip().upper()
+            elif upper_arg.startswith("PC-") or upper_arg.startswith("PC"):
+                # Normalize e.g. PC2 -> PC-2, PC-2 -> PC-2
+                digits = "".join([c for c in upper_arg if c.isdigit()])
+                config["pc_id"] = f"PC-{digits}" if digits else upper_arg
+            elif upper_arg in ("--URL", "-U") and i < len(sys.argv) - 1:
+                config["backend_url"] = sys.argv[i + 1].strip()
+
+    # Save active config so next runs remember this PC ID
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=4)
+    except Exception:
+        pass
 
     return config
 
@@ -79,6 +97,7 @@ def get_system_metrics():
         "ram_total_gb": 0.0,
         "gpu_name": "",
         "gpu_percent": 0.0,
+        "gpu_temp": 0.0,
         "gpu_vram_used_mb": 0.0,
         "gpu_vram_total_mb": 0.0,
         "ip_address": "",
@@ -93,7 +112,10 @@ def get_system_metrics():
         metrics["ip_address"] = s.getsockname()[0]
         s.close()
     except Exception:
-        metrics["ip_address"] = socket.gethostbyname(socket.gethostname())
+        try:
+            metrics["ip_address"] = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            metrics["ip_address"] = "127.0.0.1"
 
     # 2. CPU & RAM (psutil)
     if HAS_PSUTIL:
@@ -117,11 +139,48 @@ def get_system_metrics():
                 metrics["gpu_name"] = metrics["gpu_name"].decode("utf-8")
             util = pynvml.nvmlDeviceGetUtilizationRates(handle)
             metrics["gpu_percent"] = float(util.gpu)
+            try:
+                metrics["gpu_temp"] = float(pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU))
+            except Exception:
+                metrics["gpu_temp"] = 0.0
             mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
             metrics["gpu_vram_used_mb"] = round(mem_info.used / (1024 ** 2), 0)
             metrics["gpu_vram_total_mb"] = round(mem_info.total / (1024 ** 2), 0)
         except Exception:
             pass
+
+    # 4. Fallback to nvidia-smi CLI if NVML was not active or returned empty
+    if not metrics["gpu_name"]:
+        nvsmi = shutil.which("nvidia-smi")
+        if not nvsmi:
+            for cand in [
+                r"C:\Windows\System32\nvidia-smi.exe",
+                r"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe",
+                "/usr/bin/nvidia-smi",
+                "/usr/local/cuda/bin/nvidia-smi"
+            ]:
+                if os.path.exists(cand):
+                    nvsmi = cand
+                    break
+        if nvsmi:
+            try:
+                cmd = [
+                    nvsmi,
+                    "--query-gpu=name,utilization.gpu,temperature.gpu,memory.used,memory.total",
+                    "--format=csv,noheader,nounits"
+                ]
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
+                if proc.returncode == 0 and proc.stdout.strip():
+                    first_line = proc.stdout.strip().splitlines()[0]
+                    parts = [p.strip() for p in first_line.split(",")]
+                    if len(parts) >= 5:
+                        metrics["gpu_name"] = parts[0]
+                        metrics["gpu_percent"] = float(parts[1] or 0.0)
+                        metrics["gpu_temp"] = float(parts[2] or 0.0)
+                        metrics["gpu_vram_used_mb"] = round(float(parts[3] or 0.0), 0)
+                        metrics["gpu_vram_total_mb"] = round(float(parts[4] or 0.0), 0)
+            except Exception:
+                pass
 
     return metrics
 

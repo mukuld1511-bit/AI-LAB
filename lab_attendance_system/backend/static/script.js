@@ -378,22 +378,25 @@ function renderPCGrid(pcs) {
                     </div>
 
                     <!-- GPU Row with % and Temperature -->
-                    ${gpuName || gpuVal > 0 || gpuTemp > 0 ? `
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                            <span style="color: #475569; font-weight: 700;" title="${p.gpu_name || ''}">
-                                🎮 GPU ${gpuName ? `(${gpuName.split(' ')[0]})` : ''}
-                            </span>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                ${gpuTemp > 0 ? `
-                                    <span style="background: ${gpuTemp > 75 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)'}; color: ${gpuTemp > 75 ? '#dc2626' : '#d97706'}; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700;">
-                                        🔥 ${gpuTemp}°C
-                                    </span>
-                                ` : ''}
-                                <strong style="color: #0284c7; font-family: 'JetBrains Mono', monospace;">${gpuVal}%</strong>
-                            </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                        <span style="color: #475569; font-weight: 700;" title="${p.gpu_name || 'GPU Hardware Accelerator'}">
+                            🎮 GPU ${gpuName ? `(${gpuName.split(' ')[0]})` : ''}
+                        </span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            ${gpuTemp > 0 ? `
+                                <span style="background: ${gpuTemp > 75 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)'}; color: ${gpuTemp > 75 ? '#dc2626' : '#d97706'}; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700;">
+                                    🔥 ${gpuTemp}°C
+                                </span>
+                            ` : ''}
+                            <strong style="color: #0284c7; font-family: 'JetBrains Mono', monospace;">${gpuVal}%</strong>
                         </div>
-                        <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
-                            <div style="width: ${Math.min(100, gpuVal)}%; height: 100%; background: linear-gradient(90deg, #0284c7, #0369a1); border-radius: 3px;"></div>
+                    </div>
+                    <div style="width: 100%; height: 5px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: ${p.gpu_vram_total_mb > 0 ? '4px' : '0'};">
+                        <div style="width: ${Math.min(100, gpuVal)}%; height: 100%; background: linear-gradient(90deg, #0284c7, #0369a1); border-radius: 3px;"></div>
+                    </div>
+                    ${p.gpu_vram_total_mb > 0 ? `
+                        <div style="font-size: 9px; color: #64748b; font-family: 'JetBrains Mono', monospace; text-align: right; margin-top: 2px;">
+                            VRAM: ${Math.round(p.gpu_vram_used_mb || 0)} / ${Math.round(p.gpu_vram_total_mb)} MB
                         </div>
                     ` : ''}
                 </div>

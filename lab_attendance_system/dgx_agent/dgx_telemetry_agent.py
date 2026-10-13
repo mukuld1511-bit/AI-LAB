@@ -113,13 +113,22 @@ def get_nvidia_dgx_gpu_info():
         "gpu_vram_total_mb": 0.0
     }
     try:
+        nvsmi = shutil.which("nvidia-smi")
+        if not nvsmi:
+            for cand in ["/usr/bin/nvidia-smi", "/usr/local/cuda/bin/nvidia-smi", "/usr/lib/wsl/lib/nvidia-smi"]:
+                if os.path.exists(cand):
+                    nvsmi = cand
+                    break
+        if not nvsmi:
+            nvsmi = "nvidia-smi"
+
         # Query comma-separated GPU name, utilization, temperature, memory.used, memory.total
         cmd = [
-            "nvidia-smi",
+            nvsmi,
             "--query-gpu=name,utilization.gpu,temperature.gpu,memory.used,memory.total",
             "--format=csv,noheader,nounits"
         ]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=4)
         if proc.returncode == 0 and proc.stdout.strip():
             lines = [l.strip() for l in proc.stdout.strip().splitlines() if l.strip()]
             gpu_count = len(lines)
