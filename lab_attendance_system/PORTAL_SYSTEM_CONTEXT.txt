@@ -1,0 +1,177 @@
+================================================================================
+AI/ML LAB ATTENDANCE & PC TRACKING ECOSYSTEM — SYSTEM ARCHITECTURE & PORTALS CONTEXT
+================================================================================
+System Version : 2.1.0 (Production 24/7 Ready)
+Department     : AI/ML Department, PIET
+In-Charge      : Prof. Richa Choudhary
+
+--------------------------------------------------------------------------------
+1. SYSTEM OVERVIEW & CORE ARCHITECTURE
+--------------------------------------------------------------------------------
+The AI/ML Lab Attendance & PC Tracking System is an autonomous computer vision,
+attendance monitoring, workstation management, and remote supervision ecosystem.
+
+The system is built on a modular client-server architecture:
+  • Backend Core      : FastAPI (Python 3.12, Uvicorn, SQLite database)
+  • Security Engine   : OpenCV + face_recognition (128D Deep Metric Face Embeddings)
+  • Communication Hub : SMTP Dispatcher (Gmail App Password, HTML email templates)
+  • Tunnel & Remote   : Ngrok Fixed Static Domain (amaretto-confess-subtract.ngrok-free.dev)
+  • Frontends         : Dual-Portal Design (Local Admin Hub + Vercel Remote Portal)
+
+================================================================================
+2. THE TWO PORTALS EXPLAINED IN DETAIL
+================================================================================
+
+--------------------------------------------------------------------------------
+PORTAL 1: BACKEND MASTER OPERATIONS HUB (Root Admin & Gate Security Dashboard)
+--------------------------------------------------------------------------------
+• Location       : `lab_attendance_system/backend/static/index.html`
+• Hosted URL     : `http://localhost:8000/` or `http://<LAB_PC_IP>:8000/`
+• Target Audience: Lab Administrators, Lab Assistants, Technical Faculty on the Physical PC.
+• Primary Role   : Master physical control hub connected directly to hardware (USB Webcams, Local Database).
+
+KEY FEATURES & CAPABILITIES:
+1. Live Gate Security Camera Feed (`/video_feed`):
+   - Streams live feed from USB Gate Camera (Index 0) using DirectShow (`cv2.CAP_DSHOW`).
+   - Real-time face detection inference with color-coded bounding boxes:
+       🟢 GREEN Bounding Box: Recognized Enrolled Member (Name displayed).
+       🔴 RED Bounding Box  : Unrecognized Visitor / Intruder (Flagged as 'UNKNOWN / INTRUDER').
+   - Automatic snapshot capture into `unknown_faces/YYYY-MM-DD/` with 8s cooldown.
+
+2. Workstations & PC Matrix Control (9 Workstations + 1 Backend Node):
+   - Live color-coded occupancy cards:
+       🟢 Free (Available for allocation)
+       🔴 Occupied (Timer countdown, occupant name, role, email, project)
+       🟡 Ending Soon (Warning when < 5 mins remain)
+   - One-click PC Allocation with duration timer (15m, 30m, 1h, 2h, 4h, Custom).
+   - "End Session" (Free PC) & "End All Sessions" emergency purge.
+   - Quick notification templates for students.
+
+3. Kiosk Scan Entry Simulation:
+   - "Trigger Kiosk Scan" button for manual entry testing without standing in front of camera.
+
+4. Attendance Logs & Analytics:
+   - Real-time tabular logs with search filter (by date, member name).
+   - Shows In-Time, Out-Time, Status (🟢 Inside Lab vs Checked Out), and Role.
+   - One-click CSV Export (`/export/csv`).
+
+5. Member Directory & Enrollment:
+   - Add new member with Live Camera snapshot capture or file upload.
+   - Role-tailored categorization: Student 🎓, Faculty 👨‍🏫, Guest 👤.
+   - Update member emails, delete/unregister members.
+
+6. Security Gallery (Unknown Visitors):
+   - Grid view of all captured intruder faces with timestamp and date.
+   - Lightbox modal with zoom and delete options.
+
+7. Lab Timetable Management:
+   - Day-wise and Slot-wise class allocation schedule with CSV export.
+
+8. SMTP Mail Server Configuration:
+   - In-app configuration of SMTP Host, Port, Username, and Gmail App Password.
+   - Test email dispatch button.
+
+
+--------------------------------------------------------------------------------
+PORTAL 2: MAM'S REMOTE MONITORING & 3D DIGITAL TWIN PORTAL (In-Charge Portal)
+--------------------------------------------------------------------------------
+• Location       : `lab_attendance_system/mams_portal/index.html`
+• Hosted URL     : Deployed to Vercel (`https://lab-attendance-system-theta.vercel.app`)
+• Target Audience: Prof. Richa Choudhary (In-Charge) via Mobile Phone (iOS/Android) or Laptop.
+• Primary Role   : Global remote monitoring, 3D visualization, instant member allotment, and email communications from anywhere.
+
+KEY FEATURES & CAPABILITIES:
+1. 3D Digital Twin Lab Scene (Three.js):
+   - Interactive 3D representation of the physical AI/ML lab floor layout.
+   - Real-time color synchronization with workstation hardware state:
+       🟢 Glowing Green = Free PC
+       🔴 Glowing Red   = Occupied PC
+       🟡 Glowing Amber = Ending Soon (< 5 mins remaining)
+   - Clickable 3D PC models that directly open the allotment/info modal.
+
+2. Mobile-Optimized Workstation Management:
+   - Clean card-based PC grid showing active users, end time, and live countdown timers.
+   - Instant allotment modal supporting single students, faculty, or group teammates (`/pc/add_occupant`).
+   - "Send Allotment Email" toggle (automatically sends professional HTML confirmation email).
+
+3. Categorized Members Directory:
+   - Filter chips: All, Students, Faculty, Guests.
+   - High-contrast role badges.
+   - Zero-CDN Inline SVG Avatars with personalized initials gradients.
+   - Direct Email Modal for sending quick messages to any member.
+
+4. Intruder & Security Snapshot Gallery:
+   - 2-column mobile-friendly snapshot grid.
+   - Zero-Network Base64 Image Embedding: Photos load directly inside API responses to bypass mobile carrier and ngrok browser interstitial warnings.
+   - Full Lightbox zoom with date/time stamps and delete controls.
+
+5. Offline State Persistence & Resilience:
+   - If the backend PC goes offline or network disconnects:
+       * Caches last-known PC occupancy state in browser `localStorage`.
+       * Retains display without blank screens.
+       * Displays pulsating corner badge: `⚠️ Unupdated (Previous Session)`.
+       * Re-syncs automatically the instant connection restores.
+
+6. Responsive Mobile Design:
+   - Swipeable horizontal navigation tabs.
+   - Touch-friendly 2x2 header action grid.
+   - Mobile-viewport adapted bottom sheets for all modals.
+
+================================================================================
+3. HOW THE TWO PORTALS TALK TO EACH OTHER & THE BACKEND
+================================================================================
+
+                               +-----------------------------+
+                               |    Gate Camera (Index 0)    |
+                               +--------------+--------------+
+                                              |
+                                              v
++-----------------------------------------------------------------------------+
+|                      LAB PC (FastAPI Backend : 8000)                        |
+|                                                                             |
+|  • database.py  : SQLite (lab_attendance.db) — Single Source of Truth       |
+|  • camera.py    : Thread-safe GateCameraManager (cv2.CAP_DSHOW)             |
+|  • mailer.py    : SMTP Dispatcher (Gmail TLS on port 587)                  |
+|  • main.py      : REST API Endpoints (/pc/status, /attendance, etc.)        |
++----------------------+------------------------------+-----------------------+
+                       |                              |
+         (Local / LAN Access)            (Public Remote Tunnel)
+                       |                              |
+                       v                              v
++------------------------------+     +----------------------------------------+
+| PORTAL 1: Root Operations    |     | Ngrok Fixed Static Domain:             |
+| `backend/static/index.html`  |     | amaretto-confess-subtract.ngrok-free...|
+| (Localhost / Lab PC Browser) |     +-------------------+--------------------+
++------------------------------+                         |
+                                                         | (HTTPS Fetch with
+                                                         |  ngrok-skip-warning)
+                                                         v
+                                     +----------------------------------------+
+                                     | PORTAL 2: Mam's Remote Monitoring      |
+                                     | `mams_portal/index.html`               |
+                                     | (Vercel: Mobile Phone / Laptop)        |
+                                     +----------------------------------------+
+
+DATA SYNCHRONIZATION MECHANISM:
+1. Both portals poll `/pc/status` every 6-8 seconds to maintain synchronized occupancy state.
+2. 1-second interval timers run locally in the browser to decrement countdown clocks smoothly.
+3. If a PC timer expires (`end_time <= now`), the backend automatically marks the PC as 'free' upon next status check.
+4. Any PC allotment or freeing made on Mam's phone updates SQLite immediately, reflecting instantly on the Local Admin Hub.
+
+================================================================================
+4. 24/7 UNATTENDED RUNTIME INSTRUCTIONS (LAB SERVER PC)
+================================================================================
+To run the system continuously 24/7 on the dedicated Lab Server PC:
+
+Step 1: One-Time Ngrok Authtoken Setup (if not already done):
+        cmd> ngrok config add-authtoken <YOUR_NGROK_AUTHTOKEN>
+
+Step 2: Start 24/7 Background Services:
+        Double-click `run_24_7.bat` in `lab_attendance_system/`
+        (This starts both the FastAPI server on port 8000 and the permanent Ngrok tunnel).
+
+Step 3: Verification:
+        • Local Admin Hub : http://localhost:8000
+        • Mam's Portal    : https://lab-attendance-system-theta.vercel.app
+        Both portals will display `🟢 Connected to AI Lab`.
+================================================================================

@@ -1,0 +1,7 @@
+{
+  "name": "Lab Attendance & PC Occupancy Tracker",
+  "description": "Camera-based face recognition attendance and manual PC occupancy tracking system for AI/ML Lab with mobile-friendly status dashboard and quick faculty communication templates.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

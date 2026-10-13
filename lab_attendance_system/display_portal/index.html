@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI LAB — Live Display & Digital Twin (View-Only)</title>
+    <link rel="stylesheet" href="style.css?v=60">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <!-- Top Header -->
+    <header class="top-header">
+        <div class="header-left">
+            <div class="logo-badge">🔬</div>
+            <div>
+                <h1>AI/ML LAB MONITOR</h1>
+                <div class="header-sub">In-Charge: <strong>Dr. Richa Choudhary</strong> • <span style="color: #6366f1; font-weight: 700;">Live Display & Digital Twin (Read-Only)</span></div>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <!-- Read-Only Badge Indicator -->
+            <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #4338ca; border: 1px solid rgba(99, 102, 241, 0.3); font-weight: 700; font-size: 11px; padding: 5px 10px;">
+                👁️ Display Kiosk Mode
+            </span>
+
+            <!-- Attendance Logs CSV Export -->
+            <button class="btn btn-secondary" onclick="downloadAttendanceCSV()" style="font-size: 12px; padding: 6px 12px;">
+                📥 Export Logs (CSV)
+            </button>
+
+            <!-- Gate Camera Stream Modal Button -->
+            <button id="gate-camera-modal-btn" class="btn btn-secondary" onclick="openGateCameraModal()" title="View live gate camera stream" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px;">
+                📹 Live Gate Cam <span id="portal-cam-pill" class="pill-count" style="background: #22c55e; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 700;">LIVE</span>
+            </button>
+
+            <!-- DGX Spark / Server URL Connection UI -->
+            <div id="connection-ui" style="display: none; gap: 6px; align-items: center;">
+                <input type="text" id="ngrok-url" class="form-input" placeholder="Server URL (https://...)" style="min-width: 200px; font-size: 12px; padding: 5px 8px;">
+                <button id="connect-btn" class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">Connect</button>
+            </div>
+
+            <!-- Connection Status Badge -->
+            <span id="connection-status" class="badge badge-disconnected" onclick="toggleServerConfigBar()" style="cursor: pointer;" title="Click to view/change Server URL">Checking Connection...</span>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="pc-status">🖥️ 3D Lab & Workstations</button>
+        <button class="tab-btn" data-tab="projects">🚀 Research & Projects <span id="nav-project-count" class="pill-count" style="background: #6366f1; color: #fff;">0</span></button>
+        <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
+        <button class="tab-btn" data-tab="registered-faces">👥 Registered Members <span id="nav-reg-count" class="pill-count">0</span></button>
+        <button class="tab-btn" data-tab="unknown-faces">⚠️ Unwanted / Intruders <span id="nav-unknown-count" class="pill-count pill-alert">0</span></button>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 1: 3D DIGITAL TWIN & WORKSTATION DISPLAY        -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-pc-status" class="tab-content active">
+        <div class="page-title-row">
+            <div>
+                <h2>🖥️ Live 3D AI LAB & Workstations</h2>
+                <p>Interactive spatial digital twin • Real-time occupancy status & active countdowns</p>
+            </div>
+            <div class="view-controls">
+                <button id="portal-stream-quick-btn" class="btn btn-secondary" onclick="openGateCameraModal()" style="color: #6366f1; font-weight: 600;">📹 Gate Feed</button>
+                <button id="rotate-90-btn" class="btn btn-secondary">🔄 Rotate 90°</button>
+                <button id="gate-view-btn" class="btn btn-secondary">🚪 Gate View</button>
+                <button id="top-view-btn" class="btn btn-secondary">🔝 Top View</button>
+                <button id="reset-cam-btn" class="btn btn-secondary">🎯 Reset</button>
+            </div>
+        </div>
+        
+        <!-- Metrics Row -->
+        <div class="metrics-row">
+            <div class="metric-card metric-green">
+                <div class="metric-value" id="stat-free">0</div>
+                <div class="metric-label">AVAILABLE PCs</div>
+            </div>
+            <div class="metric-card metric-red">
+                <div class="metric-value" id="stat-occupied">0</div>
+                <div class="metric-label">OCCUPIED PCs</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="stat-total">1 + 8</div>
+                <div class="metric-label">TOTAL WORKSTATIONS</div>
+            </div>
+        </div>
+        
+        <!-- 3D Canvas Viewport -->
+        <div id="canvas-3d-container" class="canvas-3d-wrapper">
+            <canvas id="lab-3d-canvas"></canvas>
+            <div class="canvas-3d-controls-hint">
+                <span>⌨️ WASD Walk</span> • 
+                <span>🔄 Q / E Rotate</span> • 
+                <span>🖱️ Drag Orbit</span> • 
+                <span>🚪 Tap Gate</span> • 
+                <span>⚡ Tap Switch</span> • 
+                <span>👆 Tap PC to Inspect</span>
+            </div>
+        </div>
+
+        <!-- 2D Workstations Grid (Synchronized with 3D Canvas) -->
+        <div class="section-header">
+            <div>
+                <h3>🖥️ Workstation Real-Time Status</h3>
+                <p>Live occupancy monitoring synchronized with 3D physical model</p>
+            </div>
+            <button class="btn btn-secondary" onclick="loadPCStatus()" style="font-size: 12px; padding: 6px 12px;">
+                🔄 Refresh PCs
+            </button>
+        </div>
+
+        <div id="pc-grid" class="pc-grid">
+            <!-- Dynamically populated and synchronized by script.js -->
+        </div>
+
+        <!-- Featured Student Research Projects Showcase Section -->
+        <div class="section-header" style="margin-top: 36px;">
+            <div>
+                <h3>🚀 Active Student Research Projects Showcase</h3>
+                <p>Ongoing lab research domains, team members, durations, report statuses, and verified live deployments</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" onclick="switchTab('projects')" style="font-size: 12px; padding: 6px 14px; font-weight: 600; color: #6366f1;">
+                    Open Full Projects Tab &rarr;
+                </button>
+            </div>
+        </div>
+
+        <div id="tab1-featured-projects-grid" style="display: grid; grid-template-columns: 1fr; gap: 18px; margin-top: 14px;">
+            <!-- Synchronized with Projects list -->
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 2: STUDENT RESEARCH PROJECTS (READ-ONLY)        -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-projects" class="tab-content">
+        <div class="page-title-row">
+            <div>
+                <h2>🚀 AI Lab Research Projects & Student Deployments</h2>
+                <p>Track ongoing student research projects • Assigned DGX workstations • Live web deployments • Report filing status</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-secondary" onclick="loadStudentProjects()">🔄 Refresh Projects</button>
+            </div>
+        </div>
+
+        <!-- Project Metrics Bar -->
+        <div class="metrics-row" style="margin-bottom: 20px;">
+            <div class="metric-card metric-green">
+                <div class="metric-value" id="stat-proj-active">0</div>
+                <div class="metric-label">ACTIVE PROJECTS</div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #6366f1;">
+                <div class="metric-value" id="stat-proj-deployed" style="color: #6366f1;">0</div>
+                <div class="metric-label">LIVE DEPLOYMENTS</div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #10b981;">
+                <div class="metric-value" id="stat-proj-reports" style="color: #10b981;">0</div>
+                <div class="metric-label">REPORTS FILED</div>
+            </div>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="category-filter-chips" style="margin-bottom: 18px;">
+            <button class="cat-chip-btn active" data-proj-filter="all" onclick="filterProjectsList('all')">
+                All Projects <span id="filter-cnt-all" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" data-proj-filter="filed" onclick="filterProjectsList('filed')">
+                ✅ Report Filed <span id="filter-cnt-filed" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" data-proj-filter="pending" onclick="filterProjectsList('pending')">
+                ⏳ Report Pending <span id="filter-cnt-pending" class="cat-pill">0</span>
+            </button>
+        </div>
+
+        <!-- Projects Grid Container -->
+        <div id="projects-grid" class="projects-grid" style="display: grid; grid-template-columns: 1fr; gap: 18px;">
+            <!-- Rendered dynamically by script.js -->
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 3: ATTENDANCE LOGS (READ-ONLY)                 -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-attendance" class="tab-content">
+        <div class="page-title-row">
+            <div>
+                <h2>📋 AI LAB Attendance Logs</h2>
+                <p>Live history of student entries & exits captured by entrance camera</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" onclick="downloadAttendanceCSV()">📥 Download CSV</button>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <input type="date" id="filter-date" class="form-input">
+            <input type="text" id="filter-name" class="form-input" placeholder="Search student name...">
+            <button id="apply-filter-btn" class="btn btn-primary">🔍 Search</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('filter-date').value=''; document.getElementById('filter-name').value=''; loadAttendance();">Reset</button>
+        </div>
+
+        <div id="attendance-table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>User Type</th>
+                        <th>Project / Domain</th>
+                        <th>IN Time</th>
+                        <th>OUT Time</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="attendance-tbody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 4: REGISTERED MEMBERS DIRECTORY (READ-ONLY)    -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-registered-faces" class="tab-content">
+        <div class="page-title-row">
+            <div>
+                <h2>👥 Registered Lab Directory</h2>
+                <p>Enrolled Students, Faculty, and Guests with biometric facial recognition profiles</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="search-reg-input" class="form-input" placeholder="Search members by name, roll no..." oninput="filterRegisteredUsers()" style="max-width: 260px;">
+                <button class="btn btn-secondary" onclick="loadRegisteredFaces()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Categorized Filter Chips -->
+        <div class="category-filter-chips">
+            <button class="cat-chip-btn active" data-cat="all" onclick="selectUserCategory('all')">
+                👥 All Members <span id="cat-count-all" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" data-cat="Student" onclick="selectUserCategory('Student')">
+                🎓 Students <span id="cat-count-students" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" data-cat="Faculty" onclick="selectUserCategory('Faculty')">
+                👨‍🏫 Faculty <span id="cat-count-faculty" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" data-cat="Guest" onclick="selectUserCategory('Guest')">
+                👤 Guests <span id="cat-count-guests" class="cat-pill">0</span>
+            </button>
+        </div>
+
+        <div id="registered-grid" class="registered-grid">
+            <!-- Rendered by script.js -->
+        </div>
+    </main>
+    
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- TAB 5: UNWANTED PEOPLE & INTRUDERS (VIEW ONLY)     -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <main id="tab-unknown-faces" class="tab-content">
+        <div class="page-title-row">
+            <div>
+                <h2>⚠️ Unwanted Visitors & Intruder Snapshots</h2>
+                <p>Unrecognized face captures detected by AI Lab camera with timestamp verification</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button id="refresh-unknown-btn" class="btn btn-secondary">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div id="unknown-grid" class="unknown-grid">
+            <!-- Rendered by script.js -->
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- READ-ONLY MODAL 1: WORKSTATION INSPECTION CARD     -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div id="pc-details-modal" class="modal-overlay" style="display: none;" onclick="closePCDetailsModal(event)">
+        <div class="modal-content" style="max-width: 520px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modal-pc-title" style="margin: 0; font-size: 20px;">Workstation Details</h3>
+                    <p id="modal-pc-desc" style="margin: 4px 0 0 0; font-size: 13px; color: var(--on-surface-variant);">Live workstation telemetry</p>
+                </div>
+                <button class="modal-close-btn" onclick="closePCDetailsModal()">✕</button>
+            </div>
+            
+            <div id="modal-pc-body" style="padding: 10px 0;">
+                <!-- Populated dynamically via JS -->
+            </div>
+            
+            <div class="modal-footer" style="margin-top: 16px;">
+                <button class="btn btn-secondary" onclick="closePCDetailsModal()" style="width: 100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- READ-ONLY MODAL 2: IMAGE LIGHTBOX (NO DELETE)      -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div id="lightbox-modal" class="modal-overlay" style="display: none;" onclick="closeLightbox(event)">
+        <div class="modal-content lightbox-content" onclick="event.stopPropagation()">
+            <button class="modal-close-btn" onclick="closeLightbox()">✕</button>
+            <div style="text-align: center;">
+                <img id="lightbox-img" src="" alt="Intruder Snapshot" style="max-width: 100%; max-height: 65vh; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+                <div id="lightbox-meta" style="margin-top: 15px; font-size: 14px; color: var(--on-surface);"></div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-secondary" onclick="closeLightbox()" style="min-width: 100px;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- READ-ONLY MODAL 3: GATE CAMERA LIVE STREAM         -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div id="gate-camera-modal" class="modal-overlay" style="display: none;" onclick="closeGateCameraModal(event)">
+        <div class="modal-content" style="max-width: 780px; width: 92%; padding: 20px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                        📹 Entrance Gate Camera Live Stream
+                        <span id="modal-camera-badge" class="badge badge-success" style="font-size: 11px; padding: 2px 8px;">ONLINE</span>
+                    </h3>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--on-surface-variant);">
+                        Real-time AI Face Recognition & Attendance Monitoring Feed
+                    </p>
+                </div>
+                <button class="modal-close-btn" onclick="closeGateCameraModal()">✕</button>
+            </div>
+
+            <!-- Video Player Frame -->
+            <div style="position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                <img id="portal-camera-stream" src="" alt="Gate Camera Live Feed" style="width: 100%; height: 100%; object-fit: contain; display: block;" onerror="handleStreamImageError()">
+                <div id="portal-camera-fallback" style="display: none; text-align: center; color: var(--on-surface-variant); padding: 20px;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
+                    <div style="font-weight: 600; font-size: 14px;">Camera Feed Offline or Standby</div>
+                    <div style="font-size: 12px; margin-top: 4px;">Camera feed is currently offline or connecting</div>
+                </div>
+                <div id="portal-camera-overlay-indicator" style="position: absolute; top: 12px; left: 12px; background: rgba(15,23,42,0.8); padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #4ade80; display: flex; align-items: center; gap: 7px; backdrop-filter: blur(6px); border: 1px solid rgba(74,222,128,0.25);">
+                    <span id="portal-camera-rec-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block; box-shadow: 0 0 8px #4ade80;"></span>
+                    <span id="portal-camera-rec-text">LIVE MJPEG FEED</span>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeGateCameraModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="three_scene.js?v=30"></script>
+    <script src="script.js?v=60"></script>
+</body>
+</html>
