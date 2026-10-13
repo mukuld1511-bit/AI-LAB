@@ -16,6 +16,12 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+set TARGET_PC=%1
+if "%TARGET_PC%"=="" set TARGET_PC=PC-2
+
+echo [Target PC ID: %TARGET_PC%]
+echo { "pc_id": "%TARGET_PC%", "backend_url": "https://labg418pc12.tailc8c1f6.ts.net", "heartbeat_interval": 10 } > "%~dp0agent_config.json"
+
 echo [2/3] Installing lightweight dependencies (psutil, pynvml)...
 python -m pip install --quiet psutil pynvml >nul 2>&1
 
@@ -23,7 +29,7 @@ echo [3/3] Setting up Windows Auto-Startup Task...
 set SCRIPT_PATH=%~dp0pc_telemetry_agent.py
 
 :: Register Windows Task Scheduler task that runs silently in background at system startup
-schtasks /create /tn "AILab_PC_TelemetryAgent" /tr "pythonw.exe \"%SCRIPT_PATH%\"" /sc onlogon /rl highest /f >nul 2>&1
+schtasks /create /tn "AILab_PC_TelemetryAgent" /tr "pythonw.exe \"%SCRIPT_PATH%\" %TARGET_PC%" /sc onlogon /rl highest /f >nul 2>&1
 
 if %errorlevel% equ 0 (
     echo.
