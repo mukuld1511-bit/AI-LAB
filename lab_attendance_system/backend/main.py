@@ -15,6 +15,7 @@ import pickle
 import csv
 import io
 import shutil
+import json
 
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +34,8 @@ os.makedirs(UNKNOWN_FACES_DIR, exist_ok=True)
 STATIC_DIR = os.path.join(BASE_DIR, "backend", "static")
 AVATARS_DIR = os.path.join(STATIC_DIR, "avatars")
 os.makedirs(AVATARS_DIR, exist_ok=True)
+SCREENSHOTS_DIR = os.path.join(STATIC_DIR, "screenshots")
+os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 ENCODINGS_FILE = os.path.join(BASE_DIR, "face_recognition_module", "known_encodings.pkl")
 
 
@@ -159,6 +162,23 @@ class HeartbeatRequest(BaseModel):
     ip_address: Optional[str] = ""
     os_info: Optional[str] = ""
     boot_time: Optional[str] = ""
+    active_window: Optional[str] = ""
+    top_processes: Optional[Any] = []
+    logged_user: Optional[str] = ""
+
+
+class ScreenshotUploadRequest(BaseModel):
+    pc_id: str
+    image_base64: str
+
+
+class CommandRequest(BaseModel):
+    command: Optional[str] = "capture_screen"
+
+
+class KillTaskRequest(BaseModel):
+    pid: Optional[int] = None
+    name: Optional[str] = None
 
 
 class PCOfflineRequest(BaseModel):
@@ -230,13 +250,14 @@ def get_pc_status() -> List[Dict[str, Any]]:
 def pc_heartbeat_endpoint(payload: HeartbeatRequest):
     """
     Heartbeat and hardware telemetry receiver sent by client workstations (PC-1 to PC-8).
-    Updates online status, CPU %, RAM %, and GPU telemetry.
+    Updates online status, CPU %, RAM %, GPU, active window, and top running processes.
+    Dispatches any queued command (such as 'capture_screen' or 'kill:pid') back to the agent.
     """
     pc_id = payload.pc_id.strip().upper()
     if not pc_id:
         raise HTTPException(status_code=400, detail="pc_id is required")
 
-    database.record_pc_telemetry(
+    cmd = database.record_pc_telemetry(
         pc_id=pc_id,
         cpu_percent=payload.cpu_percent or 0.0,
         ram_percent=payload.ram_percent or 0.0,
@@ -249,9 +270,96 @@ def pc_heartbeat_endpoint(payload: HeartbeatRequest):
         gpu_vram_total_mb=payload.gpu_vram_total_mb or 0.0,
         ip_address=payload.ip_address or "",
         os_info=payload.os_info or "",
-        boot_time=payload.boot_time or ""
+        boot_time=payload.boot_time or "",
+        active_window=payload.active_window or "",
+        top_processes=json.dumps(payload.top_processes) if isinstance(payload.top_processes, list) else str(payload.top_processes or "[]"),
+        logged_user=payload.logged_user or ""
     )
-    return {"status": "ok", "pc_id": pc_id, "state": "online", "message": f"{pc_id} telemetry recorded"}
+    return {
+        "status": "ok",
+        "pc_id": pc_id,
+        "state": "online",
+        "command": cmd or None,
+        "message": f"{pc_id} telemetry recorded"
+    }
+
+
+@app.post("/api/pc/{pc_id}/request_screenshot")
+@app.post("/api/pc/{pc_id}/command")
+def request_pc_command(pc_id: str, payload: Optional[CommandRequest] = None):
+    """Dispatches an on-demand command (e.g. 'capture_screen') to the specified workstation."""
+    clean_pc = pc_id.strip().upper()
+    cmd = (payload.command if payload and payload.command else "capture_screen").strip()
+    database.set_pc_pending_command(clean_pc, cmd)
+    return {
+        "status": "ok",
+        "pc_id": clean_pc,
+        "command": cmd,
+        "message": f"Command '{cmd}' dispatched to {clean_pc}. Will trigger on next heartbeat/poll."
+    }
+
+
+@app.post("/api/pc/screenshot")
+def upload_pc_screenshot(payload: ScreenshotUploadRequest):
+    """Receives compressed screen capture from client workstation and saves to static screenshots directory."""
+    clean_pc = payload.pc_id.strip().upper()
+    if not clean_pc or not payload.image_base64:
+        raise HTTPException(status_code=400, detail="pc_id and image_base64 required")
+
+    b64_data = payload.image_base64
+    if "," in b64_data:
+        b64_data = b64_data.split(",", 1)[1]
+
+    try:
+        img_bytes = base64.b64decode(b64_data)
+        out_filename = f"{clean_pc.lower()}.jpg"
+        out_path = os.path.join(SCREENSHOTS_DIR, out_filename)
+        with open(out_path, "wb") as f:
+            f.write(img_bytes)
+
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        database.update_pc_screenshot_timestamp(clean_pc, now_str)
+
+        return {
+            "status": "ok",
+            "pc_id": clean_pc,
+            "url": f"/static/screenshots/{out_filename}?t={int(datetime.now().timestamp())}",
+            "captured_at": now_str
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save screenshot: {str(e)}")
+
+
+@app.post("/api/pc/{pc_id}/kill_task")
+def kill_pc_task(pc_id: str, payload: KillTaskRequest):
+    """Sends command to terminate a rogue/unauthorized process on the target workstation."""
+    clean_pc = pc_id.strip().upper()
+    target = str(payload.pid) if payload.pid else (payload.name or "").strip()
+    if not target:
+        raise HTTPException(status_code=400, detail="PID or process name required")
+
+    cmd = f"kill:{target}"
+    database.set_pc_pending_command(clean_pc, cmd)
+    return {
+        "status": "ok",
+        "pc_id": clean_pc,
+        "command": cmd,
+        "message": f"Kill task command for '{target}' queued for {clean_pc}"
+    }
+
+
+@app.get("/api/pc/monitoring")
+def get_monitoring_overview():
+    """Returns real-time lab workstations monitoring overview (active apps, tasks, screen URLs, and hardware usage)."""
+    pcs = database.get_all_pc_status()
+    online_count = sum(1 for p in pcs if p.get("is_online") == 1)
+    return {
+        "status": "ok",
+        "total_pcs": len(pcs),
+        "online_count": online_count,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "workstations": pcs
+    }
 
 
 @app.post("/api/pc/offline")

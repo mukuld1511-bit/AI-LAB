@@ -1,11 +1,14 @@
 """
-pc_telemetry_agent.py — Lightweight Lab Workstation Heartbeat & Telemetry Daemon
----------------------------------------------------------------------------------
-Runs automatically in the background on each Lab PC (PC-1 to PC-8).
+pc_telemetry_agent.py — Universal Workstation Telemetry & Monitoring Agent
+-------------------------------------------------------------------------
+Runs in the background on each Lab PC (PC-1 to PC-8, DGX).
 1. On Startup: Pings central backend to mark PC as 🟢 ONLINE.
-2. Every 10 seconds: Collects CPU %, RAM %, and GPU (NVIDIA/CUDA) stats and sends heartbeat.
-3. On Shutdown/Logoff: Sends clean 🛑 OFFLINE message before system halts.
-4. Auto-detects local PC ID from config file or Windows hostname.
+2. Every 5-10 seconds: Collects CPU %, RAM %, GPU %, Active Window Title,
+   Logged-in User, and Top Running Processes.
+3. On-Demand Screen Snap: When Teacher clicks 'Grab Screen' on portal,
+   captures screen (< 50KB JPEG) and uploads within 2 seconds.
+4. Remote Process Kill: Allows teacher to kill rogue games/processes.
+5. On Shutdown/Logoff: Sends clean 🛑 OFFLINE message before system halts.
 """
 
 import os
@@ -16,6 +19,8 @@ import socket
 import platform
 import atexit
 import signal
+import subprocess
+import shutil
 from datetime import datetime
 import urllib.request
 import urllib.error
@@ -23,9 +28,9 @@ import urllib.error
 # Config Defaults
 DEFAULT_BACKEND_URL = "https://labg418pc12.tailc8c1f6.ts.net"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "agent_config.json")
-HEARTBEAT_INTERVAL = 10  # seconds
+HEARTBEAT_INTERVAL = 6  # seconds (ultra-responsive & very low bandwidth)
 
-# Optional 3rd-party library imports with graceful built-in fallbacks
+# 3rd-party library imports with graceful fallbacks
 try:
     import psutil
     HAS_PSUTIL = True
@@ -39,9 +44,18 @@ try:
 except Exception:
     HAS_NVML = False
 
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
 
-import subprocess
-import shutil
+try:
+    import mss
+    HAS_MSS = True
+except ImportError:
+    HAS_MSS = False
+
 
 def load_config():
     """Loads pc_id and backend_url from agent_config.json, CLI args, or generates default."""
@@ -72,13 +86,11 @@ def load_config():
             if upper_arg in ("--PC-ID", "-P") and i < len(sys.argv) - 1:
                 config["pc_id"] = sys.argv[i + 1].strip().upper()
             elif upper_arg.startswith("PC-") or upper_arg.startswith("PC"):
-                # Normalize e.g. PC2 -> PC-2, PC-2 -> PC-2
                 digits = "".join([c for c in upper_arg if c.isdigit()])
                 config["pc_id"] = f"PC-{digits}" if digits else upper_arg
             elif upper_arg in ("--URL", "-U") and i < len(sys.argv) - 1:
                 config["backend_url"] = sys.argv[i + 1].strip()
 
-    # Save active config so next runs remember this PC ID
     try:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=4)
@@ -86,6 +98,170 @@ def load_config():
         pass
 
     return config
+
+
+def get_active_window_info():
+    """Returns the title and process of the currently active/focused window."""
+    if platform.system() == "Windows":
+        try:
+            import ctypes
+            from ctypes import wintypes
+            hwnd = ctypes.windll.user32.GetForegroundWindow()
+            if not hwnd:
+                return "Desktop / Idle"
+            length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+            title = ""
+            if length > 0:
+                buff = ctypes.create_unicode_buffer(length + 1)
+                ctypes.windll.user32.GetWindowTextW(hwnd, buff, length + 1)
+                title = buff.value.strip()
+
+            pid = wintypes.DWORD()
+            ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            proc_name = ""
+            if pid.value and HAS_PSUTIL:
+                try:
+                    proc_name = psutil.Process(pid.value).name()
+                except Exception:
+                    pass
+
+            if title and proc_name:
+                return f"{title} ({proc_name})"
+            elif title:
+                return title
+            elif proc_name:
+                return proc_name
+        except Exception:
+            pass
+
+    return "Active Desktop"
+
+
+def get_top_processes(limit=5):
+    """Collects top processes by CPU and RAM usage."""
+    if not HAS_PSUTIL:
+        return []
+    procs = []
+    try:
+        for p in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+            try:
+                info = p.info
+                name = info.get('name') or ''
+                if not name or name.lower() in ('system idle process', 'system', 'registry'):
+                    continue
+                procs.append({
+                    "pid": info['pid'],
+                    "name": name,
+                    "cpu": round(info.get('cpu_percent') or 0.0, 1),
+                    "ram": round(info.get('memory_percent') or 0.0, 1)
+                })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        procs.sort(key=lambda x: (x['cpu'], x['ram']), reverse=True)
+        return procs[:limit]
+    except Exception:
+        return []
+
+
+def capture_screen_base64(pc_id="PC", max_width=1280):
+    """
+    Captures the active screen and compresses to base64 JPEG (< 60 KB).
+    Gracefully handles headless/locked screen by rendering a fallback HUD status card.
+    """
+    import io
+    import base64
+
+    # Method 1: mss (Ultra Fast)
+    if HAS_MSS and HAS_PIL:
+        try:
+            with mss.mss() as sct:
+                monitor = sct.monitors[1] if len(sct.monitors) > 1 else sct.monitors[0]
+                sct_img = sct.grab(monitor)
+                img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
+                if img.width > max_width:
+                    scale = max_width / img.width
+                    img = img.resize((int(img.width * scale), int(img.height * scale)), Image.Resampling.LANCZOS)
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=65, optimize=True)
+                return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('utf-8')}"
+        except Exception:
+            pass
+
+    # Method 2: PIL ImageGrab
+    if HAS_PIL:
+        try:
+            from PIL import ImageGrab
+            img = ImageGrab.grab()
+            if img.width > max_width:
+                scale = max_width / img.width
+                img = img.resize((int(img.width * scale), int(img.height * scale)), Image.Resampling.LANCZOS)
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=65, optimize=True)
+            return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('utf-8')}"
+        except Exception:
+            pass
+
+    # Method 3: Fallback HUD Status Image (if screen locked or headless display)
+    if HAS_PIL:
+        try:
+            width, height = 960, 540
+            img = Image.new("RGB", (width, height), color=(15, 23, 42))
+            draw = ImageDraw.Draw(img)
+            active_win = get_active_window_info()
+            user_str = os.getenv("USERNAME", "Active User")
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            # Border
+            draw.rectangle([10, 10, width - 10, height - 10], outline=(59, 130, 246), width=3)
+            # Text information
+            draw.text((40, 50), f"WORKSTATION: {pc_id}", fill=(248, 250, 252))
+            draw.text((40, 100), f"Status: Live Telemetry Active", fill=(34, 197, 94))
+            draw.text((40, 150), f"Active Window: {active_win[:60]}", fill=(148, 163, 184))
+            draw.text((40, 200), f"Logged User: {user_str}", fill=(148, 163, 184))
+            draw.text((40, 250), f"Timestamp: {now_str}", fill=(148, 163, 184))
+            draw.text((40, 320), "(Display is currently in standby / locked mode)", fill=(234, 179, 8))
+
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=80)
+            return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode('utf-8')}"
+        except Exception:
+            pass
+
+    return None
+
+
+def execute_kill_command(target):
+    """Terminates process by PID or Name."""
+    target = target.strip()
+    print(f"[ACTION] Terminating process '{target}'...")
+    if HAS_PSUTIL:
+        try:
+            if target.isdigit():
+                pid = int(target)
+                p = psutil.Process(pid)
+                p.terminate()
+                return True
+            else:
+                killed = False
+                for p in psutil.process_iter(['name']):
+                    if p.info['name'] and p.info['name'].lower() == target.lower():
+                        p.terminate()
+                        killed = True
+                return killed
+        except Exception as e:
+            print(f"[WARN] Kill failed via psutil: {e}")
+
+    # Fallback to taskkill / kill
+    if platform.system() == "Windows":
+        cmd = ["taskkill", "/F", "/PID", target] if target.isdigit() else ["taskkill", "/F", "/IM", target]
+    else:
+        cmd = ["kill", "-9", target]
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=3)
+        return True
+    except Exception:
+        return False
 
 
 def get_system_metrics():
@@ -102,7 +278,8 @@ def get_system_metrics():
         "gpu_vram_total_mb": 0.0,
         "ip_address": "",
         "os_info": f"{platform.system()} {platform.release()}",
-        "boot_time": ""
+        "boot_time": "",
+        "logged_user": os.getenv("USERNAME", os.getenv("USER", "labuser"))
     }
 
     # 1. IP Address
@@ -149,7 +326,7 @@ def get_system_metrics():
         except Exception:
             pass
 
-    # 4. Fallback to nvidia-smi CLI if NVML was not active or returned empty
+    # 4. Fallback to nvidia-smi CLI
     if not metrics["gpu_name"]:
         nvsmi = shutil.which("nvidia-smi")
         if not nvsmi:
@@ -185,8 +362,8 @@ def get_system_metrics():
     return metrics
 
 
-def send_post(url, data_dict, timeout=6):
-    """Sends JSON POST request via standard library urllib."""
+def send_post_json(url, data_dict, timeout=6):
+    """Sends JSON POST request and returns (status_bool, response_dict)."""
     try:
         data_bytes = json.dumps(data_dict).encode("utf-8")
         req = urllib.request.Request(
@@ -194,35 +371,42 @@ def send_post(url, data_dict, timeout=6):
             data=data_bytes,
             headers={
                 "Content-Type": "application/json",
-                "User-Agent": "AILab-WorkstationAgent/1.0"
+                "User-Agent": "AILab-WorkstationAgent/2.0"
             },
             method="POST"
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status in (200, 201)
+            body = resp.read().decode("utf-8")
+            try:
+                res_json = json.loads(body)
+            except Exception:
+                res_json = {}
+            return True, res_json
     except Exception as e:
-        return False
+        return False, {}
 
 
 def main():
     config = load_config()
     pc_id = config["pc_id"].upper()
     backend_url = config["backend_url"].rstrip("/")
-    interval = config.get("heartbeat_interval", 10)
+    interval = config.get("heartbeat_interval", HEARTBEAT_INTERVAL)
 
     heartbeat_endpoint = f"{backend_url}/api/pc/heartbeat"
+    screenshot_endpoint = f"{backend_url}/api/pc/screenshot"
     offline_endpoint = f"{backend_url}/api/pc/offline"
 
     print("=" * 65)
-    print(f"🔬 AI LAB Workstation Telemetry Agent [{pc_id}]")
+    print(f"🔬 AI LAB Workstation Telemetry & Monitoring Agent [{pc_id}]")
     print(f"📡 Backend URL : {backend_url}")
-    print(f"⏱️ Interval    : {interval} seconds")
+    print(f"⏱️ Heartbeat   : Every {interval} seconds")
+    print(f"📸 Snapshots   : On-Demand & Instant Upload")
     print("=" * 65)
 
     def on_exit():
         """Clean shutdown notification when PC shuts down or script is stopped."""
         print(f"\n[OFFLINE] Sending shutdown event for {pc_id}...")
-        send_post(offline_endpoint, {"pc_id": pc_id}, timeout=3)
+        send_post_json(offline_endpoint, {"pc_id": pc_id}, timeout=3)
         if HAS_NVML:
             try:
                 pynvml.nvmlShutdown()
@@ -237,25 +421,50 @@ def main():
     except Exception:
         pass
 
-    # Prime psutil CPU percent
     if HAS_PSUTIL:
         psutil.cpu_percent(interval=None)
 
-    # Main Heartbeat Loop
+    # Main Agent Loop
     while True:
         try:
             stats = get_system_metrics()
+            active_win = get_active_window_info()
+            top_procs = get_top_processes(limit=5)
+
             payload = {
                 "pc_id": pc_id,
+                "active_window": active_win,
+                "top_processes": top_procs,
                 **stats
             }
 
-            success = send_post(heartbeat_endpoint, payload)
+            success, res_data = send_post_json(heartbeat_endpoint, payload)
             now_str = datetime.now().strftime("%H:%M:%S")
 
             if success:
                 gpu_str = f" | GPU: {stats['gpu_percent']}%" if stats['gpu_name'] else ""
-                print(f"[{now_str}] 🟢 [{pc_id}] Heartbeat OK | CPU: {stats['cpu_percent']}% | RAM: {stats['ram_percent']}%{gpu_str}")
+                win_short = (active_win[:28] + "..") if len(active_win) > 30 else active_win
+                print(f"[{now_str}] 🟢 [{pc_id}] OK | CPU: {stats['cpu_percent']}% | RAM: {stats['ram_percent']}% | Focus: '{win_short}'{gpu_str}")
+
+                # Check if a command was returned (e.g. capture_screen or kill:pid)
+                command = res_data.get("command")
+                if command:
+                    print(f"[{now_str}] ⚡ Received Remote Command: '{command}'")
+                    if command == "capture_screen":
+                        print(f"[{now_str}] 📸 On-demand Screen Grab requested by Teacher! Capturing...")
+                        snap_b64 = capture_screen_base64(pc_id=pc_id)
+                        if snap_b64:
+                            snap_ok, _ = send_post_json(screenshot_endpoint, {
+                                "pc_id": pc_id,
+                                "image_base64": snap_b64
+                            })
+                            if snap_ok:
+                                print(f"[{now_str}] 🚀 Screen Snapshot uploaded successfully to Teacher Portal!")
+                            else:
+                                print(f"[{now_str}] ⚠️ Failed to upload screenshot to backend")
+                    elif command.startswith("kill:"):
+                        target_kill = command.split(":", 1)[1]
+                        execute_kill_command(target_kill)
             else:
                 print(f"[{now_str}] ⚠️ [{pc_id}] Backend unreachable (will retry in {interval}s)")
 

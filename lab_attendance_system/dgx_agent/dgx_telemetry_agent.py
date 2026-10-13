@@ -180,8 +180,8 @@ def get_local_ip():
             return "127.0.0.1"
 
 
-def send_post(url, data_dict, timeout=6):
-    """Sends JSON POST request via standard library urllib."""
+def send_post_json(url, data_dict, timeout=6):
+    """Sends JSON POST request via standard library urllib and returns (success, parsed_dict)."""
     try:
         data_bytes = json.dumps(data_dict).encode("utf-8")
         req = urllib.request.Request(
@@ -189,14 +189,135 @@ def send_post(url, data_dict, timeout=6):
             data=data_bytes,
             headers={
                 "Content-Type": "application/json",
-                "User-Agent": "AILab-DGXAgent/1.0"
+                "User-Agent": "AILab-DGXAgent/2.0"
             },
             method="POST"
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status in (200, 201)
+            if resp.status in (200, 201):
+                try:
+                    res_body = json.loads(resp.read().decode("utf-8"))
+                    return True, res_body
+                except Exception:
+                    return True, {}
+            return False, {}
     except Exception:
-        return False
+        return False, {}
+
+
+def send_post(url, data_dict, timeout=6):
+    success, _ = send_post_json(url, data_dict, timeout=timeout)
+    return success
+
+
+def get_linux_top_processes():
+    """Queries top 5 CPU processes using native ps command without extra dependencies."""
+    procs = []
+    try:
+        cmd = ["ps", "-eo", "pid,%cpu,%mem,comm", "--sort=-%cpu"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=2)
+        if proc.returncode == 0:
+            lines = proc.stdout.strip().splitlines()
+            for line in lines[1:6]:
+                parts = line.strip().split(None, 3)
+                if len(parts) >= 4:
+                    try:
+                        procs.append({
+                            "pid": int(parts[0]),
+                            "cpu": float(parts[1]),
+                            "ram": float(parts[2]),
+                            "name": parts[3]
+                        })
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+    return procs
+
+
+def get_linux_active_info():
+    """Gets logged in users and active foreground session info."""
+    user = os.environ.get("USER") or os.environ.get("LOGNAME") or ""
+    active_win = ""
+    try:
+        # Check active X11 window if xdotool exists
+        proc = subprocess.run(["xdotool", "getwindowfocus", "getwindowname"], capture_output=True, text=True, timeout=1)
+        if proc.returncode == 0 and proc.stdout.strip():
+            active_win = proc.stdout.strip()
+    except Exception:
+        pass
+
+    if not active_win:
+        try:
+            proc = subprocess.run(["who", "-u"], capture_output=True, text=True, timeout=1)
+            if proc.returncode == 0 and proc.stdout.strip():
+                first_line = proc.stdout.strip().splitlines()[0]
+                active_win = f"Terminal / SSH: {first_line.split()[0]}"
+        except Exception:
+            pass
+
+    return user, active_win or "Linux DGX Workspace"
+
+
+def execute_remote_command(cmd, pc_id, backend_url):
+    """Executes on-demand remote commands dispatched by Lab Admin."""
+    if not cmd:
+        return
+    cmd = cmd.strip()
+    print(f"\n[REMOTE-COMMAND] Received: '{cmd}'")
+
+    if cmd.startswith("kill:"):
+        target = cmd.split(":", 1)[1].strip()
+        try:
+            if target.isdigit():
+                pid = int(target)
+                os.kill(pid, signal.SIGTERM)
+                print(f"[KILL] Terminated PID {pid}")
+            else:
+                subprocess.run(["pkill", "-f", target], timeout=3)
+                print(f"[KILL] Terminated processes matching '{target}'")
+        except Exception as e:
+            print(f"[KILL-ERR] Failed to kill {target}: {e}")
+
+    elif cmd == "capture_screen":
+        try:
+            import base64
+            # Attempt to capture display if scrot or xwd or import exists
+            img_b64 = None
+            tmp_path = f"/tmp/snap_{pc_id}.jpg"
+            for cap_tool in [["scrot", "-q", "50", tmp_path], ["import", "-window", "root", "-quality", "50", tmp_path]]:
+                try:
+                    res = subprocess.run(cap_tool, capture_output=True, timeout=3)
+                    if res.returncode == 0 and os.path.exists(tmp_path):
+                        with open(tmp_path, "rb") as f:
+                            img_b64 = base64.b64encode(f.read()).decode("utf-8")
+                        os.remove(tmp_path)
+                        break
+                except Exception:
+                    pass
+
+            if not img_b64:
+                # Render SVG/text fallback card
+                from PIL import Image, ImageDraw, ImageFont
+                img = Image.new("RGB", (700, 400), color=(15, 23, 42))
+                draw = ImageDraw.Draw(img)
+                draw.rectangle([(10, 10), (690, 390)], outline=(56, 189, 248), width=3)
+                draw.text((30, 40), f"AI/ML LAB — {pc_id} (DGX NODE)", fill=(56, 189, 248))
+                draw.text((30, 90), f"Status     : ACTIVE & ONLINE", fill=(34, 197, 94))
+                draw.text((30, 130), f"Host System: {platform.system()} {platform.release()}", fill=(226, 232, 240))
+                draw.text((30, 170), f"Timestamp  : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", fill=(148, 163, 184))
+                draw.text((30, 220), "Headless DGX Session • CLI / SSH Active", fill=(251, 191, 36))
+                import io
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=60)
+                img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+            if img_b64:
+                upload_url = f"{backend_url}/api/pc/screenshot"
+                send_post(upload_url, {"pc_id": pc_id, "image_base64": img_b64}, timeout=6)
+                print(f"[CAPTURE] Live screen grab uploaded for {pc_id}")
+        except Exception as e:
+            print(f"[CAPTURE-ERR] {e}")
 
 
 def resolve_pc_id(arg_id=None):
@@ -232,7 +353,7 @@ def main():
     offline_url = f"{backend_url}/api/pc/offline"
 
     print("=" * 68)
-    print(f"🚀 AI/ML LAB DGX & WORKSTATION TELEMETRY AGENT")
+    print(f"🚀 AI/ML LAB DGX & WORKSTATION TELEMETRY AGENT v2.0")
     print(f"🖥️ Target PC ID : {pc_id}")
     print(f"🌐 Backend URL  : {backend_url}")
     print(f"⏱️ Interval     : {interval} seconds")
@@ -254,6 +375,8 @@ def main():
             ram_pct, ram_used, ram_total = get_memory_info()
             gpu_stats = get_nvidia_dgx_gpu_info()
             ip_addr = get_local_ip()
+            top_procs = get_linux_top_processes()
+            user_str, active_win = get_linux_active_info()
 
             payload = {
                 "pc_id": pc_id,
@@ -268,15 +391,22 @@ def main():
                 "gpu_vram_total_mb": gpu_stats["gpu_vram_total_mb"],
                 "ip_address": ip_addr,
                 "os_info": f"{platform.system()} {platform.release()}",
-                "boot_time": btime
+                "boot_time": btime,
+                "active_window": active_win,
+                "top_processes": top_procs,
+                "logged_user": user_str
             }
 
-            success = send_post(heartbeat_url, payload)
+            success, resp_data = send_post_json(heartbeat_url, payload)
             t_now = datetime.now().strftime("%H:%M:%S")
 
             if success:
                 gpu_tag = f" | GPU: {gpu_stats['gpu_percent']}% ({gpu_stats['gpu_name']})" if gpu_stats['gpu_name'] else ""
                 print(f"[{t_now}] 🟢 [{pc_id}] OK | CPU: {cpu_pct}% | RAM: {ram_pct}% ({ram_used}/{ram_total} GB){gpu_tag}")
+                
+                cmd = resp_data.get("command") if isinstance(resp_data, dict) else None
+                if cmd:
+                    execute_remote_command(cmd, pc_id, backend_url)
             else:
                 print(f"[{t_now}] ⚠️ [{pc_id}] Backend unreachable ({backend_url}). Retrying in {interval}s...")
 

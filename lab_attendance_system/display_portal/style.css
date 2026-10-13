@@ -405,23 +405,29 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
     margin-bottom: 12px;
     padding-bottom: 10px;
     border-bottom: 1px solid #f1f5f9;
 }
 
 .pc-title {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 800;
     color: var(--on-background);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .status-badge {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    padding: 3px 8px;
+    padding: 2px 7px;
     border-radius: var(--radius-full);
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .badge-free {

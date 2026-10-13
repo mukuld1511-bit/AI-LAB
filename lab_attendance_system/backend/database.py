@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import pickle
+import json
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -144,11 +145,19 @@ def init_db() -> None:
         )
     """)
 
-    # Column Migration check for gpu_temp
-    try:
-        cursor.execute("ALTER TABLE pc_telemetry ADD COLUMN gpu_temp REAL DEFAULT 0")
-    except Exception:
-        pass
+    # Column Migrations for pc_telemetry (Monitoring, Active Window, Tasks, Screenshots)
+    for col_name, col_def in [
+        ("gpu_temp", "REAL DEFAULT 0"),
+        ("active_window", "TEXT DEFAULT ''"),
+        ("top_processes", "TEXT DEFAULT '[]'"),
+        ("logged_user", "TEXT DEFAULT ''"),
+        ("last_screenshot_at", "TEXT DEFAULT ''"),
+        ("pending_command", "TEXT DEFAULT ''")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE pc_telemetry ADD COLUMN {col_name} {col_def}")
+        except Exception:
+            pass
 
     # Migrations for registered_users table
     cursor.execute("PRAGMA table_info(registered_users)")
@@ -285,9 +294,12 @@ def record_pc_telemetry(
     gpu_vram_total_mb: float = 0.0,
     ip_address: str = "",
     os_info: str = "",
-    boot_time: str = ""
-) -> bool:
-    """Updates telemetry heartbeat from a workstation, marking it online."""
+    boot_time: str = "",
+    active_window: str = "",
+    top_processes: str = "[]",
+    logged_user: str = ""
+) -> Optional[str]:
+    """Updates telemetry heartbeat from a workstation, marking it online and retrieving pending commands."""
     conn = get_db_connection()
     cursor = conn.cursor()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -307,12 +319,18 @@ def record_pc_telemetry(
     if float(gpu_temp or 0.0) <= 0.0:
         gpu_temp = 39.5
 
+    # Check for pending command to dispatch back to the agent
+    cursor.execute("SELECT pending_command FROM pc_telemetry WHERE UPPER(pc_id) = UPPER(?)", (clean_pc_id,))
+    cmd_row = cursor.fetchone()
+    command_to_return = cmd_row["pending_command"] if cmd_row and cmd_row["pending_command"] else None
+
     cursor.execute("""
         INSERT INTO pc_telemetry (
             pc_id, is_online, last_heartbeat, cpu_percent, ram_percent, 
             ram_used_gb, ram_total_gb, gpu_name, gpu_percent, gpu_temp,
-            gpu_vram_used_mb, gpu_vram_total_mb, ip_address, os_info, boot_time, updated_at
-        ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            gpu_vram_used_mb, gpu_vram_total_mb, ip_address, os_info, boot_time,
+            active_window, top_processes, logged_user, updated_at
+        ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(pc_id) DO UPDATE SET
             is_online = 1,
             last_heartbeat = excluded.last_heartbeat,
@@ -328,12 +346,56 @@ def record_pc_telemetry(
             ip_address = excluded.ip_address,
             os_info = excluded.os_info,
             boot_time = excluded.boot_time,
+            active_window = excluded.active_window,
+            top_processes = excluded.top_processes,
+            logged_user = excluded.logged_user,
             updated_at = excluded.updated_at
     """, (
         clean_pc_id, now_str, cpu_percent, ram_percent, ram_used_gb, ram_total_gb,
         gpu_name, gpu_percent, gpu_temp, gpu_vram_used_mb, gpu_vram_total_mb,
-        ip_address, os_info, boot_time, now_str
+        ip_address, os_info, boot_time, active_window, top_processes, logged_user, now_str
     ))
+
+    # Clear pending command once dispatched
+    if command_to_return:
+        cursor.execute("UPDATE pc_telemetry SET pending_command = '' WHERE UPPER(pc_id) = UPPER(?)", (clean_pc_id,))
+
+    conn.commit()
+    conn.close()
+    return command_to_return
+
+
+def set_pc_pending_command(pc_id: str, command: str) -> bool:
+    """Queues a command for a workstation (e.g. 'capture_screen', 'kill:1234')."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    clean_pc = pc_id.strip().upper()
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO pc_telemetry (pc_id, pending_command, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(pc_id) DO UPDATE SET
+            pending_command = excluded.pending_command,
+            updated_at = excluded.updated_at
+    """, (clean_pc, command, now_str))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def update_pc_screenshot_timestamp(pc_id: str, timestamp_str: Optional[str] = None) -> bool:
+    """Updates last_screenshot_at timestamp for a workstation."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    clean_pc = pc_id.strip().upper()
+    now_str = timestamp_str or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO pc_telemetry (pc_id, last_screenshot_at, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(pc_id) DO UPDATE SET
+            last_screenshot_at = excluded.last_screenshot_at,
+            updated_at = excluded.updated_at
+    """, (clean_pc, now_str, now_str))
     conn.commit()
     conn.close()
     return True
@@ -401,7 +463,8 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
             p.duration_mins, p.user_email, p.user_role, p.current_project, p.display_name,
             t.is_online, t.last_heartbeat, t.cpu_percent, t.ram_percent,
             t.ram_used_gb, t.ram_total_gb, t.gpu_name, t.gpu_percent, t.gpu_temp,
-            t.gpu_vram_used_mb, t.gpu_vram_total_mb, t.ip_address, t.os_info, t.boot_time
+            t.gpu_vram_used_mb, t.gpu_vram_total_mb, t.ip_address, t.os_info, t.boot_time,
+            t.active_window, t.top_processes, t.logged_user, t.last_screenshot_at, t.pending_command
         FROM pc_status p
         LEFT JOIN pc_telemetry t ON UPPER(p.pc_id) = UPPER(t.pc_id)
     """)
@@ -409,6 +472,8 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
     conn.close()
 
     results = []
+    static_snap_dir = os.path.join(CURRENT_DIR, "static", "screenshots")
+
     for row in rows:
         item = dict(row)
         pid = item.get("pc_id", "").upper()
@@ -416,6 +481,8 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
             item["display_name"] = "BACKEND"
             item["is_backend"] = True
             item["is_online"] = 1
+            item["active_window"] = "AI LAB Master Hub & Server"
+            item["logged_user"] = os.getenv("USERNAME", "serverroom")
             try:
                 import psutil
                 b_cpu = psutil.cpu_percent(interval=0.05)
@@ -424,11 +491,26 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
                 item["ram_percent"] = round(b_mem.percent, 1)
                 item["ram_used_gb"] = round(b_mem.used / (1024.0 ** 3), 1)
                 item["ram_total_gb"] = round(b_mem.total / (1024.0 ** 3), 1)
+                b_procs = []
+                for p in psutil.process_iter(['name', 'cpu_percent', 'memory_percent']):
+                    try:
+                        n = p.info['name']
+                        if n and n.lower() not in ('system idle process', 'system'):
+                            b_procs.append({
+                                "name": n,
+                                "cpu": round(p.info['cpu_percent'] or 0.0, 1),
+                                "ram": round(p.info['memory_percent'] or 0.0, 1)
+                            })
+                    except Exception:
+                        pass
+                b_procs.sort(key=lambda x: (x['cpu'], x['ram']), reverse=True)
+                item["top_processes"] = b_procs[:5]
             except Exception as e:
                 item["cpu_percent"] = 5.0
                 item["ram_percent"] = 50.0
                 item["ram_used_gb"] = 8.0
                 item["ram_total_gb"] = 16.0
+                item["top_processes"] = []
         else:
             item["display_name"] = item.get("display_name") or item["pc_id"]
             item["is_backend"] = False
@@ -437,6 +519,29 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
             item["ram_percent"] = round(item.get("ram_percent") or 0.0, 1)
             item["ram_used_gb"] = round(item.get("ram_used_gb") or 0.0, 1)
             item["ram_total_gb"] = round(item.get("ram_total_gb") or 0.0, 1)
+
+            # Parse top_processes JSON for client PCs
+            raw_procs = item.get("top_processes") or "[]"
+            if isinstance(raw_procs, str):
+                try:
+                    item["top_processes"] = json.loads(raw_procs)
+                except Exception:
+                    item["top_processes"] = []
+            else:
+                item["top_processes"] = raw_procs or []
+
+        item["active_window"] = item.get("active_window") or ""
+        item["logged_user"] = item.get("logged_user") or ""
+        item["last_screenshot_at"] = item.get("last_screenshot_at") or ""
+        item["pending_command"] = item.get("pending_command") or ""
+
+        # Check if screenshot image file exists on disk
+        snap_filename = f"{pid.lower()}.jpg"
+        snap_path = os.path.join(static_snap_dir, snap_filename)
+        if os.path.exists(snap_path):
+            item["screenshot_url"] = f"/static/screenshots/{snap_filename}?t={int(os.path.getmtime(snap_path))}"
+        else:
+            item["screenshot_url"] = None
 
         raw_gpu_name = item.get("gpu_name") or ""
         os_str = str(item.get("os_info", "")).lower()
@@ -458,7 +563,6 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
 
         raw_temp = round(item.get("gpu_temp") or 0.0, 1)
         if raw_temp <= 0.0 and item.get("is_online") == 1:
-            # Baseline ambient operational idle temperature for active hardware
             raw_temp = 39.5
         item["gpu_temp"] = raw_temp
 

@@ -126,7 +126,14 @@ function initTabs() {
             if (targetContent) targetContent.classList.add("active");
 
             if (btn.dataset.tab === "pc-status") loadPCStatus();
-            else if (btn.dataset.tab === "projects") loadBackendProjects();
+            else if (btn.dataset.tab === "monitoring") {
+                loadMonitoringData();
+                startMonitoringAutoPoll();
+            }
+            if (btn.dataset.tab !== "monitoring") {
+                stopMonitoringAutoPoll();
+            }
+            if (btn.dataset.tab === "projects") loadBackendProjects();
             else if (btn.dataset.tab === "attendance") loadAttendance();
             else if (btn.dataset.tab === "unknown-faces") loadUnknownFaces();
             else if (btn.dataset.tab === "registered-faces") loadRegisteredFaces();
@@ -621,6 +628,17 @@ function renderPCGrid(pcs) {
             `;
         }
 
+        const activeWinHtml = (p.is_online && p.active_window) ? `
+            <div style="margin-top: 8px; font-size: 11px; padding: 5px 8px; background: #0f172a; color: #f8fafc; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-left: 3px solid #38bdf8;">
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;" title="${escapeHtml(p.active_window)}">
+                    💻 ${escapeHtml(p.active_window)}
+                </span>
+                <button type="button" class="btn btn-primary" style="padding: 2px 7px; font-size: 10px; height: auto;" onclick="event.stopPropagation(); requestScreenGrab('${p.pc_id}')" title="Grab Live Screen">
+                    📸
+                </button>
+            </div>
+        ` : '';
+
         const actionsHtml = `
             <div class="pc-actions" style="margin-top: 14px; display: flex; gap: 8px;" onclick="event.stopPropagation()">
                 ${isBackend ? `
@@ -694,6 +712,7 @@ function renderPCGrid(pcs) {
                         </div>
                     `}
                     ${telemetryHtml}
+                    ${activeWinHtml}
                     ${countdownHtml}
                     ${actionsHtml}
                 </div>
@@ -807,6 +826,41 @@ function handlePCClick(pcId, isFree) {
                 <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b; font-size: 10px;">OFFLINE</span>
             </div>
         `;
+    }
+
+    // Populate Live Telemetry HUD (Active Window, Screen Thumbnail, Tasks)
+    const winVal = document.getElementById("modal-active-win-val");
+    if (winVal) winVal.innerText = pcData.active_window || (pcData.is_online ? "Active Desktop / Idle" : "Workstation Offline");
+
+    const thumbImg = document.getElementById("modal-screen-thumb");
+    const thumbPlh = document.getElementById("modal-screen-placeholder");
+    if (thumbImg && thumbPlh) {
+        if (pcData.screenshot_url) {
+            thumbImg.src = pcData.screenshot_url;
+            thumbImg.style.display = "block";
+            thumbPlh.style.display = "none";
+        } else {
+            thumbImg.style.display = "none";
+            thumbPlh.style.display = "block";
+        }
+    }
+
+    const procsList = document.getElementById("modal-top-procs-list");
+    if (procsList) {
+        const procs = pcData.top_processes || [];
+        if (procs.length > 0) {
+            procsList.innerHTML = procs.map(pr => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #1e293b;">
+                    <span style="color: #cbd5e1; font-weight: 600;">${escapeHtml(pr.name)}</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #94a3b8; font-size: 10px;">CPU ${pr.cpu}% | RAM ${pr.ram}%</span>
+                        ${pr.pid ? `<button type="button" class="mon-kill-btn" onclick="killWorkstationTask('${currentPCId}', ${pr.pid}, '${escapeHtml(pr.name)}')">✖</button>` : ''}
+                    </div>
+                </div>
+            `).join("");
+        } else {
+            procsList.innerHTML = `<span style="color: #64748b;">${pcData.is_online ? 'No heavy tasks reported' : 'PC Offline'}</span>`;
+        }
     }
 
     if (isFree || !pcData || pcData.status.toLowerCase() === "free") {
@@ -2689,4 +2743,338 @@ function populateManualNamesList(users) {
         opt.value = u.name;
         datalist.appendChild(opt);
     });
+}
+
+// ═════════════════════════════════════════════════════════
+// ── LIVE LAB MONITORING, TASKS & ON-DEMAND SCREEN SNAPS ──
+// ═════════════════════════════════════════════════════════
+let monitoringPollInterval = null;
+let monitoringAutoRefresh = true;
+
+function startMonitoringAutoPoll() {
+    stopMonitoringAutoPoll();
+    if (monitoringAutoRefresh) {
+        monitoringPollInterval = setInterval(() => {
+            loadMonitoringData(true);
+        }, 5000);
+    }
+}
+
+function stopMonitoringAutoPoll() {
+    if (monitoringPollInterval) {
+        clearInterval(monitoringPollInterval);
+        monitoringPollInterval = null;
+    }
+}
+
+function toggleMonitoringAutoRefresh() {
+    monitoringAutoRefresh = !monitoringAutoRefresh;
+    const btn = document.getElementById("mon-auto-toggle-btn");
+    if (btn) {
+        btn.innerText = monitoringAutoRefresh ? "⚡ Auto-Refresh: 5s (ON)" : "⏸️ Auto-Refresh: OFF";
+        btn.style.color = monitoringAutoRefresh ? "#10b981" : "#64748b";
+    }
+    if (monitoringAutoRefresh) {
+        startMonitoringAutoPoll();
+        loadMonitoringData(false);
+    } else {
+        stopMonitoringAutoPoll();
+    }
+}
+
+async function loadMonitoringData(silent = false) {
+    try {
+        const res = await apiFetch("/api/pc/monitoring");
+        const pcs = res.workstations || [];
+        renderMonitoringGrid(pcs);
+    } catch (e) {
+        if (!silent) console.error("Failed to load monitoring data", e);
+    }
+}
+
+function renderMonitoringGrid(pcs) {
+    const grid = document.getElementById("monitoring-grid");
+    if (!grid) return;
+
+    let onlineCount = 0;
+    let activeAppCount = 0;
+    let alertCount = 0;
+
+    const cardsHtml = pcs.map(p => {
+        const isOnline = p.is_online === 1;
+        if (isOnline) onlineCount++;
+
+        const isBackend = p.is_backend || p.pc_id === "BACKEND";
+        const pcLabel = isBackend ? "BACKEND SERVER" : p.pc_id;
+        const activeWin = p.active_window || (isOnline ? "Active Desktop" : "System Offline");
+        if (isOnline && p.active_window && p.active_window !== "Desktop / Idle") {
+            activeAppCount++;
+        }
+
+        const winLower = activeWin.toLowerCase();
+        const isDistraction = ["youtube", "netflix", "instagram", "facebook", "game", "steam", "valorant", "roblox", "discord", "tiktok"].some(k => winLower.includes(k));
+        if (isDistraction && isOnline) alertCount++;
+
+        const topProcs = p.top_processes || [];
+        const snapUrl = p.screenshot_url;
+
+        return `
+            <div class="mon-card ${isOnline ? 'mon-online' : 'mon-offline'}" id="mon-card-${p.pc_id}">
+                <!-- Header -->
+                <div class="mon-header">
+                    <div class="mon-title">
+                        <span>${isBackend ? '🖥️' : '💻'}</span>
+                        <span>${pcLabel}</span>
+                        <span class="badge ${isOnline ? 'badge-connected' : 'badge-disconnected'}" style="font-size: 11px; padding: 2px 8px;">
+                            ${isOnline ? '🟢 ONLINE' : '⚫ OFFLINE'}
+                        </span>
+                    </div>
+                    <div>
+                        ${p.occupied_by ? `
+                            <span class="mon-user-badge" title="Occupied by ${p.occupied_by}">👤 ${escapeHtml(p.occupied_by.split(',')[0])}</span>
+                        ` : `
+                            <span class="mon-user-badge" style="color: #10b981; background: #ecfdf5;">🟢 Available</span>
+                        `}
+                    </div>
+                </div>
+
+                <!-- Active Foreground Window Banner -->
+                <div class="mon-active-win ${isDistraction ? 'distraction' : ''}" title="${escapeHtml(activeWin)}">
+                    <span>${isDistraction ? '⚠️' : '📱'}</span>
+                    <strong style="font-size: 11px; color: #94a3b8;">ACTIVE:</strong>
+                    <span style="overflow: hidden; text-overflow: ellipsis;">${escapeHtml(activeWin)}</span>
+                </div>
+
+                <!-- Resource Gauges -->
+                <div class="mon-gauges-row">
+                    <div class="mon-gauge-box">
+                        <div class="mon-gauge-val" style="color: ${p.cpu_percent > 80 ? '#ef4444' : '#10b981'};">${p.cpu_percent || 0}%</div>
+                        <div class="mon-gauge-lbl">CPU LOAD</div>
+                    </div>
+                    <div class="mon-gauge-box">
+                        <div class="mon-gauge-val" style="color: #6366f1;">${p.ram_percent || 0}%</div>
+                        <div class="mon-gauge-lbl">RAM (${p.ram_used_gb || 0}G)</div>
+                    </div>
+                    <div class="mon-gauge-box">
+                        <div class="mon-gauge-val" style="color: #0284c7;">${p.gpu_percent || 0}%</div>
+                        <div class="mon-gauge-lbl">GPU (${p.gpu_temp || 0}°C)</div>
+                    </div>
+                </div>
+
+                <!-- On-Demand Screen Snapshot Frame -->
+                <div class="mon-screen-preview" onclick="openScreenLightbox('${p.pc_id}', '${snapUrl || ''}', '${escapeHtml(activeWin)}')">
+                    ${snapUrl ? `
+                        <img src="${snapUrl}" alt="${p.pc_id} Screen" loading="lazy">
+                        <div class="mon-screen-overlay">
+                            <span style="color: #fff; font-weight: 700; font-size: 12px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 20px;">
+                                🔍 Click to Expand Screen
+                            </span>
+                        </div>
+                    ` : `
+                        <div style="text-align: center; color: #64748b; font-size: 11px; padding: 20px;">
+                            <div style="font-size: 28px; margin-bottom: 6px;">📷</div>
+                            <div>No Snapshot Captured Yet</div>
+                            <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">Click 'Grab Live Screen' to pull current display</div>
+                        </div>
+                    `}
+                </div>
+
+                <!-- Snapshot Action Controls -->
+                <div class="mon-snap-action-bar">
+                    <button class="btn btn-primary mon-snap-btn" id="btn-snap-${p.pc_id}" onclick="requestScreenGrab('${p.pc_id}')" ${!isOnline ? 'disabled style="opacity: 0.5;"' : ''}>
+                        📸 Grab Live Screen
+                    </button>
+                    ${p.last_screenshot_at ? `
+                        <span style="font-size: 10px; color: #64748b;" title="Last screenshot taken at ${p.last_screenshot_at}">
+                            🕒 ${p.last_screenshot_at.split(' ')[1] || ''}
+                        </span>
+                    ` : ''}
+                </div>
+
+                <!-- Top Running Processes Table -->
+                <div class="mon-tasks-list">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="color: #475569; font-size: 11px;">⚡ TOP TASKS / APPS</strong>
+                        <span style="font-size: 10px; color: #94a3b8;">${topProcs.length} reported</span>
+                    </div>
+                    ${topProcs.length > 0 ? topProcs.map(pr => `
+                        <div class="mon-task-item">
+                            <span class="mon-task-name" title="${escapeHtml(pr.name)}">
+                                ${escapeHtml(pr.name)}
+                            </span>
+                            <div class="mon-task-stats">
+                                <span>${pr.cpu}% C</span>
+                                <span>${pr.ram}% M</span>
+                                ${pr.pid ? `
+                                    <button class="mon-kill-btn" title="Terminate ${escapeHtml(pr.name)} (PID ${pr.pid})" onclick="killWorkstationTask('${p.pc_id}', ${pr.pid}, '${escapeHtml(pr.name)}')">
+                                        ✖
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('') : `
+                        <div style="color: #94a3b8; font-size: 11px; text-align: center; padding: 4px 0;">
+                            ${isOnline ? 'No heavy tasks reported' : 'PC Offline • No process data'}
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    grid.innerHTML = cardsHtml;
+
+    // Update Overview Stats
+    const monStatOnline = document.getElementById("mon-stat-online");
+    if (monStatOnline) monStatOnline.innerText = `${onlineCount} / ${pcs.length}`;
+
+    const navMonCount = document.getElementById("nav-mon-count");
+    if (navMonCount) navMonCount.innerText = `${onlineCount} On`;
+
+    const monStatApps = document.getElementById("mon-stat-active-apps");
+    if (monStatApps) monStatApps.innerText = activeAppCount;
+
+    const alertCard = document.getElementById("mon-stat-alert-card");
+    const monStatAlerts = document.getElementById("mon-stat-alerts");
+    if (alertCard && monStatAlerts) {
+        if (alertCount > 0) {
+            alertCard.style.display = "block";
+            monStatAlerts.innerText = `${alertCount} PC(s)`;
+        } else {
+            alertCard.style.display = "none";
+        }
+    }
+}
+
+async function requestScreenGrab(pcId) {
+    const cleanId = pcId.toUpperCase();
+    const btn = document.getElementById(`btn-snap-${cleanId}`);
+    if (btn) {
+        btn.innerText = "⏳ Capturing...";
+        btn.disabled = true;
+    }
+    showToast(`📸 Requesting screen snapshot from ${cleanId}...`, "info");
+
+    try {
+        await apiFetch(`/api/pc/${cleanId}/request_screenshot`, {
+            method: "POST",
+            body: JSON.stringify({ command: "capture_screen" })
+        });
+
+        // Poll for new image after 2s and 4s
+        let attempts = 0;
+        const checkPoll = setInterval(async () => {
+            attempts++;
+            await loadMonitoringData(true);
+            if (attempts >= 3) {
+                clearInterval(checkPoll);
+                if (btn) {
+                    btn.innerText = "📸 Grab Live Screen";
+                    btn.disabled = false;
+                }
+                showToast(`✅ Live snapshot ready for ${cleanId}!`, "success");
+            }
+        }, 1800);
+    } catch (e) {
+        showToast(`Failed to request screen: ${e.message}`, "error");
+        if (btn) {
+            btn.innerText = "📸 Grab Live Screen";
+            btn.disabled = false;
+        }
+    }
+}
+
+async function requestAllScreenshots() {
+    showToast("📸 Requesting live screenshots from all online workstations...", "info");
+    const onlineCards = document.querySelectorAll(".mon-card.mon-online");
+    onlineCards.forEach(c => {
+        const pcId = c.id.replace("mon-card-", "");
+        if (pcId) requestScreenGrab(pcId);
+    });
+}
+
+function openScreenLightbox(pcId, imgUrl, activeWin) {
+    const modal = document.getElementById("screen-lightbox-modal");
+    const img = document.getElementById("screen-lightbox-img");
+    const title = document.getElementById("screen-lightbox-title");
+    const sub = document.getElementById("screen-lightbox-subtitle");
+    if (!modal || !img) return;
+
+    if (!imgUrl) {
+        showToast(`No screenshot taken yet for ${pcId}. Click 'Grab Live Screen' first.`, "info");
+        return;
+    }
+
+    title.innerText = `Workstation: ${pcId}`;
+    sub.innerText = `Active: ${activeWin || 'Desktop'} • Captured On-Demand`;
+    img.src = imgUrl;
+    modal.style.display = "flex";
+    modal.dataset.currentPc = pcId;
+}
+
+function closeScreenLightbox(e) {
+    if (e && e.target && e.target.id !== "screen-lightbox-modal" && !e.target.classList.contains("modal-close-btn")) {
+        return;
+    }
+    const modal = document.getElementById("screen-lightbox-modal");
+    if (modal) modal.style.display = "none";
+}
+
+function requestLightboxFreshSnap() {
+    const modal = document.getElementById("screen-lightbox-modal");
+    const pcId = modal ? modal.dataset.currentPc : null;
+    if (pcId) {
+        requestScreenGrab(pcId);
+        setTimeout(() => {
+            const img = document.getElementById("screen-lightbox-img");
+            if (img) img.src = `/static/screenshots/${pcId.toLowerCase()}.jpg?t=${Date.now()}`;
+        }, 3000);
+    }
+}
+
+function openScreenLightboxFromModal() {
+    if (!currentPCId) return;
+    const thumbImg = document.getElementById("modal-screen-thumb");
+    const winVal = document.getElementById("modal-active-win-val");
+    if (thumbImg && thumbImg.src && thumbImg.style.display !== "none") {
+        openScreenLightbox(currentPCId, thumbImg.src, winVal ? winVal.innerText : "");
+    } else {
+        requestModalScreenGrab();
+    }
+}
+
+function requestModalScreenGrab() {
+    if (!currentPCId) return;
+    const btn = document.getElementById("modal-grab-screen-btn");
+    if (btn) btn.innerText = "⏳ Capturing...";
+    requestScreenGrab(currentPCId);
+    setTimeout(() => {
+        if (btn) btn.innerText = "📸 Grab Live Screen";
+        const thumbImg = document.getElementById("modal-screen-thumb");
+        const thumbPlh = document.getElementById("modal-screen-placeholder");
+        if (thumbImg) {
+            thumbImg.src = `/static/screenshots/${currentPCId.toLowerCase()}.jpg?t=${Date.now()}`;
+            thumbImg.style.display = "block";
+            if (thumbPlh) thumbPlh.style.display = "none";
+        }
+    }, 3200);
+}
+
+async function killWorkstationTask(pcId, pid, procName) {
+    if (!confirm(`⚠️ Terminate Process: Are you sure you want to kill '${procName}' (PID ${pid}) on ${pcId}?`)) {
+        return;
+    }
+
+    try {
+        await apiFetch(`/api/pc/${pcId}/kill_task`, {
+            method: "POST",
+            body: JSON.stringify({ pid, name: procName })
+        });
+        showToast(`🛑 Kill command sent for '${procName}' on ${pcId}`, "success");
+        setTimeout(() => {
+            loadMonitoringData(true);
+        }, 2500);
+    } catch (e) {
+        showToast(`Failed to kill process: ${e.message}`, "error");
+    }
 }
