@@ -827,7 +827,12 @@ function handlePCClick(pcId, isFree) {
 
     if (pcData && (pcData.is_online === 1 || pcData.is_online === true)) {
         modalTelemetryWrap.style.display = "block";
-        modalTelemetryWrap.innerHTML = `
+                const gpuDisplayName = pcData.gpu_name ? escapeHtml(pcData.gpu_name.split(' ')[0]) : 'DGX/RTX';
+                const gpuVal = pcData.gpu_percent || 0;
+                const gpuTemp = pcData.gpu_temp || 0;
+                const vramUsedMb = pcData.gpu_vram_used_mb || 0;
+                const vramTotalMb = pcData.gpu_vram_total_mb || 0;
+                modalTelemetryWrap.innerHTML = `
             <div style="margin: 12px 24px 0 24px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
@@ -836,7 +841,7 @@ function handlePCClick(pcId, isFree) {
                     </span>
                     <span style="color: #64748b; font-size: 11px;">IP: <strong>${pcData.ip_address || 'Local'}</strong></span>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr ${pcData.gpu_name ? '1fr' : ''}; gap: 10px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                     <div style="background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #f1f5f9;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
                             <span style="color: #64748b; font-weight: 600;">CPU</span>
@@ -855,21 +860,25 @@ function handlePCClick(pcId, isFree) {
                             <div style="width: ${Math.min(100, pcData.ram_percent || 0)}%; height: 100%; background: #6366f1;"></div>
                         </div>
                     </div>
-                    ${pcData.gpu_name ? `
                     <div style="background: #ffffff; padding: 6px 10px; border-radius: 6px; border: 1px solid #f1f5f9;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                            <span style="color: #64748b; font-weight: 600;" title="${escapeHtml(pcData.gpu_name)}">GPU (${escapeHtml(pcData.gpu_name.split(' ')[0])})</span>
+                            <span style="color: #64748b; font-weight: 600;" title="${escapeHtml(pcData.gpu_name || 'GPU Hardware Accelerator')}">🎮 GPU (${gpuDisplayName})</span>
                             <div style="display: flex; align-items: center; gap: 4px;">
-                                ${pcData.gpu_temp > 0 ? `<span style="color: #ea580c; font-weight: 700; font-size: 10px;">🔥 ${pcData.gpu_temp}°C</span>` : ''}
-                                <strong style="color: #0284c7;">${pcData.gpu_percent || 0}%</strong>
+                                ${gpuTemp > 0 ? `<span style="color: #ea580c; font-weight: 700; font-size: 10px;">🔥 ${gpuTemp}°C</span>` : ''}
+                                <strong style="color: #0284c7;">${gpuVal}%</strong>
                             </div>
                         </div>
                         <div style="width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
-                            <div style="width: ${Math.min(100, pcData.gpu_percent || 0)}%; height: 100%; background: #0284c7;"></div>
+                            <div style="width: ${Math.min(100, gpuVal)}%; height: 100%; background: linear-gradient(90deg, #0284c7, #0369a1);"></div>
                         </div>
                     </div>
-                    ` : ''}
                 </div>
+                ${vramTotalMb > 0 ? `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 10px; color: #64748b;">
+                    <span>⚡ Accelerator: <strong>${escapeHtml(pcData.gpu_name || 'NVIDIA DGX Compute')}</strong></span>
+                    <span>VRAM: <strong>${Math.round(vramUsedMb)} / ${Math.round(vramTotalMb)} MB</strong></span>
+                </div>
+                ` : ''}
             </div>
         `;
     } else {

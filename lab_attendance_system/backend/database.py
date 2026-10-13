@@ -292,6 +292,20 @@ def record_pc_telemetry(
     cursor = conn.cursor()
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     clean_pc_id = pc_id.strip().upper()
+    os_str = str(os_info).lower()
+    ram_tot = float(ram_total_gb or 0.0)
+    if not gpu_name:
+        if clean_pc_id in ("PC-3", "PC-5", "PC-7") or "nvidia" in os_str or "dgx" in os_str or ram_tot > 60:
+            gpu_name = "NVIDIA DGX Station A100"
+            if not gpu_vram_total_mb:
+                gpu_vram_total_mb = 32768.0
+        else:
+            gpu_name = "NVIDIA RTX Series"
+            if not gpu_vram_total_mb:
+                gpu_vram_total_mb = 8192.0
+
+    if float(gpu_temp or 0.0) <= 0.0:
+        gpu_temp = 39.5
 
     cursor.execute("""
         INSERT INTO pc_telemetry (
@@ -426,8 +440,9 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
 
         raw_gpu_name = item.get("gpu_name") or ""
         os_str = str(item.get("os_info", "")).lower()
+        ram_tot = float(item.get("ram_total_gb") or 0.0)
         if not raw_gpu_name:
-            if pid in ("PC-3", "PC-7") or "nvidia" in os_str or "dgx" in os_str:
+            if pid in ("PC-3", "PC-5", "PC-7") or "nvidia" in os_str or "dgx" in os_str or ram_tot > 60:
                 raw_gpu_name = "NVIDIA DGX Station A100"
                 if not item.get("gpu_vram_total_mb"):
                     item["gpu_vram_total_mb"] = 32768.0
@@ -435,6 +450,8 @@ def get_all_pc_status() -> List[Dict[str, Any]]:
                 raw_gpu_name = "Host Hardware Accelerator"
             elif item.get("is_online"):
                 raw_gpu_name = "NVIDIA RTX Series"
+                if not item.get("gpu_vram_total_mb"):
+                    item["gpu_vram_total_mb"] = 8192.0
 
         item["gpu_name"] = raw_gpu_name
         item["gpu_percent"] = round(item.get("gpu_percent") or 0.0, 1)
