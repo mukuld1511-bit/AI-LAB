@@ -7,20 +7,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20261014_piet_v5">
+    <link rel="stylesheet" href="style.css?v=20261014_piet_v6">
     <style>
-        /* ── Critical PIET Institutional Theme & Header ── */
+        /* ═══════════════════════════════════════════════════════════════════════════
+           OFFICIAL PIET UNIVERSITY INSTITUTIONAL HEADER & BRANDING
+           ═══════════════════════════════════════════════════════════════════════════ */
         :root {
             --piet-green: #008b38;
             --piet-dark-green: #00732e;
             --piet-light-green: #e8f5e9;
+            --piet-gold: #f59e0b;
         }
+
+        /* 1. Official Top Utility Bar */
         .piet-top-bar {
             background: #ffffff !important;
             border-bottom: 1px solid #e2e8f0 !important;
+            padding: 7px 28px !important;
             font-size: 11.5px !important;
             color: #475569 !important;
-            padding: 7px 28px !important;
             line-height: 1.4 !important;
         }
         .piet-top-bar-inner {
@@ -30,7 +35,7 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
         .piet-top-left {
             font-weight: 600;
@@ -54,13 +59,8 @@
             color: #008b38 !important;
             text-decoration: underline !important;
         }
-        .piet-top-sep {
-            color: #cbd5e1;
-        }
-        .piet-toll-free {
-            color: #0f172a;
-            font-weight: 600;
-        }
+        .piet-top-sep { color: #cbd5e1 !important; }
+        .piet-toll-free { color: #0f172a !important; font-weight: 700 !important; }
         .piet-mesh-badge {
             background: #dcfce7 !important;
             color: #166534 !important;
@@ -73,10 +73,12 @@
             align-items: center;
             gap: 4px;
         }
+
+        /* 2. Main Institutional Header (PIET BADGE BADA & CLEAN) */
         .app-header {
             background: #ffffff !important;
             border-bottom: 1px solid #e2e8f0 !important;
-            padding: 12px 28px !important;
+            padding: 14px 28px !important;
             display: flex !important;
             justify-content: space-between !important;
             align-items: center !important;
@@ -85,45 +87,123 @@
         .header-brand {
             display: flex !important;
             align-items: center !important;
-            gap: 16px !important;
+            gap: 18px !important;
         }
+
+        /* BIG PIET BADGE */
         .piet-logo-link {
             display: inline-flex !important;
             align-items: center !important;
             text-decoration: none !important;
             flex-shrink: 0 !important;
+            border-radius: 4px !important;
+            box-shadow: 0 2px 8px rgba(0, 139, 56, 0.15) !important;
+            transition: transform 0.15s ease;
+        }
+        .piet-logo-link:hover {
+            transform: translateY(-1px);
         }
         .piet-logo-img {
-            height: 52px !important;
+            height: 74px !important;
             width: auto !important;
+            display: block !important;
             object-fit: contain !important;
             border-radius: 4px !important;
         }
+
         .brand-divider {
-            width: 1.5px !important;
-            height: 46px !important;
+            width: 2px !important;
+            height: 56px !important;
             background: #e2e8f0 !important;
         }
         .univ-tag {
             display: block !important;
-            font-size: 10.5px !important;
+            font-size: 11px !important;
             font-weight: 800 !important;
             color: #008b38 !important;
             letter-spacing: 0.8px !important;
+            text-transform: uppercase !important;
             margin-bottom: 2px !important;
         }
         .brand-text h1 {
-            font-size: 18px !important;
+            font-size: 22px !important;
             font-weight: 800 !important;
             color: #0f172a !important;
             line-height: 1.2 !important;
             margin: 0 !important;
+            letter-spacing: -0.3px !important;
         }
         .brand-sub {
-            font-size: 11.5px !important;
+            font-size: 12px !important;
             color: #64748b !important;
             font-weight: 500 !important;
+            margin-top: 2px !important;
+            display: block !important;
         }
+
+        /* Header Right: Clock & Action Buttons */
+        .header-right {
+            display: flex !important;
+            align-items: center !important;
+            gap: 14px !important;
+        }
+        .live-clock-card {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-end !important;
+        }
+        .clock-label {
+            font-size: 9.5px !important;
+            font-weight: 700 !important;
+            color: #94a3b8 !important;
+            letter-spacing: 0.5px !important;
+        }
+        .live-clock {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            background: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 5px 12px !important;
+            border-radius: 6px !important;
+        }
+
+        .header-action-btns {
+            display: flex !important;
+            gap: 8px !important;
+        }
+        .btn {
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+            padding: 8px 16px !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+        }
+        .btn-primary {
+            background: #008b38 !important;
+            color: #ffffff !important;
+            border: 1px solid #00732e !important;
+            box-shadow: 0 2px 4px rgba(0, 139, 56, 0.2) !important;
+        }
+        .btn-primary:hover {
+            background: #00732e !important;
+        }
+        .btn-outline {
+            background: #ffffff !important;
+            color: #334155 !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+        .btn-outline:hover {
+            background: #f8fafc !important;
+            color: #0f172a !important;
+        }
+
+        /* 3. Official PIET Forest Green Ribbon */
         .piet-nav-ribbon {
             background: linear-gradient(135deg, #008b38 0%, #00732e 100%) !important;
             color: #ffffff !important;
@@ -147,20 +227,20 @@
             gap: 14px;
         }
         .nav-dept-label {
-            font-size: 12px;
-            font-weight: 700;
-            color: #dcfce7;
-            letter-spacing: 0.3px;
-            white-space: nowrap;
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+            color: #dcfce7 !important;
+            letter-spacing: 0.3px !important;
+            white-space: nowrap !important;
         }
         .lab-switcher {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(0, 0, 0, 0.15) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            background: rgba(0, 0, 0, 0.18) !important;
             padding: 4px 6px !important;
             border-radius: 9999px !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
         }
         .lab-pill {
             background: transparent !important;
@@ -185,16 +265,13 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12) !important;
         }
         .lab-pill .tag {
-            background: rgba(0, 0, 0, 0.2) !important;
-            color: #ffffff !important;
+            background: #fef08a !important;
+            color: #854d0e !important;
             font-size: 9px !important;
             font-weight: 800 !important;
-            padding: 1px 5px !important;
+            padding: 1px 6px !important;
             border-radius: 4px !important;
-        }
-        .lab-pill.active .tag {
-            background: #e8f5e9 !important;
-            color: #00732e !important;
+            letter-spacing: 0.3px !important;
         }
         .nav-ribbon-right a, .nav-ext-link {
             color: #ffffff !important;
@@ -235,11 +312,11 @@
         </div>
     </div>
 
-    <!-- Official PIET Master Institutional Header -->
+    <!-- Official PIET Master Institutional Header (BIG HD BADGE) -->
     <header class="app-header">
         <div class="header-brand">
             <a href="https://www.piet.co.in" target="_blank" class="piet-logo-link" title="Panipat Institute of Engineering & Technology">
-                <img src="piet_logo_wide.png" alt="PIET Logo" class="piet-logo-img">
+                <img src="piet_logo_wide.png?v=2" alt="PIET Logo" class="piet-logo-img">
             </a>
             <div class="brand-divider"></div>
             <div class="brand-text">
@@ -293,62 +370,62 @@
 
     <!-- Main Content Container -->
     <main class="main-wrapper">
-        <!-- Active Session & Timetable Banner -->
+        <!-- Active Session & KPIs Banner -->
         <section class="session-banner" id="session-banner">
             <div class="session-info">
-                <div class="slot-badge">⚡ ACTIVE LAB SESSION</div>
+                <div class="slot-badge">⚡ ACTIVE SESSION</div>
                 <div class="session-title" id="slot-subject">Detecting Timetable...</div>
                 <div class="session-meta">
-                    <span id="slot-faculty">👨‍🏫 Faculty: Loading...</span>
+                    <span id="slot-faculty">Faculty: Loading...</span>
                     <span class="sep">•</span>
-                    <span id="slot-batch">🎓 Batch: Loading...</span>
+                    <span id="slot-batch">Batch: Loading...</span>
                     <span class="sep">•</span>
-                    <span id="slot-time">⏱️ Time: Loading...</span>
+                    <span id="slot-time">Slot: Loading...</span>
                 </div>
             </div>
             <div class="session-stats">
                 <div class="kpi-mini">
                     <span class="kpi-num" id="kpi-total">20</span>
-                    <span class="kpi-lbl">Total PCs</span>
+                    <span class="kpi-lbl">TOTAL</span>
                 </div>
                 <div class="kpi-mini text-success">
                     <span class="kpi-num" id="kpi-online">0</span>
-                    <span class="kpi-lbl">Online</span>
+                    <span class="kpi-lbl">ONLINE</span>
                 </div>
                 <div class="kpi-mini text-cyan">
                     <span class="kpi-num" id="kpi-fruitful">0</span>
-                    <span class="kpi-lbl">Fruitful (Coding)</span>
+                    <span class="kpi-lbl">CODING</span>
                 </div>
                 <div class="kpi-mini text-amber">
                     <span class="kpi-num" id="kpi-idle">0</span>
-                    <span class="kpi-lbl">Idle</span>
+                    <span class="kpi-lbl">IDLE</span>
                 </div>
                 <div class="kpi-mini">
                     <span class="kpi-num" id="kpi-offline" style="color: #64748b;">20</span>
-                    <span class="kpi-lbl">Offline</span>
+                    <span class="kpi-lbl">OFFLINE</span>
                 </div>
             </div>
         </section>
 
         <!-- Navigation Sub-Tabs -->
         <div class="nav-subtabs">
-            <button class="subtab active" onclick="switchView('grid')">🖥️ Live Workstations Grid</button>
-            <button class="subtab" onclick="switchView('timetable')">📅 Lab Timetable</button>
-            <button class="subtab" onclick="switchView('analytics')">📊 Analytics & Productivity</button>
+            <button class="subtab active" onclick="switchView('grid')">🖥️ WORKSTATIONS</button>
+            <button class="subtab" onclick="switchView('timetable')">📅 TIMETABLE</button>
+            <button class="subtab" onclick="switchView('analytics')">📊 ANALYTICS</button>
         </div>
 
         <!-- VIEW 1: LIVE WORKSTATIONS GRID -->
         <section id="view-grid" class="view-panel active">
             <div class="grid-controls">
                 <div class="filter-group">
-                    <button class="filter-btn active" onclick="filterPCs('all')">All Workstations</button>
-                    <button class="filter-btn" onclick="filterPCs('online')">🟢 Online Only</button>
-                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 Fruitful (Coding)</button>
-                    <button class="filter-btn" onclick="filterPCs('idle')">💤 Idle PCs</button>
-                    <button class="filter-btn" onclick="filterPCs('offline')">⚪ Offline Only</button>
+                    <button class="filter-btn active" onclick="filterPCs('all')">ALL</button>
+                    <button class="filter-btn" onclick="filterPCs('online')">🟢 ONLINE</button>
+                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 CODING</button>
+                    <button class="filter-btn" onclick="filterPCs('idle')">💤 IDLE</button>
+                    <button class="filter-btn" onclick="filterPCs('offline')">⚪ OFFLINE</button>
                 </div>
                 <div class="search-box">
-                    <input type="text" id="pc-search-input" placeholder="Search PC (e.g. PC-414-05, Chrome)..." onkeyup="searchPCs()">
+                    <input type="text" id="pc-search-input" placeholder="SEARCH PC / APP (e.g. PC-414-05, Python)..." onkeyup="searchPCs()">
                 </div>
             </div>
 
@@ -511,21 +588,11 @@
         </div>
     </div>
 
-    <!-- Official PIET Departmental Institutional Footer -->
+    <!-- Minimal Brutalist Institutional Footer -->
     <footer class="piet-footer">
         <div class="piet-footer-inner">
-            <div class="footer-col">
-                <div class="footer-logo-text">
-                    <strong>PANIPAT INSTITUTE OF ENGINEERING &amp; TECHNOLOGY</strong>
-                </div>
-                <p class="footer-desc">An Autonomous Institute &bull; Approved by AICTE, New Delhi &bull; Affiliated to Kurukshetra University, Kurukshetra &bull; Accredited with 'A' Grade by NAAC</p>
-                <p class="footer-campus">📍 70 Milestone, GT Road, Samalkha, Panipat, Haryana - 132102 &bull; 📞 1800 120 6884</p>
-            </div>
-            <div class="footer-col text-right">
-                <div class="footer-dept-title">DEPARTMENT OF ARTIFICIAL INTELLIGENCE &amp; MACHINE LEARNING</div>
-                <p class="footer-incharge">Head of Department / In-Charge: <strong>Prof. Dr. Richa Choudhary</strong></p>
-                <p class="footer-credits">Automated Lab Supervision &amp; Workstation Telemetry Network &bull; High-Performance Deep Learning Lab Node</p>
-            </div>
+            <span>🏛️ PIET AIML DEPT &bull; SMART LAB 414 &bull; AUTONOMOUS / NAAC 'A'</span>
+            <span>📍 SAMALKHA, PANIPAT &bull; 📞 1800 120 6884</span>
         </div>
     </footer>
 

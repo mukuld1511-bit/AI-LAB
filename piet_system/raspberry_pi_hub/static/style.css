@@ -4,50 +4,50 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-    --bg-page: #f8fafc;
+    --bg-page: #f4f4f0;
     --bg-card: #ffffff;
-    --bg-subtle: #f1f5f9;
-    --bg-hover: #f8fafc;
+    --bg-subtle: #ffffff;
+    --bg-hover: #ffde59;
 
-    --border-light: #e2e8f0;
-    --border-medium: #cbd5e1;
-    --border-focus: #2563eb;
+    --border-light: #000000;
+    --border-medium: #000000;
+    --border-focus: #000000;
 
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
+    --text-primary: #000000;
+    --text-secondary: #222222;
+    --text-muted: #555555;
 
     --primary: #008b38;
     --primary-hover: #00732e;
-    --primary-light: #e8f5e9;
-    --primary-border: #a5d6a7;
+    --primary-light: #dcfce7;
+    --primary-border: #000000;
     --piet-dark-green: #005a24;
-    --piet-gold: #f59e0b;
+    --piet-gold: #ffde59;
 
-    --success: #16a34a;
+    --success: #008b38;
     --success-light: #dcfce7;
-    --success-text: #15803d;
+    --success-text: #000000;
 
     --info: #0284c7;
     --info-light: #e0f2fe;
-    --info-text: #0369a1;
+    --info-text: #000000;
 
     --warning: #d97706;
     --warning-light: #fef3c7;
-    --warning-text: #b45309;
+    --warning-text: #000000;
 
     --danger: #dc2626;
     --danger-light: #fee2e2;
-    --danger-text: #b91c1c;
+    --danger-text: #000000;
 
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
-    --radius-pill: 9999px;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-pill: 0px;
 
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 2px 2px 0px #000000;
+    --shadow-md: 3px 3px 0px #000000;
+    --shadow-lg: 5px 5px 0px #000000;
 }
 
 * {
@@ -153,7 +153,7 @@ body {
 }
 
 .piet-logo-img {
-    height: 52px;
+    height: 74px;
     width: auto;
     object-fit: contain;
     border-radius: 4px;
