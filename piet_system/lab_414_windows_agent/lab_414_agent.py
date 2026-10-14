@@ -195,7 +195,7 @@ def load_config():
     default_cfg = {
         "pc_id": "PC-414-01",
         "lab_id": "LAB-414",
-        "hub_url": "https://labg418pc12.tailc8c1f6.ts.net",
+        "hub_url": "https://raspberrypi.tailc8c1f6.ts.net",
         "heartbeat_interval": 6,
         "idle_threshold_seconds": 180
     }
