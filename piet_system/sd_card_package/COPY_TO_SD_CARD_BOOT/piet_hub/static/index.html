@@ -90,21 +90,21 @@
             gap: 18px !important;
         }
 
-        /* BIG PIET BADGE */
+        /* BIG PIET BADGE ON MAIN PAGE */
         .piet-logo-link {
             display: inline-flex !important;
             align-items: center !important;
             text-decoration: none !important;
             flex-shrink: 0 !important;
             border-radius: 4px !important;
-            box-shadow: 0 2px 8px rgba(0, 139, 56, 0.15) !important;
+            box-shadow: 0 3px 10px rgba(0, 139, 56, 0.2) !important;
             transition: transform 0.15s ease;
         }
         .piet-logo-link:hover {
             transform: translateY(-1px);
         }
         .piet-logo-img {
-            height: 74px !important;
+            height: 96px !important;
             width: auto !important;
             display: block !important;
             object-fit: contain !important;
@@ -113,8 +113,8 @@
 
         .brand-divider {
             width: 2px !important;
-            height: 56px !important;
-            background: #e2e8f0 !important;
+            height: 72px !important;
+            background: #cbd5e1 !important;
         }
         .univ-tag {
             display: block !important;
@@ -126,10 +126,10 @@
             margin-bottom: 2px !important;
         }
         .brand-text h1 {
-            font-size: 22px !important;
-            font-weight: 800 !important;
+            font-size: 24px !important;
+            font-weight: 900 !important;
             color: #0f172a !important;
-            line-height: 1.2 !important;
+            line-height: 1.15 !important;
             margin: 0 !important;
             letter-spacing: -0.3px !important;
         }
@@ -137,8 +137,55 @@
             font-size: 12px !important;
             color: #64748b !important;
             font-weight: 500 !important;
-            margin-top: 2px !important;
+            margin-top: 3px !important;
             display: block !important;
+        }
+
+        /* Formal Institutional Report Letterhead */
+        .report-letterhead {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            background: #ffffff !important;
+            border: 2px solid #000000 !important;
+            box-shadow: 3px 3px 0px #000000 !important;
+            padding: 16px 20px !important;
+            margin-bottom: 16px !important;
+            gap: 16px !important;
+            flex-wrap: wrap !important;
+        }
+        .letterhead-brand {
+            display: flex !important;
+            align-items: center !important;
+            gap: 16px !important;
+        }
+        .report-piet-logo {
+            height: 64px !important;
+            width: auto !important;
+            object-fit: contain !important;
+            border-radius: 4px !important;
+            border: 1.5px solid #000000 !important;
+        }
+        .letterhead-text h3 {
+            font-size: 16px !important;
+            font-weight: 900 !important;
+            color: #0f172a !important;
+            margin: 0 !important;
+            letter-spacing: -0.2px !important;
+        }
+        .letterhead-dept {
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            color: #008b38 !important;
+            letter-spacing: 0.8px !important;
+            text-transform: uppercase !important;
+            display: block !important;
+        }
+        .letterhead-sub {
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            margin-top: 2px !important;
         }
 
         /* Header Right: Clock & Action Buttons */
@@ -394,11 +441,11 @@
                 </div>
                 <div class="kpi-mini text-cyan">
                     <span class="kpi-num" id="kpi-fruitful">0</span>
-                    <span class="kpi-lbl">CODING</span>
+                    <span class="kpi-lbl">ACADEMIC WORK</span>
                 </div>
                 <div class="kpi-mini text-amber">
                     <span class="kpi-num" id="kpi-idle">0</span>
-                    <span class="kpi-lbl">IDLE</span>
+                    <span class="kpi-lbl">STANDBY</span>
                 </div>
                 <div class="kpi-mini">
                     <span class="kpi-num" id="kpi-offline" style="color: #64748b;">20</span>
@@ -420,8 +467,8 @@
                 <div class="filter-group">
                     <button class="filter-btn active" onclick="filterPCs('all')">ALL</button>
                     <button class="filter-btn" onclick="filterPCs('online')">🟢 ONLINE</button>
-                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 CODING</button>
-                    <button class="filter-btn" onclick="filterPCs('idle')">💤 IDLE</button>
+                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 ACADEMIC WORK</button>
+                    <button class="filter-btn" onclick="filterPCs('idle')">💤 STANDBY</button>
                     <button class="filter-btn" onclick="filterPCs('offline')">⚪ OFFLINE</button>
                 </div>
                 <div class="search-box">
@@ -469,9 +516,24 @@
         <!-- VIEW 3: ANALYTICS & DAILY REPORTS -->
         <section id="view-analytics" class="view-panel">
             <div class="analytics-card">
-                <div class="card-header">
-                    <h2>📑 Daily Departmental Utilization Report</h2>
-                    <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save PDF</button>
+                <!-- Institutional Audit Letterhead with Official PIET Crest -->
+                <div class="report-letterhead">
+                    <div class="letterhead-brand">
+                        <img src="piet_logo_wide.png?v=3" alt="PIET Official Logo" class="report-piet-logo">
+                        <div class="letterhead-text">
+                            <span class="letterhead-dept">DEPARTMENT OF ARTIFICIAL INTELLIGENCE & MACHINE LEARNING</span>
+                            <h3>PANIPAT INSTITUTE OF ENGINEERING & TECHNOLOGY</h3>
+                            <div class="letterhead-sub">Smart Workstation Utilization & Academic Compliance Audit Report</div>
+                        </div>
+                    </div>
+                    <div class="letterhead-actions">
+                        <button class="btn btn-primary" onclick="window.print()">🖨️ Print Official Report</button>
+                    </div>
+                </div>
+
+                <div class="card-header" style="margin-top: 10px;">
+                    <h2>📑 Workstation Telemetry & Daily Utilization Audit</h2>
+                    <span class="card-subtitle">Automated session-based activity classification and academic compliance audit</span>
                 </div>
                 <div class="report-summary-bar" id="report-summary-bar">
                     <!-- Populated dynamically -->
@@ -480,14 +542,14 @@
                     <table class="piet-table" id="analytics-table">
                         <thead>
                             <tr>
-                                <th>PC Identifier</th>
-                                <th>Total Uptime</th>
-                                <th>Fruitful (Work) Time</th>
-                                <th>Idle Time</th>
-                                <th>Distracted Time</th>
-                                <th>Productivity Ratio</th>
-                                <th>Primary App / Activity</th>
-                                <th>Compliance Status</th>
+                                <th>Workstation ID</th>
+                                <th>Session Uptime</th>
+                                <th>Academic Work Hours</th>
+                                <th>Standby Time</th>
+                                <th>Flagged Off-Task</th>
+                                <th>Utilization Compliance</th>
+                                <th>Foreground Application</th>
+                                <th>Audit Status</th>
                             </tr>
                         </thead>
                         <tbody id="analytics-body">
@@ -504,35 +566,35 @@
         <div class="modal-box">
             <div class="modal-header">
                 <div class="modal-title-wrap">
-                    <h3 id="modal-pc-title">PC Detailed Briefing</h3>
+                    <h3 id="modal-pc-title">Workstation Academic Audit Dossier</h3>
                     <span class="modal-badge" id="modal-status-badge">🟢 ONLINE</span>
                 </div>
-                <button class="modal-close" onclick="closeModal()" title="Close Briefing">✕</button>
+                <button class="modal-close" onclick="closeModal()" title="Close Dossier">✕</button>
             </div>
             <div class="modal-body">
                 <div class="modal-col-media">
                     <div class="screen-preview-container">
                         <img id="modal-screen-img" src="" alt="Workstation Screen Preview" onclick="window.open(this.src, '_blank')" style="cursor: zoom-in;" title="Click to view full image in new tab">
                         <div id="modal-screen-placeholder" class="screen-placeholder">
-                            <span>📸 No screen captured yet</span>
-                            <small>Click "Grab Live Screen" below</small>
+                            <span>📸 No screen capture on record</span>
+                            <small>Click "Capture Screen Now" below</small>
                         </div>
                     </div>
                     <div class="screen-actions">
                         <button class="btn btn-primary btn-block" id="modal-grab-btn" onclick="requestModalScreenGrab()">
-                            📸 Grab Fresh Screen Now
+                            📸 Capture Screen Now
                         </button>
                         <a id="modal-full-img-btn" href="#" target="_blank" class="btn btn-outline btn-block" style="text-decoration: none; display: none;">
                             🔗 Open High-Res Image ↗
                         </a>
-                        <span class="snap-timestamp" id="modal-snap-time">Last snap: N/A</span>
+                        <span class="snap-timestamp" id="modal-snap-time">Last screen capture: N/A</span>
                     </div>
                 </div>
 
                 <div class="modal-col-details">
                     <!-- Productivity Gauge -->
                     <div class="modal-section">
-                        <h4>🎯 Productivity & Work Time Breakdown</h4>
+                        <h4>🎯 Academic Engagement & Session Breakdown</h4>
                         <div class="prod-bar-wrap">
                             <div class="prod-bar-fill" id="modal-prod-fill" style="width: 80%;"></div>
                         </div>
@@ -543,28 +605,28 @@
                             </div>
                             <div class="metric-box">
                                 <span class="metric-val text-success" id="modal-fruitful">0h 0m</span>
-                                <span class="metric-lbl">Fruitful Coding</span>
+                                <span class="metric-lbl">Academic Work</span>
                             </div>
                             <div class="metric-box">
                                 <span class="metric-val text-amber" id="modal-idle">0h 0m</span>
-                                <span class="metric-lbl">Idle Inactive</span>
+                                <span class="metric-lbl">Standby Time</span>
                             </div>
                             <div class="metric-box">
                                 <span class="metric-val text-rose" id="modal-distracted">0h 0m</span>
-                                <span class="metric-lbl">Distracted</span>
+                                <span class="metric-lbl">Flagged Off-Task</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Active Window & App -->
                     <div class="modal-section">
-                        <h4>💻 Focused Window / Active Activity</h4>
+                        <h4>💻 Focused Window / Active Application</h4>
                         <div class="active-app-banner" id="modal-active-app">Visual Studio Code</div>
                     </div>
 
                     <!-- Hardware Stats -->
                     <div class="modal-section">
-                        <h4>⚙️ Workstation Hardware Health</h4>
+                        <h4>⚙️ Workstation Hardware Telemetry</h4>
                         <div class="hw-gauges">
                             <div class="hw-chip">CPU: <strong id="modal-cpu">0%</strong></div>
                             <div class="hw-chip">RAM: <strong id="modal-ram">0% (0/0 GB)</strong></div>
@@ -576,7 +638,7 @@
                     <!-- Running Processes & Tasks -->
                     <div class="modal-section">
                         <div class="tasks-header">
-                            <h4>⚡ Active Top Processes</h4>
+                            <h4>⚡ Active Workstation Processes</h4>
                             <span class="tasks-count" id="modal-tasks-count">5 reported</span>
                         </div>
                         <div class="tasks-list" id="modal-tasks-list">

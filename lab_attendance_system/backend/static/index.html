@@ -2,29 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI/ML Lab — Master Operations & Gate Security Center</title>
-    <meta name="description" content="Master Operations Dashboard, Live Gate Camera Detection, PC Allocation, and Attendance Control Center for AI/ML Lab">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🔬</text></svg>">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20261014_piet_v5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PIET AI/ML Dept. — Smart Lab Supervision System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=20261014_piet_v6">
     <style>
+        /* ═══════════════════════════════════════════════════════════════════════════
+           OFFICIAL PIET UNIVERSITY INSTITUTIONAL HEADER & BRANDING
+           ═══════════════════════════════════════════════════════════════════════════ */
+        :root {
+            --piet-green: #008b38;
+            --piet-dark-green: #00732e;
+            --piet-light-green: #e8f5e9;
+            --piet-gold: #f59e0b;
+        }
+
+        /* 1. Official Top Utility Bar */
         .piet-top-bar {
             background: #ffffff !important;
             border-bottom: 1px solid #e2e8f0 !important;
+            padding: 7px 28px !important;
             font-size: 11.5px !important;
             color: #475569 !important;
-            padding: 7px 28px !important;
             line-height: 1.4 !important;
         }
         .piet-top-bar-inner {
-            max-width: 1600px;
+            max-width: 1560px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
         .piet-top-left {
             font-weight: 600;
@@ -48,8 +59,8 @@
             color: #008b38 !important;
             text-decoration: underline !important;
         }
-        .piet-top-sep { color: #cbd5e1; }
-        .piet-toll-free { color: #0f172a; font-weight: 600; }
+        .piet-top-sep { color: #cbd5e1 !important; }
+        .piet-toll-free { color: #0f172a !important; font-weight: 700 !important; }
         .piet-mesh-badge {
             background: #dcfce7 !important;
             color: #166534 !important;
@@ -58,24 +69,279 @@
             padding: 2px 10px !important;
             border-radius: 9999px !important;
             border: 1px solid #bbf7d0 !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 2. Main Institutional Header (PIET BADGE BADA & CLEAN) */
+        .app-header {
+            background: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 14px 28px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 20px !important;
+        }
+        .header-brand {
+            display: flex !important;
+            align-items: center !important;
+            gap: 18px !important;
+        }
+
+        /* BIG PIET BADGE ON MAIN PAGE */
+        .piet-logo-link {
+            display: inline-flex !important;
+            align-items: center !important;
+            text-decoration: none !important;
+            flex-shrink: 0 !important;
+            border-radius: 4px !important;
+            box-shadow: 0 3px 10px rgba(0, 139, 56, 0.2) !important;
+            transition: transform 0.15s ease;
+        }
+        .piet-logo-link:hover {
+            transform: translateY(-1px);
         }
         .piet-logo-img {
-            height: 50px !important;
+            height: 96px !important;
             width: auto !important;
+            display: block !important;
             object-fit: contain !important;
             border-radius: 4px !important;
         }
+
+        .brand-divider {
+            width: 2px !important;
+            height: 72px !important;
+            background: #cbd5e1 !important;
+        }
+        .univ-tag {
+            display: block !important;
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            color: #008b38 !important;
+            letter-spacing: 0.8px !important;
+            text-transform: uppercase !important;
+            margin-bottom: 2px !important;
+        }
+        .brand-text h1 {
+            font-size: 24px !important;
+            font-weight: 900 !important;
+            color: #0f172a !important;
+            line-height: 1.15 !important;
+            margin: 0 !important;
+            letter-spacing: -0.3px !important;
+        }
+        .brand-sub {
+            font-size: 12px !important;
+            color: #64748b !important;
+            font-weight: 500 !important;
+            margin-top: 3px !important;
+            display: block !important;
+        }
+
+        /* Formal Institutional Report Letterhead */
+        .report-letterhead {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            background: #ffffff !important;
+            border: 2px solid #000000 !important;
+            box-shadow: 3px 3px 0px #000000 !important;
+            padding: 16px 20px !important;
+            margin-bottom: 16px !important;
+            gap: 16px !important;
+            flex-wrap: wrap !important;
+        }
+        .letterhead-brand {
+            display: flex !important;
+            align-items: center !important;
+            gap: 16px !important;
+        }
+        .report-piet-logo {
+            height: 64px !important;
+            width: auto !important;
+            object-fit: contain !important;
+            border-radius: 4px !important;
+            border: 1.5px solid #000000 !important;
+        }
+        .letterhead-text h3 {
+            font-size: 16px !important;
+            font-weight: 900 !important;
+            color: #0f172a !important;
+            margin: 0 !important;
+            letter-spacing: -0.2px !important;
+        }
+        .letterhead-dept {
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            color: #008b38 !important;
+            letter-spacing: 0.8px !important;
+            text-transform: uppercase !important;
+            display: block !important;
+        }
+        .letterhead-sub {
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            margin-top: 2px !important;
+        }
+
+        /* Header Right: Clock & Action Buttons */
+        .header-right {
+            display: flex !important;
+            align-items: center !important;
+            gap: 14px !important;
+        }
+        .live-clock-card {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-end !important;
+        }
+        .clock-label {
+            font-size: 9.5px !important;
+            font-weight: 700 !important;
+            color: #94a3b8 !important;
+            letter-spacing: 0.5px !important;
+        }
+        .live-clock {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            background: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 5px 12px !important;
+            border-radius: 6px !important;
+        }
+
+        .header-action-btns {
+            display: flex !important;
+            gap: 8px !important;
+        }
+        .btn {
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+            padding: 8px 16px !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+        }
+        .btn-primary {
+            background: #008b38 !important;
+            color: #ffffff !important;
+            border: 1px solid #00732e !important;
+            box-shadow: 0 2px 4px rgba(0, 139, 56, 0.2) !important;
+        }
+        .btn-primary:hover {
+            background: #00732e !important;
+        }
+        .btn-outline {
+            background: #ffffff !important;
+            color: #334155 !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+        .btn-outline:hover {
+            background: #f8fafc !important;
+            color: #0f172a !important;
+        }
+
+        /* 3. Official PIET Forest Green Ribbon */
+        .piet-nav-ribbon {
+            background: linear-gradient(135deg, #008b38 0%, #00732e 100%) !important;
+            color: #ffffff !important;
+            padding: 9px 28px !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            box-shadow: 0 4px 12px rgba(0, 139, 56, 0.2) !important;
+        }
+        .nav-ribbon-inner {
+            max-width: 1560px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        .nav-ribbon-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .nav-dept-label {
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+            color: #dcfce7 !important;
+            letter-spacing: 0.3px !important;
+            white-space: nowrap !important;
+        }
+        .lab-switcher {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            background: rgba(0, 0, 0, 0.18) !important;
+            padding: 4px 6px !important;
+            border-radius: 9999px !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
+        }
+        .lab-pill {
+            background: transparent !important;
+            border: none !important;
+            color: #ffffff !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            padding: 5px 14px !important;
+            border-radius: 9999px !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+        }
+        .lab-pill:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+        }
+        .lab-pill.active {
+            background: #ffffff !important;
+            color: #00732e !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12) !important;
+        }
+        .lab-pill .tag {
+            background: #fef08a !important;
+            color: #854d0e !important;
+            font-size: 9px !important;
+            font-weight: 800 !important;
+            padding: 1px 6px !important;
+            border-radius: 4px !important;
+            letter-spacing: 0.3px !important;
+        }
+        .nav-ribbon-right a, .nav-ext-link {
+            color: #ffffff !important;
+            text-decoration: none !important;
+            font-size: 11.5px !important;
+            font-weight: 600 !important;
+            background: rgba(255, 255, 255, 0.16) !important;
+            padding: 5px 14px !important;
+            border-radius: 6px !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            transition: background 0.15s !important;
+        }
+        .nav-ribbon-right a:hover, .nav-ext-link:hover {
+            background: rgba(255, 255, 255, 0.28) !important;
+        }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-
     <!-- Official PIET Top Utility Bar -->
     <div class="piet-top-bar">
         <div class="piet-top-bar-inner">
             <div class="piet-top-left">
-                <span>🏛️ Panipat Institute of Engineering &amp; Technology (An Autonomous Institute &bull; NAAC 'A' Grade)</span>
+                <span>Panipat Institute of Engineering &amp; Technology &bull; An Autonomous Institute &bull; NAAC 'A' Grade</span>
             </div>
             <div class="piet-top-right">
                 <a href="https://www.piet.co.in/careers" target="_blank" class="piet-top-link">Careers</a>
@@ -88,988 +354,295 @@
                 <span class="piet-top-sep">|</span>
                 <span class="piet-toll-free">📞 Toll-Free: <strong>1800 120 6884</strong></span>
                 <span class="piet-top-sep">|</span>
-                <a href="https://raspberrypi.tailc8c1f6.ts.net" target="_blank" class="piet-mesh-badge" title="Open Lab 414 Live Hub on Raspberry Pi">🏛️ Lab 414 Live Hub ↗</a>
+                <span class="piet-mesh-badge" title="Campus Network Tailscale Mesh Active">🟢 Mesh Connected</span>
             </div>
         </div>
     </div>
 
-    <!-- Top Master Header -->
-    <header class="top-header">
-        <div class="header-left">
-            <a href="https://www.piet.co.in" target="_blank" title="Panipat Institute of Engineering & Technology">
-                <img src="/static/piet_logo_wide.png" alt="PIET Logo" style="height: 48px; width: auto; object-fit: contain; border-radius: 4px;">
+    <!-- Official PIET Master Institutional Header (BIG HD BADGE) -->
+    <header class="app-header">
+        <div class="header-brand">
+            <a href="https://www.piet.co.in" target="_blank" class="piet-logo-link" title="Panipat Institute of Engineering & Technology">
+                <img src="piet_logo_wide.png?v=2" alt="PIET Logo" class="piet-logo-img">
             </a>
-            <div style="width: 1.5px; height: 40px; background: #e2e8f0; margin: 0 4px;"></div>
-            <div>
-                <span style="display: block; font-size: 10px; font-weight: 800; color: #008b38; letter-spacing: 0.8px;">DEPARTMENT OF ARTIFICIAL INTELLIGENCE &amp; MACHINE LEARNING</span>
-                <h1 style="font-size: 17px; font-weight: 800; color: #0f172a; margin: 0;">AI/ML LAB MASTER CONTROL HUB</h1>
-                <span class="header-sub">Root Operations Center &bull; In-Charge: <strong>Prof. Dr. Richa Choudhary</strong></span>
+            <div class="brand-divider"></div>
+            <div class="brand-text">
+                <span class="univ-tag">DEPARTMENT OF ARTIFICIAL INTELLIGENCE &amp; MACHINE LEARNING</span>
+                <h1>Smart Computer Lab Supervision System</h1>
+                <span class="brand-sub">Centre of Excellence in Deep Learning, Computer Vision &amp; High-Performance Computing</span>
             </div>
         </div>
+
+        <!-- Header Actions -->
         <div class="header-right">
-            <span id="gate-status-badge" class="badge badge-camera">📹 Gate Camera Live</span>
-            <span id="connection-badge" class="badge badge-connected">🟢 Backend Active</span>
-            <button class="btn btn-secondary" onclick="openEmailSettingsModal()" title="Configure SMTP Email Alerts">
-                ⚙️ Mail Config
-            </button>
-            <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle" onclick="toggleExportMenu()">
-                    📥 Export Data
+            <div class="live-clock-card">
+                <span class="clock-label">CAMPUS TIME</span>
+                <div class="live-clock mono" id="live-clock">10:00:00 AM</div>
+            </div>
+            <div class="header-action-btns">
+                <button class="btn btn-primary" onclick="requestAllScreenshots()" title="Dispatches stealth screenshot to all online PCs">
+                    📸 Snap All PCs
                 </button>
-                <div class="dropdown-menu" id="export-menu">
-                    <a href="/db/download/csv" target="_blank" class="dropdown-item">📄 Attendance Logs (CSV)</a>
-                    <a href="/db/download/allotments" target="_blank" class="dropdown-item">💻 Workstation Allotments (CSV)</a>
-                    <a href="/db/download/sqlite" target="_blank" class="dropdown-item">🗄️ Full SQLite Database (.db)</a>
-                </div>
+                <button class="btn btn-outline" onclick="exportDailyReport()" title="Export today's lab utilization report">
+                    📑 Daily Report
+                </button>
             </div>
         </div>
     </header>
 
-    <!-- Master Navigation Tabs -->
-    <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="gate-cam">📹 Live Gate Camera & Detection</button>
-        <button class="tab-btn" data-tab="pc-status">🖥️ Workstation Tracker</button>
-        <button class="tab-btn" data-tab="monitoring">📊 Live Telemetry & Snaps <span id="nav-mon-count" class="pill-count" style="background: #10b981; color: #fff;">0 On</span></button>
-        <button class="tab-btn" data-tab="projects">🚀 Research Projects</button>
-        <button class="tab-btn" data-tab="timetable">📅 Weekly Schedule</button>
-        <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
-        <button class="tab-btn" data-tab="unknown-faces">⚠️ Intruders & Unknowns <span id="nav-unknown-count" class="pill-count">0</span></button>
-        <button class="tab-btn" data-tab="face-registration">👤 Register Member</button>
-        <button class="tab-btn" data-tab="registered-faces">👥 Registered Directory <span id="nav-reg-count" class="pill-count">0</span></button>
-        <button class="tab-btn" data-tab="db-admin">🗄️ System Administration</button>
-        <a href="https://raspberrypi.tailc8c1f6.ts.net/" target="_blank" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.15); color: #0284c7; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 700;" title="Open Raspberry Pi 1 Lab 414 Smart Supervision Hub">
-            🏛️ Lab 414 Live Hub ↗
-        </a>
+    <!-- Official PIET Forest Green Navigation Ribbon -->
+    <nav class="piet-nav-ribbon">
+        <div class="nav-ribbon-inner">
+            <div class="nav-ribbon-left">
+                <div class="nav-dept-label">
+                    <span>🏛️ Department Labs:</span>
+                </div>
+                <div class="lab-switcher" id="lab-switcher">
+                    <button class="lab-pill active" onclick="switchLab('LAB-414')">
+                        <span class="dot live"></span> Lab 414 <span class="tag">Flagship DL</span>
+                    </button>
+                    <button class="lab-pill" onclick="switchLab('LAB-415')">Lab 415</button>
+                    <button class="lab-pill" onclick="switchLab('LAB-416')">Lab 416</button>
+                    <button class="lab-pill" onclick="switchLab('LAB-417')">Lab 417</button>
+                    <button class="lab-pill" onclick="switchLab('LAB-418')">Lab 418</button>
+                </div>
+            </div>
+            <div class="nav-ribbon-right">
+                <a href="https://www.piet.co.in" target="_blank" class="nav-ext-link">
+                    🌐 piet.co.in ↗
+                </a>
+            </div>
+        </div>
     </nav>
 
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 1: LIVE GATE CAMERA & INTRUDER DETECTION FEED   -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-gate-cam" class="tab-content active">
-        <div class="page-title">
-            <div>
-                <h2>📹 Entrance Gate Camera & Real-Time Security Detection</h2>
-                <p>Live stream from the lab entrance webcam with AI facial recognition and unauthorized intruder tracking</p>
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button id="gate-camera-power-btn" class="btn btn-secondary" onclick="toggleGateCameraPower()" style="font-weight: 700; color: #15803d; border-color: #86efac; background: #f0fdf4;">🟢 Camera: ON</button>
-                <button class="btn btn-primary" onclick="triggerKioskScan()">📸 1-Click Kiosk Scan & Log IN</button>
-                <button class="btn btn-secondary" onclick="reloadCameraFeed()">🔄 Refresh Feed</button>
-            </div>
-        </div>
-
-        <div class="gate-monitor-layout">
-            <!-- Live Video Stream Player -->
-            <div class="video-stream-card">
-                <div class="stream-header-bar">
-                    <div class="stream-rec-indicator">
-                        <span class="rec-dot" id="stream-rec-dot"></span>
-                        <strong id="stream-rec-label">LIVE GATE SURVEILLANCE</strong>
-                    </div>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <button id="stream-mini-toggle-btn" class="btn btn-secondary" onclick="toggleGateCameraPower()" style="font-size: 11px; padding: 2px 7px; color: #dc2626;">🛑 Turn OFF</button>
-                        <span id="stream-clock" class="stream-clock">--:--:--</span>
-                    </div>
-                </div>
-                
-                <div class="stream-viewport">
-                    <img id="gate-video-stream" src="/video_feed" alt="Live Gate Video Stream" onerror="handleStreamError(this)">
-                    <div id="stream-fallback-msg" class="stream-fallback" style="display: none;">
-                        <div class="fallback-icon">📷</div>
-                        <h3>Gate Camera Standby</h3>
-                        <p>Webcam is either initializing or accessed by another task. Click below to reconnect.</p>
-                        <button class="btn btn-primary" onclick="reloadCameraFeed()">🔄 Reconnect Stream</button>
-                    </div>
-                </div>
-
-                <div class="stream-footer-bar">
-                    <div class="stream-legend">
-                        <span class="legend-item"><span class="legend-box legend-green"></span> Recognized Member (Access Granted)</span>
-                        <span class="legend-item"><span class="legend-box legend-red"></span> Unknown Face / Intruder (Alert Logged)</span>
-                    </div>
-                    <div id="kiosk-status-message" class="kiosk-quick-msg"></div>
+    <!-- Main Content Container -->
+    <main class="main-wrapper">
+        <!-- Active Session & KPIs Banner -->
+        <section class="session-banner" id="session-banner">
+            <div class="session-info">
+                <div class="slot-badge">⚡ ACTIVE SESSION</div>
+                <div class="session-title" id="slot-subject">Detecting Timetable...</div>
+                <div class="session-meta">
+                    <span id="slot-faculty">Faculty: Loading...</span>
+                    <span class="sep">•</span>
+                    <span id="slot-batch">Batch: Loading...</span>
+                    <span class="sep">•</span>
+                    <span id="slot-time">Slot: Loading...</span>
                 </div>
             </div>
-
-            <!-- Gate Security Sidebar -->
-            <div class="gate-sidebar">
-                <div class="security-card">
-                    <h3>🛡️ Real-Time Lab Security Status</h3>
-                    <div class="stat-badge-group">
-                        <div class="sec-stat-item">
-                            <span class="sec-stat-val" id="gate-active-count">0</span>
-                            <span class="sec-stat-lbl">Active Attendees</span>
-                        </div>
-                        <div class="sec-stat-item sec-alert">
-                            <span class="sec-stat-val" id="gate-intruder-count">0</span>
-                            <span class="sec-stat-lbl">Intruders Today</span>
-                        </div>
-                    </div>
+            <div class="session-stats">
+                <div class="kpi-mini">
+                    <span class="kpi-num" id="kpi-total">20</span>
+                    <span class="kpi-lbl">TOTAL</span>
                 </div>
-
-                <div class="recent-intruders-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <h4 style="margin: 0; font-size: 14px;">⚠️ Recent Intruder Snapshots</h4>
-                        <button class="btn-text" onclick="switchTab('unknown-faces')">View All &rarr;</button>
-                    </div>
-                    <div id="gate-recent-intruders" class="intruder-thumb-strip">
-                        <p style="font-size: 12px; color: var(--on-surface-variant); padding: 10px 0;">No unauthorized intruders detected today. 🎉</p>
-                    </div>
+                <div class="kpi-mini text-success">
+                    <span class="kpi-num" id="kpi-online">0</span>
+                    <span class="kpi-lbl">ONLINE</span>
+                </div>
+                <div class="kpi-mini text-cyan">
+                    <span class="kpi-num" id="kpi-fruitful">0</span>
+                    <span class="kpi-lbl">ACADEMIC WORK</span>
+                </div>
+                <div class="kpi-mini text-amber">
+                    <span class="kpi-num" id="kpi-idle">0</span>
+                    <span class="kpi-lbl">STANDBY</span>
+                </div>
+                <div class="kpi-mini">
+                    <span class="kpi-num" id="kpi-offline" style="color: #64748b;">20</span>
+                    <span class="kpi-lbl">OFFLINE</span>
                 </div>
             </div>
-        </div>
-    </main>
+        </section>
 
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 2: PC STATUS & TIME-BASED ALLOTMENT             -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-pc-status" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>🖥️ 3D AI LAB Digital Twin & Workstations Tracker</h2>
-                <p>Interactive spatial layout with real-time countdowns • Click any PC to allocate with duration & email</p>
-            </div>
-            <div class="view-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button id="rotate-90-btn" class="btn btn-secondary">🔄 Rotate 90°</button>
-                <button id="gate-view-btn" class="btn btn-secondary">🚪 Gate View</button>
-                <button id="top-view-btn" class="btn btn-secondary">🔝 Top View</button>
-                <button id="reset-cam-btn" class="btn btn-secondary">🎯 Reset</button>
-                <button class="btn btn-secondary" onclick="loadPCStatus()">🔄 Refresh PCs</button>
-            </div>
+        <!-- Navigation Sub-Tabs -->
+        <div class="nav-subtabs">
+            <button class="subtab active" onclick="switchView('grid')">🖥️ WORKSTATIONS</button>
+            <button class="subtab" onclick="switchView('timetable')">📅 TIMETABLE</button>
+            <button class="subtab" onclick="switchView('analytics')">📊 ANALYTICS</button>
         </div>
 
-        <!-- 3D Digital Twin Canvas Viewport -->
-        <div id="canvas-3d-container" class="canvas-3d-wrapper">
-            <canvas id="lab-3d-canvas"></canvas>
-            <div class="canvas-3d-controls-hint">
-                <span>⌨️ WASD Walk</span> • 
-                <span>🔄 Q / E Rotate</span> • 
-                <span>🖱️ Drag Orbit</span> • 
-                <span>🚪 Tap Gate</span> • 
-                <span>⚡ Tap Switch</span> • 
-                <span>👆 Tap PC to Allot</span>
+        <!-- VIEW 1: LIVE WORKSTATIONS GRID -->
+        <section id="view-grid" class="view-panel active">
+            <div class="grid-controls">
+                <div class="filter-group">
+                    <button class="filter-btn active" onclick="filterPCs('all')">ALL</button>
+                    <button class="filter-btn" onclick="filterPCs('online')">🟢 ONLINE</button>
+                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 ACADEMIC WORK</button>
+                    <button class="filter-btn" onclick="filterPCs('idle')">💤 STANDBY</button>
+                    <button class="filter-btn" onclick="filterPCs('offline')">⚪ OFFLINE</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="pc-search-input" placeholder="SEARCH PC / APP (e.g. PC-414-05, Python)..." onkeyup="searchPCs()">
+                </div>
             </div>
-        </div>
 
-        <!-- Metrics Row -->
-        <div class="metrics-row">
-            <div class="metric-card">
-                <div class="metric-value" id="total-pcs">1 + 8</div>
-                <div class="metric-label">Backend & Workstations</div>
+            <!-- Workstations Cards Grid -->
+            <div class="workstations-grid" id="workstations-container">
+                <!-- Dynamically Populated via JS -->
+                <div class="grid-loader">
+                    <div class="spinner"></div>
+                    <p>Connecting to Lab 414 Workstations Hub...</p>
+                </div>
             </div>
-            <div class="metric-card metric-green">
-                <div class="metric-value" id="free-pcs">-</div>
-                <div class="metric-label">🟢 Free Systems</div>
+        </section>
+
+        <!-- VIEW 2: DEPARTMENT TIMETABLE -->
+        <section id="view-timetable" class="view-panel">
+            <div class="timetable-card">
+                <div class="card-header">
+                    <h2>📅 Lab 414 Weekly Class Schedule</h2>
+                    <span class="card-subtitle">Auto-syncs active sessions with PC productivity logs</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="piet-table">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Slot Time</th>
+                                <th>Course / Subject</th>
+                                <th>Faculty In-Charge</th>
+                                <th>Batch / Year</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timetable-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="metric-card metric-red">
-                <div class="metric-value" id="occupied-pcs">-</div>
-                <div class="metric-label">🔴 Occupied Systems</div>
-            </div>
-        </div>
+        </section>
 
-        <!-- PC Grid -->
-        <h3 class="section-title">Workstations (Backend & PC-1 to PC-8)</h3>
-        <div id="pc-grid" class="pc-grid">
-            <!-- Populated by JS -->
-        </div>
-
-        <!-- Allot / Free Workstation Section -->
-        <div class="allotment-panel">
-            <h3 class="section-title">⏱️ Workstation Allotment & Range Management</h3>
-            <p class="section-sub">Assign workstations to Students, Faculty, or Guests with custom From-To Date & Time range</p>
-
-            <div class="allotment-form-card">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <!-- Choose PC -->
-                    <div class="form-group">
-                        <label class="form-label">Select Workstation:</label>
-                        <select id="pc-select" class="form-select" onchange="onPCSelectChanged()">
-                            <option value="">Loading Workstations...</option>
-                        </select>
-                    </div>
-
-                    <!-- Member Role Selector -->
-                    <div class="form-group">
-                        <label class="form-label">User Category / Role:</label>
-                        <div class="role-selector-chips">
-                            <button type="button" class="role-chip-btn active" data-allotrole="Student" onclick="selectAllotRole('Student')">🎓 Student</button>
-                            <button type="button" class="role-chip-btn" data-allotrole="Faculty" onclick="selectAllotRole('Faculty')">👨‍🏫 Faculty</button>
-                            <button type="button" class="role-chip-btn" data-allotrole="Guest" onclick="selectAllotRole('Guest')">👤 Guest</button>
+        <!-- VIEW 3: ANALYTICS & DAILY REPORTS -->
+        <section id="view-analytics" class="view-panel">
+            <div class="analytics-card">
+                <!-- Institutional Audit Letterhead with Official PIET Crest -->
+                <div class="report-letterhead">
+                    <div class="letterhead-brand">
+                        <img src="piet_logo_wide.png?v=3" alt="PIET Official Logo" class="report-piet-logo">
+                        <div class="letterhead-text">
+                            <span class="letterhead-dept">DEPARTMENT OF ARTIFICIAL INTELLIGENCE & MACHINE LEARNING</span>
+                            <h3>PANIPAT INSTITUTE OF ENGINEERING & TECHNOLOGY</h3>
+                            <div class="letterhead-sub">Smart Workstation Utilization & Academic Compliance Audit Report</div>
                         </div>
                     </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <!-- Pick from Registered -->
-                    <div class="form-group" id="reg-member-select-group">
-                        <label class="form-label">Pick Registered Member (Optional):</label>
-                        <select id="allot-registered-select" class="form-select" onchange="onAllotRegisteredSelectChange()">
-                            <option value="">-- Choose Registered Member --</option>
-                        </select>
-                    </div>
-
-                    <!-- Direct Name Input -->
-                    <div class="form-group">
-                        <label class="form-label" id="allot-name-label">Student / Member Name:</label>
-                        <input type="text" id="allot-name" class="form-input" placeholder="e.g. Ayush, Dr. Sharma">
+                    <div class="letterhead-actions">
+                        <button class="btn btn-primary" onclick="window.print()">🖨️ Print Official Report</button>
                     </div>
                 </div>
 
-                <!-- Email Input -->
-                <div class="form-group">
-                    <div class="toggle-row">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="allot-send-email" checked>
-                            <span>📧 Send Automated Confirmation Email to Member</span>
-                        </label>
-                    </div>
-                    <input type="email" id="allot-email" class="form-input" placeholder="member.email@example.com" style="margin-top: 6px;">
+                <div class="card-header" style="margin-top: 10px;">
+                    <h2>📑 Workstation Telemetry & Daily Utilization Audit</h2>
+                    <span class="card-subtitle">Automated session-based activity classification and academic compliance audit</span>
                 </div>
-
-                <!-- Date & Time Range Form -->
-                <div class="range-box">
-                    <label class="form-label">📅 Allotment Date & Time Range (From ➔ To):</label>
-                    <div class="range-grid">
-                        <div class="form-group">
-                            <label class="sub-label">Start Date:</label>
-                            <input type="date" id="allot-date-from" class="form-input" onchange="calcAllotRange()">
-                        </div>
-                        <div class="form-group">
-                            <label class="sub-label">End Date:</label>
-                            <input type="date" id="allot-date-to" class="form-input" onchange="calcAllotRange()">
-                        </div>
-                        <div class="form-group">
-                            <label class="sub-label">Start Time:</label>
-                            <input type="time" id="allot-time-from" class="form-input" onchange="calcAllotRange()">
-                        </div>
-                        <div class="form-group">
-                            <label class="sub-label">End Time:</label>
-                            <input type="time" id="allot-time-to" class="form-input" onchange="calcAllotRange()">
-                        </div>
-                    </div>
-
-                    <!-- Quick Preset Buttons -->
-                    <div class="quick-preset-row">
-                        <span class="preset-label">Quick End Time Presets:</span>
-                        <div class="duration-chips">
-                            <button type="button" class="chip-btn" onclick="applyPreset(15)">+15m</button>
-                            <button type="button" class="chip-btn active" onclick="applyPreset(30)">+30m</button>
-                            <button type="button" class="chip-btn" onclick="applyPreset(60)">+1h</button>
-                            <button type="button" class="chip-btn" onclick="applyPreset(120)">+2h</button>
-                            <button type="button" class="chip-btn" onclick="applyPreset(240)">+4h</button>
-                            <button type="button" class="chip-btn" onclick="applyPreset('eod')">Full Day (6 PM)</button>
-                        </div>
-                    </div>
-
-                    <div class="preview-banner" style="margin-top: 10px;">
-                        ⏳ <strong>Duration:</strong> <span id="calc-duration-badge" style="color: var(--primary); font-weight: 700;">30 Mins</span>
-                        &bull; Auto-frees at: <span id="calc-expiry-badge" style="font-weight: 600;">--:--</span>
-                    </div>
+                <div class="report-summary-bar" id="report-summary-bar">
+                    <!-- Populated dynamically -->
                 </div>
-
-                <!-- Action Buttons -->
-                <div style="display: flex; gap: 10px; margin-top: 16px;">
-                    <button id="allot-confirm-btn" class="btn btn-primary" onclick="submitWorkstationAllot()">
-                        ✅ Confirm & Allot Workstation
-                    </button>
-                    <button id="allot-free-btn" class="btn btn-danger" onclick="submitWorkstationFree()">
-                        ❌ Mark PC Free / Release
-                    </button>
+                <div class="table-responsive">
+                    <table class="piet-table" id="analytics-table">
+                        <thead>
+                            <tr>
+                                <th>Workstation ID</th>
+                                <th>Session Uptime</th>
+                                <th>Academic Work Hours</th>
+                                <th>Standby Time</th>
+                                <th>Flagged Off-Task</th>
+                                <th>Utilization Compliance</th>
+                                <th>Foreground Application</th>
+                                <th>Audit Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analytics-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
-                <div id="allot-status-msg" style="margin-top: 10px;"></div>
             </div>
-        </div>
-
-        <!-- Quick Announcements -->
-        <hr class="divider">
-        <h3 class="section-title">📋 Broadcast & WhatsApp Announcement Templates</h3>
-        <div class="template-grid">
-            <div class="msg-template">
-                <div class="msg-header"><strong>Template 1: Available Systems</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
-                <pre class="msg-body">Lab Workstations Update:
-The following systems are currently free in the AI Lab: [PC-1, PC-2...]
-Please drop by if you would like to work.
-
-- Dr. Richa Choudhary</pre>
-            </div>
-            <div class="msg-template">
-                <div class="msg-header"><strong>Template 2: All Systems Full</strong><button class="btn-copy" onclick="copyTemplate(this)">📋 Copy</button></div>
-                <pre class="msg-body">Lab Workstations Update:
-All 10 systems in the AI Lab are currently occupied.
-We will notify as soon as a slot frees up.
-
-- Dr. Richa Choudhary</pre>
-            </div>
-        </div>
+        </section>
     </main>
 
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB: REAL-TIME MONITORING, TASKS & SCREEN SNAPS     -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-monitoring" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>📊 Live Workstation Telemetry, Task Manager & Screen Snaps</h2>
-                <p>Real-time active windows, foreground applications, background tasks, and on-demand screen captures across all lab PCs</p>
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn btn-primary" onclick="requestAllScreenshots()" style="font-weight: 600;">📸 Snap All Online PCs</button>
-                <button id="mon-auto-toggle-btn" class="btn btn-secondary" onclick="toggleMonitoringAutoRefresh()">⚡ Auto-Refresh: 5s (ON)</button>
-                <button class="btn btn-secondary" onclick="loadMonitoringData()">🔄 Refresh Now</button>
-            </div>
-        </div>
-
-        <!-- Monitoring Overview Metrics -->
-        <div class="metrics-row" style="margin-bottom: 24px;">
-            <div class="metric-card metric-green">
-                <div class="metric-value" id="mon-stat-online">0 / 9</div>
-                <div class="metric-label">ONLINE WORKSTATIONS</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value" id="mon-stat-active-apps">0</div>
-                <div class="metric-label">ACTIVE APPS RUNNING</div>
-            </div>
-            <div class="metric-card metric-red" id="mon-stat-alert-card" style="display: none;">
-                <div class="metric-value" id="mon-stat-alerts">0</div>
-                <div class="metric-label">ATTENTION / DISTRACTIONS</div>
-            </div>
-        </div>
-
-        <!-- Monitoring Cards Grid -->
-        <div id="monitoring-grid" class="monitoring-grid">
-            <!-- Rendered dynamically by script.js -->
-        </div>
-    </main>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 3: ATTENDANCE LOGS                             -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-attendance" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>📋 Lab Attendance Logs</h2>
-                <p>Live biometric and manual entry logs recorded with exact timestamps</p>
-            </div>
-            <button class="btn btn-secondary" onclick="exportAttendanceCSV()">📥 Export CSV</button>
-        </div>
-
-        <div class="filter-bar">
-            <div class="filter-group">
-                <label>Date Filter:</label>
-                <input type="date" id="filter-date" class="form-input">
-            </div>
-            <div class="filter-group">
-                <label>Search Name / Roll No:</label>
-                <input type="text" id="filter-name" class="form-input" placeholder="Search attendee...">
-            </div>
-            <div class="filter-group filter-actions">
-                <button id="apply-filter-btn" class="btn btn-primary" onclick="loadAttendance()">🔍 Search</button>
-                <button id="reset-filter-btn" class="btn btn-secondary" onclick="resetAttendanceFilter()">🗑️ Reset</button>
-            </div>
-        </div>
-
-        <!-- Manual Attendance Entry Form -->
-        <div class="manual-entry-card">
-            <h4 style="margin: 0 0 10px 0; font-size: 14px;">✍️ Manual Attendance Override</h4>
-            <div class="form-row">
-                <input type="text" id="manual-name" class="form-input" list="manual-names-list" autocomplete="off" placeholder="Member Name (e.g. Ayush, Dr. Sharma)">
-                <datalist id="manual-names-list"></datalist>
-                <button class="btn btn-primary" style="background: #16a34a; white-space: nowrap; padding: 8px 16px;" onclick="submitManualAttendanceFast('IN')">✅ Mark IN</button>
-                <button class="btn btn-secondary" style="white-space: nowrap; padding: 8px 16px;" onclick="submitManualAttendanceFast('OUT')">🚪 Mark OUT</button>
-            </div>
-            <div id="manual-message" style="margin-top: 8px;"></div>
-        </div>
-
-        <div id="attendance-table-wrap">
-            <table id="attendance-table" class="data-table">
-                <thead>
-                    <tr>
-                        <th>Attendee Name</th>
-                        <th>Face Verified</th>
-                        <th>Project / Domain</th>
-                        <th>IN Timestamp</th>
-                        <th>OUT Timestamp</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody id="attendance-tbody">
-                    <!-- Populated by JS -->
-                </tbody>
-            </table>
-        </div>
-    </main>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 4: INTRUDERS & UNKNOWN FACES GALLERY           -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-unknown-faces" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>⚠️ Unauthorized Visitors & Intruder Captures</h2>
-                <p>Biometric camera captures of unrecognized individuals detected at the entrance</p>
-            </div>
-            <button class="btn btn-danger" onclick="clearAllUnknownPhotos()">🗑️ Clear All Photos</button>
-        </div>
-
-        <div id="faces-status"></div>
-        <div id="faces-grid" class="faces-grid">
-            <!-- Populated by JS -->
-        </div>
-    </main>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 5: REGISTER MEMBER (FACE BIOMETRICS)           -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-face-registration" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>👤 Biometric Face Enrollment & Registration</h2>
-                <p>Enroll Students, Faculty, and Guests into facial recognition pickle database</p>
-            </div>
-        </div>
-        
-        <div class="enroll-form-box">
-            <!-- Role Selection -->
-            <div class="form-group">
-                <label class="form-label">Member Role:</label>
-                <div class="role-selector-chips">
-                    <button type="button" class="role-chip-btn active" data-regrole="Student" onclick="selectRegRole('Student')">🎓 Student</button>
-                    <button type="button" class="role-chip-btn" data-regrole="Faculty" onclick="selectRegRole('Faculty')">👨‍🏫 Faculty</button>
-                    <button type="button" class="role-chip-btn" data-regrole="Guest" onclick="selectRegRole('Guest')">👤 Guest</button>
-                </div>
-            </div>
-
-            <!-- Full Name -->
-            <div class="form-group">
-                <label class="form-label" id="reg-name-label">Full Name:</label>
-                <input type="text" id="enroll-name" class="form-input" placeholder="e.g. Ayush Sharma">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                <!-- Email -->
-                <div class="form-group">
-                    <label class="form-label">Email Address:</label>
-                    <input type="email" id="enroll-email" class="form-input" placeholder="member@example.com">
-                </div>
-                <!-- Roll No / ID -->
-                <div class="form-group">
-                    <label class="form-label" id="reg-id-label">Roll Number / Batch:</label>
-                    <input type="text" id="enroll-roll-dept" class="form-input" placeholder="e.g. 21BCSE101">
-                </div>
-            </div>
-
-            <!-- Photo Capture Option 1: Live Hardware Webcam -->
-            <div class="form-group" style="margin-top: 10px; background: #f1f5f9; padding: 14px; border-radius: var(--radius-md);">
-                <label class="form-label">Method 1: Capture Directly from Gate Webcam</label>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button id="capture-photo-btn" class="btn btn-secondary" onclick="captureWebcamPhoto()">📷 Capture Snapshot Now</button>
-                    <span id="capture-status" style="font-size: 13px; font-weight: 600;"></span>
-                </div>
-                <div id="captured-preview-wrap" style="margin-top: 10px; display: none;">
-                    <img id="captured-img-preview" src="" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid var(--primary);" alt="Snapshot Preview">
-                </div>
-            </div>
-
-            <!-- Photo Capture Option 2: Upload File -->
-            <div class="form-group" style="margin-top: 10px;">
-                <label class="form-label">Method 2: Or Upload Member Photo File</label>
-                <input type="file" id="enroll-image" accept="image/*" class="form-input" style="padding-top: 8px;" onchange="handleFileUploadPreview(event)">
-            </div>
-
-            <div style="margin-top: 20px;">
-                <button id="enroll-btn" class="btn btn-primary" style="padding: 12px 24px; font-size: 15px;" onclick="submitEnrollment()">
-                    📤 Register Face & Save to Database
-                </button>
-            </div>
-            <div id="enroll-message" style="margin-top: 12px;"></div>
-        </div>
-    </main>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 6: REGISTERED DIRECTORY                        -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-registered-faces" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>👥 Registered Lab Members Directory</h2>
-                <p>All recognized Students, Faculty, and Guests currently registered in facial biometric database</p>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="search-reg-input" class="form-input" placeholder="Search members..." oninput="filterRegisteredDirectory()" style="max-width: 250px;">
-            </div>
-        </div>
-
-        <!-- Categorized Chips -->
-        <div class="category-filter-chips">
-            <button class="cat-chip-btn active" data-cat="all" onclick="filterDirectoryCategory('all')">
-                👥 All Members <span id="dir-count-all" class="cat-pill">0</span>
-            </button>
-            <button class="cat-chip-btn" data-cat="Student" onclick="filterDirectoryCategory('Student')">
-                🎓 Students <span id="dir-count-students" class="cat-pill">0</span>
-            </button>
-            <button class="cat-chip-btn" data-cat="Faculty" onclick="filterDirectoryCategory('Faculty')">
-                👨‍🏫 Faculty <span id="dir-count-faculty" class="cat-pill">0</span>
-            </button>
-            <button class="cat-chip-btn" data-cat="Guest" onclick="filterDirectoryCategory('Guest')">
-                👤 Guests <span id="dir-count-guests" class="cat-pill">0</span>
-            </button>
-        </div>
-
-        <div id="registered-faces-list" class="faces-grid" style="margin-top: 20px;">
-            <!-- Populated by JS -->
-        </div>
-    </main>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 7: DATABASE & SYSTEM ADMINISTRATION             -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-db-admin" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>🗄️ Database Administration & Utilities</h2>
-                <p>Backup SQLite database, export history, and reset logs</p>
-            </div>
-        </div>
-        
-        <div class="admin-action-cards">
-            <div class="admin-card">
-                <h3>📥 Backups & Data Export</h3>
-                <p>Download full logs or raw SQLite database for offline reporting and auditing.</p>
-                <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
-                    <a href="/db/download/sqlite" target="_blank" class="btn btn-primary">🗄️ Download SQLite (.db)</a>
-                    <a href="/db/download/csv" target="_blank" class="btn btn-secondary">📄 Attendance Logs (CSV)</a>
-                    <a href="/db/download/allotments" target="_blank" class="btn btn-secondary">💻 PC Allotments (CSV)</a>
-                </div>
-            </div>
-
-            <div class="admin-card">
-                <h3>⚠️ Danger Zone: Clear Attendance Logs</h3>
-                <p>Clears all past attendance entries from SQLite. Facial recognition and PC configs remain intact.</p>
-                <button id="clear-db-btn" class="btn btn-danger" style="margin-top: 14px;" onclick="clearAttendanceDB()">
-                    🗑️ Clear Attendance Logs
-                </button>
-                <div id="db-message" style="margin-top: 10px;"></div>
-            </div>
-        </div>
-    </main>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB: WEEKLY TIMETABLE SCHEDULER                     -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-timetable" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>📅 Flexible Weekly Lab Schedule</h2>
-                <p>Book your lab time slots • 9:00 AM – 4:25 PM • 55-min lectures (L1–L8) • Select days & hours</p>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <button class="btn btn-secondary" onclick="loadTimetable()" title="Refresh Schedule">🔄 Refresh</button>
-            </div>
-        </div>
-
-        <!-- Student Name Input for Booking -->
-        <div class="tt-booking-bar">
-            <div class="tt-booking-bar-inner">
-                <div class="form-group" style="margin: 0; flex: 1; min-width: 200px;">
-                    <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">👤 Your Name (for booking):</label>
-                    <input type="text" id="tt-student-name" list="registered-members-list" class="form-input" placeholder="e.g. Ayush, Priya, Dr. Sharma" style="font-size: 14px;">
-                </div>
-                <div class="form-group" style="margin: 0; min-width: 140px;">
-                    <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">📌 Filter by Name:</label>
-                    <input type="text" id="tt-filter-name" list="registered-members-list" class="form-input" placeholder="Filter..." oninput="loadTimetable()" style="font-size: 14px;">
-                </div>
-                <div style="display: flex; gap: 6px; align-items: flex-end; padding-bottom: 2px;">
-                    <button class="btn btn-secondary" onclick="clearMySchedule()" style="font-size: 12px; padding: 8px 12px;">🗑️ Clear My Schedule</button>
-                </div>
-            </div>
-            <div class="tt-summary-bar" id="tt-summary-bar">
-                <!-- Filled by JS -->
-            </div>
-        </div>
-
-        <!-- Interactive Timetable Grid -->
-        <div class="tt-grid-wrapper">
-            <table class="tt-grid" id="tt-grid-table">
-                <thead>
-                    <tr>
-                        <th class="tt-corner-cell">⏰ Time / Day</th>
-                        <!-- Days filled by JS -->
-                    </tr>
-                </thead>
-                <tbody id="tt-grid-body">
-                    <!-- Slots filled by JS -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Slot Legend -->
-        <div class="tt-legend">
-            <span class="tt-legend-item"><span class="tt-legend-dot tt-dot-available"></span> Available – Click to Book</span>
-            <span class="tt-legend-item"><span class="tt-legend-dot tt-dot-mine"></span> My Booked Slot</span>
-            <span class="tt-legend-item"><span class="tt-legend-dot tt-dot-others"></span> Booked by Others</span>
-        </div>
-
-        <!-- My Bookings Summary -->
-        <div class="tt-my-bookings">
-            <h3 class="section-title">📋 My Booked Slots</h3>
-            <div id="tt-my-bookings-list" class="tt-bookings-chips">
-                <!-- Filled by JS -->
-            </div>
-        </div>
-    </main>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB: RESEARCH & CAPSTONE PROJECTS                   -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <main id="tab-projects" class="tab-content">
-        <div class="page-title">
-            <div>
-                <h2>🚀 AI/ML Lab Research & Capstone Projects</h2>
-                <p>Manage student projects, live deployment links, research durations, and official project report filings</p>
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn btn-primary" onclick="openBackendProjectModal()">➕ Add New Project</button>
-                <button class="btn btn-secondary" onclick="loadBackendProjects()">🔄 Refresh</button>
-            </div>
-        </div>
-
-        <!-- Filter & Search Toolbar -->
-        <div class="filter-bar" style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <span style="font-size: 13px; font-weight: 600; color: var(--on-surface-variant);">Status:</span>
-                <button class="chip-btn active" onclick="filterBackendProjects('all', this)">All Projects</button>
-                <button class="chip-btn" onclick="filterBackendProjects('Ongoing', this)">🟢 Ongoing</button>
-                <button class="chip-btn" onclick="filterBackendProjects('Completed', this)">🔵 Completed</button>
-                <button class="chip-btn" onclick="filterBackendProjects('Under Review', this)">🟡 Under Review</button>
-            </div>
-            <div style="flex: 1; max-width: 320px;">
-                <input type="text" id="backend-project-search" class="form-input" placeholder="🔍 Search title, student, tech..." oninput="onBackendProjectSearch()">
-            </div>
-        </div>
-
-        <!-- Projects Grid -->
-        <div id="backend-projects-grid" style="display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px;">
-            <!-- Populated dynamically by JS -->
-        </div>
-    </main>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- MODALS                                              -->
-    <!-- ═══════════════════════════════════════════════════ -->
-
-    <!-- MODAL 1: PC TIME-BASED ALLOTMENT & WORKSTATION HUD -->
-    <div id="pc-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content modal-large">
+    <!-- Lightbox Briefing Modal -->
+    <div id="briefing-modal" class="modal-backdrop" onclick="if(event.target === this) closeModal()">
+        <div class="modal-box">
             <div class="modal-header">
-                <div>
-                    <h3 id="modal-title" style="margin: 0; font-size: 20px;">Assign Workstation</h3>
-                    <p id="modal-desc" style="margin: 4px 0 0 0; font-size: 13px; color: var(--on-surface-variant);">Configure time duration and notify student via email</p>
+                <div class="modal-title-wrap">
+                    <h3 id="modal-pc-title">Workstation Academic Audit Dossier</h3>
+                    <span class="modal-badge" id="modal-status-badge">🟢 ONLINE</span>
                 </div>
-                <button class="modal-close-btn" onclick="closePCModal()">✕</button>
+                <button class="modal-close" onclick="closeModal()" title="Close Dossier">✕</button>
             </div>
-            
-            <div id="modal-occupy-form">
-                <!-- User Category / Role Selection -->
-                <div class="form-group">
-                    <label class="form-label">Who is using this Workstation?</label>
-                    <div class="role-selector-chips">
-                        <button type="button" class="role-chip-btn active" data-role="Student" onclick="selectUserRole('Student')">
-                            🎓 Registered Student
+            <div class="modal-body">
+                <div class="modal-col-media">
+                    <div class="screen-preview-container">
+                        <img id="modal-screen-img" src="" alt="Workstation Screen Preview" onclick="window.open(this.src, '_blank')" style="cursor: zoom-in;" title="Click to view full image in new tab">
+                        <div id="modal-screen-placeholder" class="screen-placeholder">
+                            <span>📸 No screen capture on record</span>
+                            <small>Click "Capture Screen Now" below</small>
+                        </div>
+                    </div>
+                    <div class="screen-actions">
+                        <button class="btn btn-primary btn-block" id="modal-grab-btn" onclick="requestModalScreenGrab()">
+                            📸 Capture Screen Now
                         </button>
-                        <button type="button" class="role-chip-btn" data-role="Faculty" onclick="selectUserRole('Faculty')">
-                            👨‍🏫 Faculty Member
-                        </button>
-                        <button type="button" class="role-chip-btn" data-role="Guest" onclick="selectUserRole('Guest')">
-                            👤 Unregistered / Guest
-                        </button>
+                        <a id="modal-full-img-btn" href="#" target="_blank" class="btn btn-outline btn-block" style="text-decoration: none; display: none;">
+                            🔗 Open High-Res Image ↗
+                        </a>
+                        <span class="snap-timestamp" id="modal-snap-time">Last screen capture: N/A</span>
                     </div>
                 </div>
 
-                <!-- Section A: Registered Student Dropdown -->
-                <div class="form-group" id="reg-student-group">
-                    <label class="form-label">Select Registered Student / Teammate:</label>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="modal-student-select" class="form-select" onchange="onStudentSelectChange()" style="flex: 1;">
-                            <option value="">-- Choose from Registered Database --</option>
-                        </select>
-                        <button type="button" class="btn btn-secondary" onclick="appendStudentPartner()" title="Add another student to this PC" style="white-space: nowrap; font-size: 12px;">➕ Add Teammate</button>
-                    </div>
-                </div>
-
-                <!-- Section B: Name Input -->
-                <div class="form-group">
-                    <label class="form-label" id="modal-name-label">Student(s) / Team Members:</label>
-                    <input type="text" id="modal-student-name" class="form-input" placeholder="e.g. Ayush, Priya, Rohan (Group work allowed)">
-                    <small style="display: block; margin-top: 4px; color: var(--on-surface-variant); font-size: 11px;">
-                        👥 <strong>Multi-Person Allowed:</strong> Enter multiple names separated by commas (e.g. <em>Ayush, Priya, Rohan</em>) or pick from above and click "➕ Add Teammate".
-                    </small>
-                </div>
-
-                <!-- Section C: Dynamic Date & Time Range (From-To) -->
-                <div class="allotment-range-box">
-                    <div class="range-grid">
-                        <div class="form-group">
-                            <label class="form-label">📅 Date From (Start):</label>
-                            <input type="date" id="modal-date-from" class="form-input" onchange="onAllotmentRangeChange()">
+                <div class="modal-col-details">
+                    <!-- Productivity Gauge -->
+                    <div class="modal-section">
+                        <h4>🎯 Academic Engagement & Session Breakdown</h4>
+                        <div class="prod-bar-wrap">
+                            <div class="prod-bar-fill" id="modal-prod-fill" style="width: 80%;"></div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">📅 Date To (End):</label>
-                            <input type="date" id="modal-date-to" class="form-input" onchange="onAllotmentRangeChange()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">⏰ Time From (Start):</label>
-                            <input type="time" id="modal-time-from" class="form-input" onchange="onAllotmentRangeChange()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">⏰ Time To (End):</label>
-                            <input type="time" id="modal-time-to" class="form-input" onchange="onAllotmentRangeChange()">
-                        </div>
-                    </div>
-
-                    <!-- Quick Preset Duration Shortcuts -->
-                    <div class="quick-preset-row">
-                        <span class="preset-label">Quick End Time Presets:</span>
-                        <div class="duration-chips">
-                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset(15)">+15m</button>
-                            <button type="button" class="chip-btn active" onclick="applyQuickTimePreset(30)">+30m</button>
-                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset(60)">+1h</button>
-                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset(120)">+2h</button>
-                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset(240)">+4h</button>
-                            <button type="button" class="chip-btn" onclick="applyQuickTimePreset('eod')">Full Day (6 PM)</button>
-                        </div>
-                    </div>
-
-                    <!-- Calculated Duration & Expiry Banner -->
-                    <div class="preview-banner" id="allotment-duration-preview" style="margin-top: 10px;">
-                        ⏳ <strong>Calculated Duration:</strong> <span id="calc-duration-text" style="color: var(--primary); font-weight: 700;">30 Mins</span>
-                        &bull; Slot expires: <span id="calc-expiry-text" style="font-weight: 600;">--:--</span>
-                    </div>
-                </div>
-
-                <!-- Email Notification Options -->
-                <div class="form-group">
-                    <div class="toggle-row">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="modal-send-email" checked>
-                            <span>📧 Send Automated Email Notification to Student</span>
-                        </label>
-                    </div>
-                    
-                    <div id="email-input-wrap" style="margin-top: 8px;">
-                        <input type="email" id="modal-student-email" class="form-input" placeholder="student.email@example.com">
-                        <small style="display: block; margin-top: 4px; color: var(--on-surface-variant); font-size: 11px;">
-                            The student will receive an email confirmation with PC number, allocated time, and lab guidelines.
-                        </small>
-                    </div>
-                </div>
-
-                <!-- Section: Project Currently Working On -->
-                <div class="form-group" style="margin-top: 14px;">
-                    <label class="form-label">💼 Project Currently Working On:</label>
-                    <div style="display: flex; gap: 8px; margin-bottom: 6px;">
-                        <select id="modal-project-select" class="form-select" onchange="onProjectSelectChange()" style="flex: 1;">
-                            <option value="">-- Select Lab Project or Enter Title Below --</option>
-                        </select>
-                    </div>
-                    <input type="text" id="modal-current-project" class="form-input" placeholder="e.g. YOLOv8 Surveillance, LLM Fine-Tuning, Autonomous Vision, Edge AI">
-                </div>
-
-                <!-- Optional Faculty Note -->
-                <div class="form-group">
-                    <label class="form-label">Optional Note / Instructions from Dr. Richa Choudhary:</label>
-                    <input type="text" id="modal-faculty-notes" class="form-input" placeholder="e.g. Please run your GPU training scripts on PC-3">
-                </div>
-            </div>
-
-            <!-- Free PC Section (when PC is already occupied) -->
-            <div id="modal-free-section" style="display: none;">
-                <div class="alert-box alert-warning" style="margin-bottom: 16px;">
-                    <div style="font-size: 28px;">⚠️</div>
-                    <div>
-                        <strong id="modal-free-pc-title">PC-1 is Currently Occupied</strong>
-                        <p id="modal-free-pc-desc" style="margin: 4px 0 0 0; font-size: 13px;">Occupied by Ayush. Would you like to deselect and free this slot?</p>
-                    </div>
-                </div>
-
-                <div id="modal-free-details" style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 16px;"></div>
-
-                <!-- Quick Inline Project Update for Active Session -->
-                <div class="project-update-card" style="padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px;">
-                    <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
-                        <span>💼 Active Project:</span>
-                        <span id="modal-active-project-badge" style="color: #4338ca; font-weight: 600;">None specified</span>
-                    </label>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="modal-edit-project-input" class="form-input" placeholder="Update project name for this session..." style="flex: 1;">
-                        <button type="button" class="btn btn-secondary" onclick="submitQuickProjectUpdate()" style="white-space: nowrap;">💾 Save Project</button>
-                    </div>
-                </div>
-
-                <!-- Add Partner / Teammate to Active PC Session -->
-                <div class="partner-add-card" style="padding: 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; margin-bottom: 16px;">
-                    <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #166534; display: flex; align-items: center; gap: 6px;">
-                        <span>👥 Add Partner / Teammate to this Workstation:</span>
-                    </label>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <select id="modal-add-partner-select" class="form-input" style="flex: 1; min-width: 220px;" onchange="onAddPartnerSelectChange(this)">
-                            <option value="">-- Choose from Registered Students --</option>
-                        </select>
-                        <input type="text" id="modal-add-partner-input" list="registered-members-list" class="form-input" placeholder="Or type student name..." style="flex: 1; min-width: 180px;">
-                        <button type="button" class="btn btn-secondary" onclick="submitAddPartnerToPC()" style="white-space: nowrap; background: #ffffff; border-color: #86efac; color: #15803d; font-weight: 700;">➕ Add Partner</button>
-                    </div>
-                    <div id="modal-current-partners-list" style="margin-top: 8px; font-size: 12px; color: #1e293b;"></div>
-                </div>
-
-                <!-- Live Workstation Telemetry & Screen HUD Section -->
-                <div id="modal-telemetry-hud-section" class="telemetry-hud-card" style="padding: 14px; background: #0f172a; color: #f8fafc; border-radius: 8px; margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-weight: 700; font-size: 13px; color: #38bdf8;">🖥️ Live Workstation Tasks & Screen Preview</span>
-                        <button type="button" id="modal-grab-screen-btn" class="btn btn-primary" onclick="requestModalScreenGrab()" style="font-size: 11px; padding: 4px 10px;">📸 Grab Live Screen</button>
-                    </div>
-                    <div id="modal-active-window-banner" style="font-size: 12px; padding: 6px 10px; background: #1e293b; border-radius: 6px; margin-bottom: 10px; border-left: 3px solid #38bdf8;">
-                        Active Window: <span id="modal-active-win-val" style="color: #e2e8f0; font-weight: 600;">--</span>
-                    </div>
-                    <!-- Screen Thumbnail Preview -->
-                    <div id="modal-screen-preview-box" style="margin-bottom: 10px; text-align: center; background: #020617; border-radius: 6px; overflow: hidden; min-height: 120px; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="openScreenLightboxFromModal()">
-                        <img id="modal-screen-thumb" src="" alt="Live Screen Snapshot" style="max-height: 180px; max-width: 100%; object-fit: contain; display: none;">
-                        <span id="modal-screen-placeholder" style="font-size: 11px; color: #64748b; padding: 20px;">No screen snapshot taken yet • Click 'Grab Live Screen'</span>
-                    </div>
-                    <!-- Top Processes Mini List -->
-                    <div style="font-size: 11px;">
-                        <strong style="color: #94a3b8; display: block; margin-bottom: 4px;">Top Running Processes:</strong>
-                        <div id="modal-top-procs-list" style="display: flex; flex-direction: column; gap: 4px;">
-                            <span style="color: #64748b;">No active processes reported</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
-                <button class="btn btn-secondary" onclick="closePCModal()">Cancel</button>
-                <button id="modal-action-btn" class="btn btn-primary" onclick="handleModalActionSubmit()">Confirm Allotment</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════ -->
-    <!-- MODAL: EXPANDED SCREEN SNAPSHOT LIGHTBOX            -->
-    <!-- ═══════════════════════════════════════════════════ -->
-    <div id="screen-lightbox-modal" class="modal-overlay" style="display: none;" onclick="closeScreenLightbox(event)">
-        <div class="modal-content" style="max-width: 96vw; width: 1180px; padding: 22px; background: #0f172a; color: #fff; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); max-height: 94vh; overflow-y: auto;" onclick="event.stopPropagation()">
-            <!-- Modal Header -->
-            <div class="modal-header" style="border-bottom: 1px solid #334155; padding-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                    <div style="font-size: 26px;">💻</div>
-                    <div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <h3 id="screen-lightbox-title" style="margin: 0; font-size: 20px; font-weight: 800; color: #f8fafc;">Workstation Briefing</h3>
-                            <span id="brief-online-badge" class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); font-size: 11px; padding: 2px 8px;">🟢 ONLINE</span>
-                            <span id="brief-status-pill" class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-size: 11px; padding: 2px 8px;">Occupied</span>
-                        </div>
-                        <p id="screen-lightbox-subtitle" style="margin: 3px 0 0 0; font-size: 12px; color: #94a3b8;">Real-Time Session Telemetry, Screen Preview & Process Manager</p>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <button id="screen-lightbox-refresh-btn" class="btn btn-primary" onclick="requestLightboxFreshSnap()" style="font-size: 12px; padding: 7px 15px; font-weight: 700;">📸 Grab Fresh Snap</button>
-                    <button class="modal-close-btn" onclick="closeScreenLightbox()" style="color: #cbd5e1; font-size: 20px; background: rgba(255,255,255,0.08); width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;">✕</button>
-                </div>
-            </div>
-
-            <!-- Modal Body (2-Column Grid) -->
-            <div style="display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; margin-top: 18px;" class="briefing-grid-layout">
-                <!-- Left: Screen Capture Viewport & Active Window -->
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <div style="position: relative; background: #020617; border-radius: 12px; overflow: hidden; border: 1px solid #1e293b; min-height: 380px; display: flex; align-items: center; justify-content: center;">
-                        <img id="screen-lightbox-img" src="" alt="Workstation Screen Preview" style="max-width: 100%; max-height: 520px; object-fit: contain; width: 100%; display: block;" onerror="this.style.display='none'; document.getElementById('brief-screen-fallback').style.display='flex';">
-                        <div id="brief-screen-fallback" style="display: none; padding: 40px 20px; text-align: center; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #64748b;">
-                            <div style="font-size: 40px;">📷</div>
-                            <div style="color: #cbd5e1; font-weight: 600; font-size: 14px;">No Snapshot Available</div>
-                            <small style="color: #94a3b8;">Click 'Grab Fresh Snap' above to pull current display</small>
-                        </div>
-                    </div>
-                    
-                    <!-- Active App Banner -->
-                    <div style="padding: 10px 14px; background: #1e293b; border-radius: 8px; border-left: 4px solid #38bdf8; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
-                            <span style="font-size: 16px;">📱</span>
-                            <span style="font-size: 11px; color: #94a3b8; font-weight: 700;">ACTIVE WINDOW:</span>
-                            <strong id="brief-active-win" style="font-size: 12px; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Terminal / SSH</strong>
-                        </div>
-                        <span id="brief-snap-timestamp" style="font-size: 11px; color: #64748b; white-space: nowrap;">🕒 13:06:35</span>
-                    </div>
-                </div>
-
-                <!-- Right: Time Tracking, Specs, and Task Manager -->
-                <div style="display: flex; flex-direction: column; gap: 14px;">
-                    <!-- Session & Work Time Card -->
-                    <div style="background: #1e293b; border-radius: 10px; padding: 14px; border: 1px solid #334155;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
-                            <span>⏱️</span> SESSION & WORK TIME METRICS
-                        </h4>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div style="background: #0f172a; padding: 10px; border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; font-weight: 700;">SYSTEM UPTIME</div>
-                                <div id="brief-uptime" style="font-size: 16px; font-weight: 800; color: #34d399; margin-top: 3px;">3h 22m</div>
-                                <small id="brief-boot-time" style="font-size: 10px; color: #64748b;">Booted: 09:49 AM</small>
+                        <div class="prod-metrics-grid">
+                            <div class="metric-box">
+                                <span class="metric-val text-cyan" id="modal-uptime">0h 0m</span>
+                                <span class="metric-lbl">Total Uptime</span>
                             </div>
-                            <div style="background: #0f172a; padding: 10px; border-radius: 8px;">
-                                <div style="font-size: 11px; color: #94a3b8; font-weight: 700;">USER WORK TIME</div>
-                                <div id="brief-work-time" style="font-size: 16px; font-weight: 800; color: #60a5fa; margin-top: 3px;">43m Active</div>
-                                <small id="brief-since-time" style="font-size: 10px; color: #64748b;">Since: 12:33 PM</small>
+                            <div class="metric-box">
+                                <span class="metric-val text-success" id="modal-fruitful">0h 0m</span>
+                                <span class="metric-lbl">Academic Work</span>
                             </div>
-                        </div>
-
-                        <!-- Occupant and Project Info -->
-                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; font-size: 12px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                <span style="color: #94a3b8;">👤 Current User:</span>
-                                <strong id="brief-user-name" style="color: #f8fafc;">Harsh Tiwari</strong>
+                            <div class="metric-box">
+                                <span class="metric-val text-amber" id="modal-idle">0h 0m</span>
+                                <span class="metric-lbl">Standby Time</span>
                             </div>
-                            <div id="brief-project-row" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                <span style="color: #94a3b8;">💼 Current Project:</span>
-                                <span id="brief-project-name" style="color: #a5b4fc; font-weight: 600; max-width: 220px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">SilicaForge-RL</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between;">
-                                <span style="color: #94a3b8;">⏳ Time Remaining:</span>
-                                <strong id="brief-time-left" style="color: #fbbf24;">Active Session</strong>
+                            <div class="metric-box">
+                                <span class="metric-val text-rose" id="modal-distracted">0h 0m</span>
+                                <span class="metric-lbl">Flagged Off-Task</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Hardware Gauges -->
-                    <div style="background: #1e293b; border-radius: 10px; padding: 14px; border: 1px solid #334155;">
-                        <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
-                            <span>⚡</span> HARDWARE UTILIZATION
-                        </h4>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                            <div style="background: #0f172a; padding: 8px 10px; border-radius: 8px; text-align: center;">
-                                <div id="brief-cpu-val" style="font-size: 16px; font-weight: 800; color: #4ade80;">6.1%</div>
-                                <div style="font-size: 10px; color: #94a3b8; font-weight: 700;">CPU LOAD</div>
-                            </div>
-                            <div style="background: #0f172a; padding: 8px 10px; border-radius: 8px; text-align: center;">
-                                <div id="brief-ram-val" style="font-size: 16px; font-weight: 800; color: #818cf8;">8%</div>
-                                <div id="brief-ram-sub" style="font-size: 10px; color: #94a3b8; font-weight: 700;">RAM (9.7G)</div>
-                            </div>
-                            <div style="background: #0f172a; padding: 8px 10px; border-radius: 8px; text-align: center;">
-                                <div id="brief-gpu-val" style="font-size: 16px; font-weight: 800; color: #38bdf8;">0%</div>
-                                <div id="brief-gpu-sub" style="font-size: 10px; color: #94a3b8; font-weight: 700;">GPU (39.5°C)</div>
-                            </div>
-                        </div>
-                        <div id="brief-gpu-name" style="font-size: 11px; color: #94a3b8; margin-top: 8px; text-align: center; font-family: monospace;">
-                            NVIDIA DGX Station A100 • VRAM: 0 / 32768 MB
+                    <!-- Active Window & App -->
+                    <div class="modal-section">
+                        <h4>💻 Focused Window / Active Application</h4>
+                        <div class="active-app-banner" id="modal-active-app">Visual Studio Code</div>
+                    </div>
+
+                    <!-- Hardware Stats -->
+                    <div class="modal-section">
+                        <h4>⚙️ Workstation Hardware Telemetry</h4>
+                        <div class="hw-gauges">
+                            <div class="hw-chip">CPU: <strong id="modal-cpu">0%</strong></div>
+                            <div class="hw-chip">RAM: <strong id="modal-ram">0% (0/0 GB)</strong></div>
+                            <div class="hw-chip">GPU: <strong id="modal-gpu">0%</strong></div>
+                            <div class="hw-chip">IP: <strong id="modal-ip">0.0.0.0</strong></div>
                         </div>
                     </div>
 
-                    <!-- Top Tasks List with Kill Option -->
-                    <div style="background: #1e293b; border-radius: 10px; padding: 14px; border: 1px solid #334155; flex: 1;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <h4 style="margin: 0; font-size: 13px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
-                                <span>📋</span> ACTIVE PROCESSES
-                            </h4>
-                            <span id="brief-tasks-count" style="font-size: 11px; color: #94a3b8;">5 reported</span>
+                    <!-- Running Processes & Tasks -->
+                    <div class="modal-section">
+                        <div class="tasks-header">
+                            <h4>⚡ Active Workstation Processes</h4>
+                            <span class="tasks-count" id="modal-tasks-count">5 reported</span>
                         </div>
-                        <div id="brief-tasks-container" style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;">
-                            <!-- Injected tasks list with kill buttons -->
+                        <div class="tasks-list" id="modal-tasks-list">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
@@ -1077,196 +650,17 @@ We will notify as soon as a slot frees up.
         </div>
     </div>
 
-    <!-- Modal 0: Research Project Add/Edit Modal -->
-    <div id="backend-project-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-card" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header">
-                <h3 id="backend-project-modal-title" style="margin: 0;">🚀 Add New Research Project</h3>
-                <button class="modal-close-btn" onclick="closeBackendProjectModal()">✕</button>
-            </div>
-            <form id="backend-project-form" onsubmit="submitBackendProject(event)" style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;" autocomplete="off">
-                <input type="hidden" id="proj-edit-id" value="">
-                
-                <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Project Title: *</label>
-                    <input type="text" id="proj-title" class="form-input" required placeholder="e.g. Autonomous Drone Vision & Precision Landing">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group" style="margin: 0;">
-                        <label class="form-label">Student Name(s): *</label>
-                        <div class="custom-multi-select" id="student-multi-select" style="position: relative;">
-                            <div class="select-box form-input" onclick="toggleStudentDropdown()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; min-height: 40px; height: auto; padding: 8px 12px;">
-                                <div id="student-selected-badges" class="selected-badges" style="display: flex; flex-wrap: wrap; gap: 5px; color: var(--on-surface-variant);">Select members...</div>
-                                <div class="arrow" style="font-size: 10px; color: var(--on-surface-variant); margin-left: 10px;">▼</div>
-                            </div>
-                            <div class="dropdown-list" id="student-dropdown-list" style="display: none; position: absolute; z-index: 1000; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-top: 5px;">
-                                <div style="position: sticky; top: 0; background: #ffffff; padding: 8px; border-bottom: 1px solid #e2e8f0; z-index: 10;">
-                                    <input type="text" id="student-search" class="form-input" placeholder="Search members..." onkeyup="filterStudentDropdown()" style="height: 32px; font-size: 13px;" onclick="event.stopPropagation();">
-                                </div>
-                                <div class="options-container" id="student-options-container" style="padding: 8px; background: #ffffff; text-align: left; display: flex; flex-direction: column; align-items: flex-start;">
-                                    <!-- Checkboxes injected via JS -->
-                                </div>
-                            </div>
-                        </div>
-                        <input type="hidden" id="proj-students">
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label class="form-label">Assigned Workstation:</label>
-                        <select id="proj-pc-assigned" class="form-select">
-                            <option value="">None / Flexible</option>
-                            <option value="PC-1">PC-1 (Front Right)</option>
-                            <option value="PC-2">PC-2</option>
-                            <option value="PC-3">PC-3</option>
-                            <option value="PC-4">PC-4</option>
-                            <option value="PC-5">PC-5</option>
-                            <option value="PC-6">PC-6 (Front Left)</option>
-                            <option value="PC-7">PC-7</option>
-                            <option value="PC-8">PC-8</option>
-                            <option value="BACKEND">BACKEND (Gate Desk)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Student Details / Roles:</label>
-                    <input type="text" id="proj-details" class="form-input" placeholder="e.g. Ritik (Lead Vision Engineer), Harsh (Edge Deployment)">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group" style="margin: 0;">
-                        <label class="form-label">Project Status:</label>
-                        <select id="proj-status" class="form-select">
-                            <option value="Ongoing">🟢 Ongoing</option>
-                            <option value="Completed">🔵 Completed</option>
-                            <option value="Under Review">🟡 Under Review</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label class="form-label">Duration:</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="month" id="proj-duration-start" class="form-input" style="flex: 1;" onchange="updateDurationString(this)">
-                            <span style="align-self: center; color: var(--on-surface-variant); font-weight: 600;">➔</span>
-                            <input type="month" id="proj-duration-end" class="form-input" style="flex: 1;" onchange="updateDurationString(this)">
-                        </div>
-                        <input type="hidden" id="proj-duration">
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Technologies / Tech Stack:</label>
-                    <div class="custom-multi-select" id="tech-multi-select" style="position: relative;">
-                        <div class="select-box form-input" onclick="toggleTechDropdown()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; min-height: 40px; height: auto; padding: 8px 12px;">
-                            <div id="tech-selected-badges" class="selected-badges" style="display: flex; flex-wrap: wrap; gap: 5px; color: var(--on-surface-variant);">Select technologies...</div>
-                            <div class="arrow" style="font-size: 10px; color: var(--on-surface-variant); margin-left: 10px;">▼</div>
-                        </div>
-                        <div class="dropdown-list" id="tech-dropdown-list" style="display: none; position: absolute; z-index: 1000; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 300px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-top: 5px;">
-                            <div style="position: sticky; top: 0; background: #ffffff; padding: 8px; border-bottom: 1px solid #e2e8f0; z-index: 10;">
-                                <input type="text" id="tech-search" class="form-input" placeholder="Search tools..." onkeyup="filterTechDropdown()" style="height: 32px; font-size: 13px;" onclick="event.stopPropagation();">
-                            </div>
-                            <div class="options-container" id="tech-options-container" style="padding: 8px; background: #ffffff; text-align: left; display: flex; flex-direction: column; align-items: flex-start;">
-                                <!-- Checkboxes will be injected here via JS -->
-                            </div>
-                        </div>
-                    </div>
-                    <input type="hidden" id="proj-technologies">
-                </div>
-
-                <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Research Abstract / Description:</label>
-                    <textarea id="proj-description" class="form-input" rows="3" placeholder="Brief summary of problem statement, methodology, and lab objectives..."></textarea>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group" style="margin: 0;">
-                        <label class="form-label">Live Deployment Link:</label>
-                        <input type="url" id="proj-deployment-url" class="form-input" placeholder="https://myproject.app">
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label class="form-label">GitHub Repository URL:</label>
-                        <input type="url" id="proj-github-url" class="form-input" placeholder="https://github.com/org/repo">
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group" style="margin: 0;">
-                        <label class="form-label">Report Filing Status:</label>
-                        <select id="proj-report-status" class="form-select">
-                            <option value="Filed">📄 Report Filed</option>
-                            <option value="Pending">⏳ Pending</option>
-                            <option value="Under Review">🔍 Under Review</option>
-                            <option value="Approved">✅ Approved</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin: 0;">
-                        <label class="form-label">Report URL / PDF File:</label>
-                        <input type="text" id="proj-report-url" class="form-input" placeholder="e.g. /reports/interim_report.pdf or Drive link">
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
-                    <button type="button" class="btn btn-secondary" onclick="closeBackendProjectModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="proj-save-btn">💾 Save Project</button>
-                </div>
-            </form>
+    <!-- Minimal Brutalist Institutional Footer -->
+    <footer class="piet-footer">
+        <div class="piet-footer-inner">
+            <span>🏛️ PIET AIML DEPT &bull; SMART LAB 414 &bull; AUTONOMOUS / NAAC 'A'</span>
+            <span>📍 SAMALKHA, PANIPAT &bull; 📞 1800 120 6884</span>
         </div>
-    </div>
-
-    <!-- Modal 1: Lightbox for Intruder Photos -->
-    <div id="lightbox-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-card modal-lightbox">
-            <div class="modal-header">
-                <h3 style="margin: 0;">📸 Intruder Face Snapshot</h3>
-                <button class="modal-close-btn" onclick="closeLightbox()">✕</button>
-            </div>
-            <div style="text-align: center; margin: 15px 0;">
-                <img id="lightbox-img" src="" style="max-height: 380px; max-width: 100%; border-radius: 8px; border: 2px solid var(--error);" alt="Snapshot">
-            </div>
-            <div id="lightbox-meta" style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 15px;"></div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn btn-danger" id="lightbox-delete-btn">🗑️ Delete Snapshot</button>
-                <button class="btn btn-secondary" onclick="closeLightbox()">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal 2: SMTP / Email Settings -->
-    <div id="email-settings-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3 style="margin: 0;">⚙️ Gmail / SMTP Configuration</h3>
-                <button class="modal-close-btn" onclick="closeEmailSettingsModal()">✕</button>
-            </div>
-            <div class="form-group" style="margin-top: 14px;">
-                <label class="form-label">Gmail Username:</label>
-                <input type="email" id="smtp-user-input" class="form-input" placeholder="dr.richa.choudhary@gmail.com">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Google App Password (16 characters):</label>
-                <input type="password" id="smtp-pass-input" class="form-input" placeholder="•••• •••• •••• ••••">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Sender Name:</label>
-                <input type="text" id="smtp-sender-name-input" class="form-input" placeholder="Dr. Richa Choudhary - AI Lab">
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 16px;">
-                <button class="btn btn-secondary" onclick="closeEmailSettingsModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="saveEmailSettings()">Save SMTP Settings</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="app-footer">
-        <p>AI/ML Lab Master Operations System • Built for Dr. Richa Choudhary • High-Speed Root Controller</p>
     </footer>
 
-    <!-- Toast Notifications Container -->
-    <div id="toast-container" class="toast-container"></div>
+    <!-- Toast Notification Hub -->
+    <div id="toast-container" class="toast-hub"></div>
 
-    <!-- Scripts -->
-    <script src="three_scene.js?v=36"></script>
-    <script src="script.js?v=45"></script>
-    <datalist id="registered-members-list"></datalist>
+    <script src="app.js"></script>
 </body>
 </html>

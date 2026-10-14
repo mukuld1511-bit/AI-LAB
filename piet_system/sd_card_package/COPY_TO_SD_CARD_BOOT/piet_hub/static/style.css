@@ -1424,3 +1424,61 @@ body {
     .piet-nav-ribbon { padding: 8px 16px; }
     .app-header { padding: 12px 16px; flex-direction: column; align-items: flex-start; }
 }
+
+/* Institutional Report Print Styles */
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+    .piet-topbar,
+    .piet-nav-ribbon,
+    .session-banner,
+    .nav-subtabs,
+    .letterhead-actions,
+    .piet-footer,
+    #view-grid,
+    #view-timetable,
+    .toast-hub,
+    .modal-backdrop {
+        display: none !important;
+    }
+    #view-analytics {
+        display: block !important;
+    }
+    .main-wrapper {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+    .analytics-card {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    .report-letterhead {
+        border: 2px solid #000000 !important;
+        box-shadow: none !important;
+        padding: 12px 16px !important;
+        margin-bottom: 20px !important;
+        page-break-inside: avoid;
+    }
+    .report-piet-logo {
+        height: 60px !important;
+    }
+    .table-responsive {
+        border: 1px solid #000000 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+    .piet-table th {
+        background: #f1f5f9 !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+    }
+    .piet-table td {
+        border: 1px solid #cbd5e1 !important;
+        color: #000000 !important;
+    }
+}
+

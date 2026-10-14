@@ -152,17 +152,17 @@ function renderWorkstationsGrid() {
 
         let badgeHtml = "";
         if (isWarn) {
-            badgeHtml = `<span class="activity-badge distracted">⚠️ Distracted</span>`;
+            badgeHtml = `<span class="activity-badge distracted">⚠️ Flagged</span>`;
         } else if (actType === "fruitful") {
-            badgeHtml = `<span class="activity-badge fruitful">🎯 ${pc.fruitful_ratio || 0}% Fruitful</span>`;
+            badgeHtml = `<span class="activity-badge fruitful">🎯 ${pc.fruitful_ratio || 0}% Academic Work</span>`;
         } else if (actType === "idle") {
-            badgeHtml = `<span class="activity-badge idle">💤 Idle</span>`;
+            badgeHtml = `<span class="activity-badge idle">💤 Standby</span>`;
         } else {
             badgeHtml = `<span class="activity-badge neutral">⚪ Normal</span>`;
         }
 
         const appName = pc.active_app || (isOnline ? "Active Desktop" : "Offline");
-        const activeWin = pc.active_window || (isOnline ? "Desktop / Idle" : "System Offline");
+        const activeWin = pc.active_window || (isOnline ? "Desktop / Standby" : "System Offline");
 
         // Screenshot resolution
         let snapUrl = pc.screenshot_url ? pc.screenshot_url.replace('/static/screenshots/', '/screenshots/') : null;
@@ -184,7 +184,7 @@ function renderWorkstationsGrid() {
                     <div class="empty-screen-inner">
                         <span class="camera-icon">📸</span>
                         <strong style="color: #0f172a; font-size: 13px;">No Screenshot Taken Yet</strong>
-                        <span class="click-hint">👉 Click to Snap Screen Now</span>
+                        <span class="click-hint">👉 Click to Capture Screen</span>
                     </div>
                 </div>
             `;
@@ -193,7 +193,7 @@ function renderWorkstationsGrid() {
                 <div class="card-screenshot-wrap empty-screen" style="opacity: 0.7; cursor: default;">
                     <div class="empty-screen-inner">
                         <span style="font-size: 26px; filter: grayscale(1);">🖥️</span>
-                        <span style="font-size: 12px; color: #64748b;">PC is currently powered off</span>
+                        <span style="font-size: 12px; color: #64748b;">Workstation is Offline</span>
                     </div>
                 </div>
             `;
@@ -232,25 +232,25 @@ function renderWorkstationsGrid() {
                 <div class="time-metrics-row">
                     <div class="time-item">
                         <span class="time-val text-cyan">${formatDuration(pc.uptime_seconds)}</span>
-                        <span class="time-lbl">Uptime</span>
+                        <span class="time-lbl">Session Uptime</span>
                     </div>
                     <div class="time-item">
                         <span class="time-val text-success">${formatDuration(pc.fruitful_seconds)}</span>
-                        <span class="time-lbl">Coding Work</span>
+                        <span class="time-lbl">Academic Work</span>
                     </div>
                     <div class="time-item">
                         <span class="time-val text-amber">${formatDuration(pc.idle_seconds)}</span>
-                        <span class="time-lbl">Idle</span>
+                        <span class="time-lbl">Standby</span>
                     </div>
                 </div>
 
                 <!-- Card Actions -->
                 <div class="card-footer">
                     <button class="btn btn-primary" onclick="requestSingleScreen('${pc.pc_id}', this)" ${!isOnline ? 'disabled' : ''}>
-                        📸 Snap Screen
+                        📸 Capture Screen
                     </button>
                     <button class="btn btn-outline" onclick="openBriefingModal('${pc.pc_id}')">
-                        👁️ Full Details
+                        📋 Audit Details
                     </button>
                 </div>
             </div>
@@ -538,15 +538,15 @@ async function loadAnalyticsView() {
                         <span class="val text-cyan">${rep.total_uptime}</span>
                     </div>
                     <div class="summary-box">
-                        <span class="lbl">CODING (FRUITFUL)</span>
+                        <span class="lbl">ACADEMIC WORK HOURS</span>
                         <span class="val text-success">${rep.total_fruitful_work}</span>
                     </div>
                     <div class="summary-box highlight-box">
-                        <span class="lbl">PRODUCTIVITY RATE</span>
+                        <span class="lbl">UTILIZATION COMPLIANCE</span>
                         <span class="val">${rep.overall_fruitful_rate}</span>
                     </div>
                     <div class="summary-box">
-                        <span class="lbl">IDLE TIME</span>
+                        <span class="lbl">STANDBY TIME</span>
                         <span class="val text-amber">${rep.total_idle_time}</span>
                     </div>
                 </div>
