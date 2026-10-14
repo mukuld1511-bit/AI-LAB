@@ -495,10 +495,10 @@ async function loadTimetableView() {
         tbody.innerHTML = sched.map(s => {
             const isToday = s.day_of_week === todayName;
             return `
-                <tr style="${isToday ? 'background: rgba(56, 189, 248, 0.05);' : ''}">
+                <tr style="${isToday ? 'background: rgba(0, 139, 56, 0.06);' : ''}">
                     <td><strong>${escapeHtml(s.day_of_week)}</strong></td>
                     <td class="mono">${escapeHtml(s.start_time)} - ${escapeHtml(s.end_time)}</td>
-                    <td><strong style="color: #f8fafc;">${escapeHtml(s.subject)}</strong></td>
+                    <td><strong style="color: #0f172a;">${escapeHtml(s.subject)}</strong></td>
                     <td>${escapeHtml(s.faculty)}</td>
                     <td>${escapeHtml(s.batch)}</td>
                     <td>${isToday ? '<span class="status-indicator online">Today</span>' : '<span style="color: #64748b;">Scheduled</span>'}</td>
@@ -524,13 +524,31 @@ async function loadAnalyticsView() {
 
         if (summaryBar) {
             summaryBar.innerHTML = `
-                <div style="display: flex; gap: 20px; background: rgba(15, 23, 42, 0.8); padding: 14px 20px; border-radius: 12px; border: 1px solid rgba(51, 65, 85, 0.5); margin-bottom: 16px; flex-wrap: wrap;">
-                    <div>Date: <strong>${rep.report_date}</strong></div>
-                    <div>Workstations: <strong>${rep.total_workstations}</strong></div>
-                    <div>Total Uptime: <strong class="text-cyan">${rep.total_uptime}</strong></div>
-                    <div>Fruitful Work: <strong class="text-success">${rep.total_fruitful_work}</strong></div>
-                    <div>Dept. Productivity Rate: <strong class="text-success">${rep.overall_fruitful_rate}</strong></div>
-                    <div>Total Idle: <strong class="text-amber">${rep.total_idle_time}</strong></div>
+                <div class="report-summary-boxes">
+                    <div class="summary-box">
+                        <span class="lbl">REPORT DATE</span>
+                        <span class="val">${rep.report_date}</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="lbl">WORKSTATIONS</span>
+                        <span class="val">${rep.total_workstations} PCs</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="lbl">TOTAL UPTIME</span>
+                        <span class="val text-cyan">${rep.total_uptime}</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="lbl">CODING (FRUITFUL)</span>
+                        <span class="val text-success">${rep.total_fruitful_work}</span>
+                    </div>
+                    <div class="summary-box highlight-box">
+                        <span class="lbl">PRODUCTIVITY RATE</span>
+                        <span class="val">${rep.overall_fruitful_rate}</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="lbl">IDLE TIME</span>
+                        <span class="val text-amber">${rep.total_idle_time}</span>
+                    </div>
                 </div>
             `;
         }
@@ -543,7 +561,7 @@ async function loadAnalyticsView() {
 
         tbody.innerHTML = pcs.map(p => `
             <tr>
-                <td><strong class="mono" style="color: #f8fafc;">${p.pc_id}</strong></td>
+                <td><strong class="mono" style="color: #0f172a;">${p.pc_id}</strong></td>
                 <td class="mono">${p.uptime}</td>
                 <td class="mono text-success"><strong>${p.fruitful_time}</strong></td>
                 <td class="mono text-amber">${p.idle_time}</td>
