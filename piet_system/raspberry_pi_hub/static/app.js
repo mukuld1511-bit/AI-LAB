@@ -158,25 +158,77 @@ function renderWorkstationsGrid() {
         } else if (actType === "idle") {
             badgeHtml = `<span class="activity-badge idle">💤 Idle</span>`;
         } else {
-            badgeHtml = `<span class="activity-badge" style="background: rgba(100, 116, 139, 0.2); color: #94a3b8;">⚪ Normal</span>`;
+            badgeHtml = `<span class="activity-badge neutral">⚪ Normal</span>`;
         }
 
         const appName = pc.active_app || (isOnline ? "Active Desktop" : "Offline");
         const activeWin = pc.active_window || (isOnline ? "Desktop / Idle" : "System Offline");
 
+        // Screenshot resolution
+        let snapUrl = pc.screenshot_url ? pc.screenshot_url.replace('/static/screenshots/', '/screenshots/') : null;
+        if (!snapUrl && pc.last_screenshot_at) {
+            snapUrl = `/screenshots/${pc.pc_id.toLowerCase()}.jpg?t=${Date.now()}`;
+        }
+
+        let screenBlockHtml = "";
+        if (snapUrl) {
+            screenBlockHtml = `
+                <div class="card-screenshot-wrap" onclick="openBriefingModal('${pc.pc_id}')" title="Click to view full screen">
+                    <img class="card-screenshot-img" src="${snapUrl}" alt="${pc.pc_id} Desktop" onerror="this.onerror=null; this.src='/screenshots/${pc.pc_id.toLowerCase()}.jpg'">
+                    <div class="card-screenshot-overlay">🔍 Click to enlarge • ${pc.last_screenshot_at || 'Captured'}</div>
+                </div>
+            `;
+        } else if (isOnline) {
+            screenBlockHtml = `
+                <div class="card-screenshot-wrap empty-screen" onclick="requestSingleScreen('${pc.pc_id}', null)" title="Click to take fresh screenshot">
+                    <div class="empty-screen-inner">
+                        <span class="camera-icon">📸</span>
+                        <strong style="color: #0f172a; font-size: 13px;">No Screenshot Taken Yet</strong>
+                        <span class="click-hint">👉 Click to Snap Screen Now</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            screenBlockHtml = `
+                <div class="card-screenshot-wrap empty-screen" style="opacity: 0.7; cursor: default;">
+                    <div class="empty-screen-inner">
+                        <span style="font-size: 26px; filter: grayscale(1);">🖥️</span>
+                        <span style="font-size: 12px; color: #64748b;">PC is currently powered off</span>
+                    </div>
+                </div>
+            `;
+        }
+
         return `
             <div class="${cardClass}" id="card-${pc.pc_id}">
                 <div class="card-top">
                     <div class="card-title-group">
-                        <span class="pc-name">${escapeHtml(pc.pc_id)}</span>
+                        <span class="pc-name">🖥️ ${escapeHtml(pc.pc_id)}</span>
                         <div class="status-indicator ${isOnline ? 'online' : 'offline'}">
-                            <span class="dot ${isOnline ? 'live' : ''}" style="${!isOnline ? 'background: #64748b;' : ''}"></span>
+                            <span class="dot ${isOnline ? 'live' : ''}"></span>
                             ${isOnline ? 'ONLINE' : 'OFFLINE'}
                         </div>
                     </div>
                     ${badgeHtml}
                 </div>
 
+                <!-- Prominent Live Desktop Screenshot Area -->
+                ${screenBlockHtml}
+
+                <!-- Active App & Window Title -->
+                <div class="active-win-strip" title="${escapeHtml(activeWin)}">
+                    <span style="background: #e0f2fe; color: #0284c7; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 11px;">${escapeHtml(appName)}</span>
+                    <span style="font-weight: 600; color: #0f172a; margin-left: 4px;">${escapeHtml(activeWin)}</span>
+                </div>
+
+                <!-- Hardware & Resource Gauges -->
+                <div class="card-gauges">
+                    <span>CPU: <strong>${pc.cpu_percent || 0}%</strong></span>
+                    <span>RAM: <strong>${pc.ram_percent || 0}%</strong></span>
+                    <span>IP: <strong>${pc.ip_address || 'LAN'}</strong></span>
+                </div>
+
+                <!-- Time Metrics Row -->
                 <div class="time-metrics-row">
                     <div class="time-item">
                         <span class="time-val text-cyan">${formatDuration(pc.uptime_seconds)}</span>
@@ -184,7 +236,7 @@ function renderWorkstationsGrid() {
                     </div>
                     <div class="time-item">
                         <span class="time-val text-success">${formatDuration(pc.fruitful_seconds)}</span>
-                        <span class="time-lbl">Work Time</span>
+                        <span class="time-lbl">Coding Work</span>
                     </div>
                     <div class="time-item">
                         <span class="time-val text-amber">${formatDuration(pc.idle_seconds)}</span>
@@ -192,29 +244,13 @@ function renderWorkstationsGrid() {
                     </div>
                 </div>
 
-                <div class="active-win-strip" title="${escapeHtml(activeWin)}">
-                    💻 <strong>${escapeHtml(appName)}</strong>: ${escapeHtml(activeWin)}
-                </div>
-
-                <div class="card-gauges">
-                    <span>CPU: <strong>${pc.cpu_percent || 0}%</strong></span>
-                    <span>RAM: <strong>${pc.ram_percent || 0}%</strong></span>
-                    <span>GPU: <strong>${pc.gpu_percent || 0}%</strong></span>
-                </div>
-
-                ${pc.screenshot_url ? `
-                    <div class="card-screenshot-wrap" onclick="openBriefingModal('${pc.pc_id}')" title="Click to view full screen">
-                        <img class="card-screenshot-img" src="${pc.screenshot_url.replace('/static/screenshots/', '/screenshots/')}" alt="Screen Preview" onerror="this.src='/screenshots/${pc.pc_id.toLowerCase()}.jpg'">
-                        <div class="card-screenshot-overlay">🔍 Click to enlarge</div>
-                    </div>
-                ` : ''}
-
+                <!-- Card Actions -->
                 <div class="card-footer">
-                    <button class="btn btn-outline" onclick="requestSingleScreen('${pc.pc_id}', this)" ${!isOnline ? 'disabled' : ''}>
-                        📸 Snap
+                    <button class="btn btn-primary" onclick="requestSingleScreen('${pc.pc_id}', this)" ${!isOnline ? 'disabled' : ''}>
+                        📸 Snap Screen
                     </button>
-                    <button class="btn btn-primary" onclick="openBriefingModal('${pc.pc_id}')">
-                        👁️ Briefing
+                    <button class="btn btn-outline" onclick="openBriefingModal('${pc.pc_id}')">
+                        👁️ Full Details
                     </button>
                 </div>
             </div>
@@ -318,34 +354,49 @@ function openBriefingModal(pcId) {
 
     populateModalData(pc);
     const modal = document.getElementById("briefing-modal");
-    if (modal) modal.classList.add("show");
+    if (modal) {
+        modal.classList.add("active");
+        modal.classList.add("show");
+        modal.style.display = "flex";
+    }
 }
 
 function populateModalData(pc) {
-    document.getElementById("modal-pc-title").innerText = `${pc.pc_id} — Comprehensive Briefing`;
+    const titleEl = document.getElementById("modal-pc-title");
+    if (titleEl) titleEl.innerText = `${pc.pc_id} — Comprehensive Workstation Briefing`;
     
     const badge = document.getElementById("modal-status-badge");
     if (badge) {
         const isOnline = pc.is_online === 1 || pc.is_online === true;
-        badge.innerText = isOnline ? "🟢 ONLINE" : "⚫ OFFLINE";
-        badge.style.color = isOnline ? "#34d399" : "#94a3b8";
-        badge.style.background = isOnline ? "rgba(52, 211, 153, 0.15)" : "rgba(100, 116, 139, 0.2)";
+        badge.innerText = isOnline ? "🟢 ONLINE" : "⚪ OFFLINE";
+        badge.style.color = isOnline ? "#15803d" : "#64748b";
+        badge.style.background = isOnline ? "#dcfce7" : "#f1f5f9";
     }
 
     // Image preview
     const img = document.getElementById("modal-screen-img");
     const placeholder = document.getElementById("modal-screen-placeholder");
-    if (pc.screenshot_url) {
-        let snapSrc = pc.screenshot_url;
-        if (snapSrc.startsWith("/static/screenshots/")) {
-            snapSrc = snapSrc.replace("/static/screenshots/", "/screenshots/");
+    const fullBtn = document.getElementById("modal-full-img-btn");
+
+    let snapSrc = pc.screenshot_url ? pc.screenshot_url.replace('/static/screenshots/', '/screenshots/') : null;
+    if (!snapSrc && pc.last_screenshot_at) {
+        snapSrc = `/screenshots/${pc.pc_id.toLowerCase()}.jpg?t=${Date.now()}`;
+    }
+
+    if (snapSrc) {
+        if (img) {
+            img.src = snapSrc;
+            img.style.display = "block";
         }
-        img.src = snapSrc;
-        img.style.display = "block";
-        placeholder.style.display = "none";
+        if (placeholder) placeholder.style.display = "none";
+        if (fullBtn) {
+            fullBtn.href = snapSrc;
+            fullBtn.style.display = "inline-flex";
+        }
     } else {
-        img.style.display = "none";
-        placeholder.style.display = "flex";
+        if (img) img.style.display = "none";
+        if (placeholder) placeholder.style.display = "flex";
+        if (fullBtn) fullBtn.style.display = "none";
     }
 
     // Productivity metrics
@@ -415,7 +466,11 @@ async function killTask(pcId, pid, procName) {
 function closeModal() {
     currentModalPcId = null;
     const modal = document.getElementById("briefing-modal");
-    if (modal) modal.classList.remove("show");
+    if (modal) {
+        modal.classList.remove("show");
+        modal.classList.remove("active");
+        modal.style.display = "none";
+    }
 }
 
 // ── Timetable View ──

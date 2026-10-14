@@ -409,31 +409,31 @@ body {
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
-/* ── Workstations Grid ── */
+/* ── Workstations Grid (Large Usable Blocks) ── */
 .workstations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 22px;
 }
 
-/* Individual PC Card */
+/* Individual PC Card (Spacious High-Visibility Block) */
 .pc-card {
     background: #ffffff;
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
-    padding: 14px;
-    box-shadow: var(--shadow-sm);
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
     transition: all 0.2s ease;
 }
 
 .pc-card:hover {
-    border-color: var(--border-medium);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    border-color: var(--primary);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+    transform: translateY(-3px);
 }
 
 /* Offline Card Styling */
@@ -554,11 +554,11 @@ body {
     color: var(--text-primary);
 }
 
-/* Screenshot Preview */
+/* Screenshot Preview on Card (Large & Prominent) */
 .card-screenshot-wrap {
     width: 100%;
-    height: 130px;
-    background: var(--bg-subtle);
+    height: 210px;
+    background: #0f172a;
     border: 1px solid var(--border-light);
     border-radius: var(--radius-sm);
     overflow: hidden;
@@ -572,30 +572,55 @@ body {
 .card-screenshot-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background: #1e293b;
     transition: transform 0.2s ease;
 }
 
 .card-screenshot-wrap:hover .card-screenshot-img {
-    transform: scale(1.03);
+    transform: scale(1.02);
 }
 
 .card-screenshot-overlay {
     position: absolute;
-    bottom: 4px;
-    right: 4px;
-    background: rgba(15, 23, 42, 0.7);
+    bottom: 6px;
+    right: 6px;
+    background: rgba(15, 23, 42, 0.85);
     color: #ffffff;
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
     border-radius: var(--radius-sm);
+    backdrop-filter: blur(2px);
 }
 
-.card-noscreen-text {
-    font-size: 12px;
-    color: var(--text-muted);
-    font-weight: 500;
+.card-screenshot-wrap.empty-screen {
+    background: var(--bg-subtle);
+    border: 1px dashed var(--border-medium);
+}
+
+.card-screenshot-wrap.empty-screen:hover {
+    background: #eff6ff;
+    border-color: var(--primary);
+}
+
+.empty-screen-inner {
+    text-align: center;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.empty-screen-inner .camera-icon {
+    font-size: 26px;
+}
+
+.empty-screen-inner .click-hint {
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: 700;
 }
 
 /* Card Actions & Footer */

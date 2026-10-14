@@ -175,19 +175,19 @@
     </main>
 
     <!-- Lightbox Briefing Modal -->
-    <div id="briefing-modal" class="modal-backdrop">
+    <div id="briefing-modal" class="modal-backdrop" onclick="if(event.target === this) closeModal()">
         <div class="modal-box">
             <div class="modal-header">
                 <div class="modal-title-wrap">
-                    <h3 id="modal-pc-title">PC-414-05 Detailed Briefing</h3>
+                    <h3 id="modal-pc-title">PC Detailed Briefing</h3>
                     <span class="modal-badge" id="modal-status-badge">🟢 ONLINE</span>
                 </div>
-                <button class="modal-close" onclick="closeModal()">✕</button>
+                <button class="modal-close" onclick="closeModal()" title="Close Briefing">✕</button>
             </div>
             <div class="modal-body">
                 <div class="modal-col-media">
                     <div class="screen-preview-container">
-                        <img id="modal-screen-img" src="" alt="Workstation Screen Preview">
+                        <img id="modal-screen-img" src="" alt="Workstation Screen Preview" onclick="window.open(this.src, '_blank')" style="cursor: zoom-in;" title="Click to view full image in new tab">
                         <div id="modal-screen-placeholder" class="screen-placeholder">
                             <span>📸 No screen captured yet</span>
                             <small>Click "Grab Live Screen" below</small>
@@ -195,8 +195,11 @@
                     </div>
                     <div class="screen-actions">
                         <button class="btn btn-primary btn-block" id="modal-grab-btn" onclick="requestModalScreenGrab()">
-                            📸 Grab Fresh Screen
+                            📸 Grab Fresh Screen Now
                         </button>
+                        <a id="modal-full-img-btn" href="#" target="_blank" class="btn btn-outline btn-block" style="text-decoration: none; display: none;">
+                            🔗 Open High-Res Image ↗
+                        </a>
                         <span class="snap-timestamp" id="modal-snap-time">Last snap: N/A</span>
                     </div>
                 </div>
