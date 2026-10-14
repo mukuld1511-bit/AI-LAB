@@ -190,8 +190,10 @@ def get_daily_report(lab_id: str = "LAB-414", date: Optional[str] = None):
     return rep
 
 
-# ── Static Web App Mounting ──
+# ── Static Web App & Asset Mounting ──
 
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_assets")
+app.mount("/screenshots", StaticFiles(directory=SCREENSHOTS_DIR), name="screenshots_assets")
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static_frontend")
 
 

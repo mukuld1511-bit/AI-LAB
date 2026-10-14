@@ -242,8 +242,8 @@ def get_lab_workstations(lab_id: str = "LAB-414") -> Dict[str, Any]:
     conn = get_connection()
     c = conn.cursor()
 
-    # Auto-mark PCs as offline if no heartbeat in last 25 seconds
-    cutoff = (datetime.now() - timedelta(seconds=25)).strftime("%Y-%m-%d %H:%M:%S")
+    # Auto-mark PCs as offline if no heartbeat in last 90 seconds
+    cutoff = (datetime.now() - timedelta(seconds=90)).strftime("%Y-%m-%d %H:%M:%S")
     c.execute("UPDATE workstations SET is_online = 0 WHERE is_online = 1 AND last_heartbeat < ?", (cutoff,))
     conn.commit()
 
