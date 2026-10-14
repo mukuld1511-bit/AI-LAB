@@ -516,7 +516,7 @@ async function loadAnalyticsView() {
     const summaryBar = document.getElementById("report-summary-bar");
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #64748b;">Generating daily analytics for ${currentLab}...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b;">Generating daily analytics for ${currentLab}...</td></tr>`;
 
     try {
         const resp = await fetch(`/api/reports/daily?lab_id=${currentLab}`);
@@ -526,27 +526,27 @@ async function loadAnalyticsView() {
             summaryBar.innerHTML = `
                 <div class="report-summary-boxes">
                     <div class="summary-box">
-                        <span class="lbl">REPORT DATE</span>
+                        <span class="lbl">AUDIT DATE</span>
                         <span class="val">${rep.report_date}</span>
                     </div>
                     <div class="summary-box">
                         <span class="lbl">WORKSTATIONS</span>
-                        <span class="val">${rep.total_workstations} PCs</span>
+                        <span class="val">${rep.total_workstations} Systems</span>
                     </div>
                     <div class="summary-box">
-                        <span class="lbl">TOTAL UPTIME</span>
+                        <span class="lbl">TOTAL OPERATING HOURS</span>
                         <span class="val text-cyan">${rep.total_uptime}</span>
                     </div>
                     <div class="summary-box">
-                        <span class="lbl">ACADEMIC WORK HOURS</span>
-                        <span class="val text-success">${rep.total_fruitful_work}</span>
+                        <span class="lbl">UTILISED WORK TIME</span>
+                        <span class="val text-success">${rep.total_work_time || rep.total_fruitful_work}</span>
                     </div>
                     <div class="summary-box highlight-box">
-                        <span class="lbl">UTILIZATION COMPLIANCE</span>
-                        <span class="val">${rep.overall_fruitful_rate}</span>
+                        <span class="lbl">WORKSTATION UTILIZATION</span>
+                        <span class="val">${rep.overall_utilization_rate || rep.overall_fruitful_rate}</span>
                     </div>
                     <div class="summary-box">
-                        <span class="lbl">STANDBY TIME</span>
+                        <span class="lbl">STANDBY / IDLE TIME</span>
                         <span class="val text-amber">${rep.total_idle_time}</span>
                     </div>
                 </div>
@@ -555,24 +555,23 @@ async function loadAnalyticsView() {
 
         const pcs = rep.pcs || [];
         if (pcs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #64748b;">No utilization data recorded for today yet.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b;">No utilization data recorded for today yet.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = pcs.map(p => `
             <tr>
                 <td><strong class="mono" style="color: #0f172a;">${p.pc_id}</strong></td>
-                <td class="mono">${p.uptime}</td>
-                <td class="mono text-success"><strong>${p.fruitful_time}</strong></td>
-                <td class="mono text-amber">${p.idle_time}</td>
-                <td class="mono text-rose">${p.distracted_time}</td>
-                <td><strong class="text-cyan">${p.fruitful_percent}</strong></td>
-                <td>${escapeHtml(p.last_active_app)}</td>
-                <td>${p.has_warning ? `<span class="activity-badge distracted" title="${escapeHtml(p.warning_reason)}">⚠️ Warning</span>` : '<span class="activity-badge fruitful">🟢 Compliant</span>'}</td>
+                <td class="mono font-semibold" style="color: #0284c7;">${p.uptime}</td>
+                <td class="mono font-semibold" style="color: #008b38;"><strong>${p.work_time || p.fruitful_time}</strong></td>
+                <td class="mono" style="color: #d97706;">${p.idle_time}</td>
+                <td><strong class="mono" style="color: #0f172a;">${p.utilization_rate || p.fruitful_percent}</strong></td>
+                <td><span class="mono" style="font-size: 12px; color: #334155;">${escapeHtml(p.last_active_app)}</span></td>
+                <td><span class="activity-badge fruitful">🟢 ${escapeHtml(p.operational_status || 'Operational')}</span></td>
             </tr>
         `).join("");
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="8" style="color: #f43f5e;">Failed to generate report: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="color: #f43f5e;">Failed to generate report: ${e.message}</td></tr>`;
     }
 }
 
@@ -585,11 +584,10 @@ function exportDailyReport() {
 
 // ── Utilities ──
 function formatDuration(seconds) {
-    if (!seconds || seconds <= 0) return "0m";
+    if (!seconds || seconds <= 0) return "0h 00m";
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
-    if (hrs > 0) return `${hrs}h ${mins}m`;
-    return `${mins}m`;
+    return `${hrs}h ${mins < 10 ? '0' : ''}${mins}m`;
 }
 
 function escapeHtml(str) {

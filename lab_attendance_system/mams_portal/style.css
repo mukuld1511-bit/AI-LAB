@@ -1523,5 +1523,58 @@ body {
         border-bottom: 1px solid #cbd5e1 !important;
         color: #0f172a !important;
     }
+
+    .nba-signatures-block {
+        display: flex !important;
+        justify-content: space-between !important;
+        margin-top: 50px !important;
+        padding-top: 20px !important;
+        page-break-inside: avoid !important;
+    }
 }
+
+/* NBA Report Meta & Signatures (Screen & Print) */
+.nba-report-meta {
+    display: flex;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1.5px solid #000000;
+    padding: 8px 16px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: #1e293b;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.nba-signatures-block {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 48px;
+    padding-top: 20px;
+    page-break-inside: avoid;
+}
+.sig-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 220px;
+    text-align: center;
+}
+.sig-line {
+    width: 100%;
+    height: 1.5px;
+    background: #000000;
+    margin-bottom: 8px;
+}
+.sig-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.sig-dept {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 600;
+}
+
 

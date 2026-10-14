@@ -385,16 +385,25 @@ def generate_daily_report(lab_id: str = "LAB-414", date_str: Optional[str] = Non
     for p in pcs:
         t_secs = (p.get("fruitful_seconds", 0) + p.get("idle_seconds", 0) + p.get("distracted_seconds", 0)) or 1
         rate = round((p.get("fruitful_seconds", 0) / t_secs) * 100, 1)
+        is_online = bool(p.get("is_online"))
+        if is_online:
+            op_status = "Active In-Use" if p.get("fruitful_seconds", 0) > 0 else "Standby / Ready"
+        else:
+            op_status = "Serviceable"
+
         pc_summaries.append({
             "pc_id": p["pc_id"],
             "uptime": format_duration(p.get("uptime_seconds", 0)),
             "fruitful_time": format_duration(p.get("fruitful_seconds", 0)),
+            "work_time": format_duration(p.get("fruitful_seconds", 0)),
             "idle_time": format_duration(p.get("idle_seconds", 0)),
             "distracted_time": format_duration(p.get("distracted_seconds", 0)),
             "fruitful_percent": f"{rate}%",
+            "utilization_rate": f"{rate}%",
             "last_active_app": p.get("active_app") or "N/A",
             "has_warning": bool(p.get("has_warning")),
-            "warning_reason": p.get("warning_reason") or "None"
+            "warning_reason": p.get("warning_reason") or "None",
+            "operational_status": op_status
         })
 
     conn.close()
@@ -406,17 +415,17 @@ def generate_daily_report(lab_id: str = "LAB-414", date_str: Optional[str] = Non
         "total_workstations": total_pcs,
         "total_uptime": format_duration(total_uptime_secs),
         "total_fruitful_work": format_duration(total_fruitful_secs),
+        "total_work_time": format_duration(total_fruitful_secs),
         "overall_fruitful_rate": f"{fruitful_rate}%",
+        "overall_utilization_rate": f"{fruitful_rate}%",
         "total_idle_time": format_duration(total_idle_secs),
         "pcs": pc_summaries
     }
 
 
 def format_duration(seconds: int) -> str:
-    if seconds <= 0:
-        return "0m"
+    if not seconds or seconds <= 0:
+        return "0h 00m"
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
-    if hours > 0:
-        return f"{hours}h {minutes}m"
-    return f"{minutes}m"
+    return f"{hours}h {minutes:02d}m"

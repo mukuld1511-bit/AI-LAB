@@ -44,17 +44,17 @@ def init_db():
         )
     """)
 
-    # Seed Default 5 AIML Labs
+    # Seed Default 5 AIML Labs (20 PCs each)
     default_labs = [
-        ("LAB-414", "AI & Deep Learning Lab 414", 30, "Primary Windows Lab — High Performance AI Workstations"),
-        ("LAB-415", "Machine Learning & Vision Lab 415", 30, "Windows Workstations — Computer Vision & NLP"),
-        ("LAB-416", "Data Science & Analytics Lab 416", 30, "Windows Workstations — Big Data & Analytics"),
-        ("LAB-417", "Python & Core AI Lab 417", 30, "Windows Workstations — Algorithm & ML Labs"),
-        ("LAB-418", "Project & Research Lab 418", 30, "Windows Workstations — Capstone Projects & DGX Terminal")
+        ("LAB-414", "AI & Deep Learning Lab 414", 20, "Primary Windows Lab — High Performance AI Workstations"),
+        ("LAB-415", "Machine Learning & Vision Lab 415", 20, "Windows Workstations — Computer Vision & NLP"),
+        ("LAB-416", "Data Science & Analytics Lab 416", 20, "Windows Workstations — Big Data & Analytics"),
+        ("LAB-417", "Python & Core AI Lab 417", 20, "Windows Workstations — Algorithm & ML Labs"),
+        ("LAB-418", "Project & Research Lab 418", 20, "Windows Workstations — Capstone Projects & DGX Terminal")
     ]
     for lab in default_labs:
         c.execute("""
-            INSERT OR IGNORE INTO labs (lab_id, name, total_pcs, description)
+            INSERT OR REPLACE INTO labs (lab_id, name, total_pcs, description)
             VALUES (?, ?, ?, ?)
         """, lab)
 
@@ -91,6 +91,16 @@ def init_db():
             FOREIGN KEY (lab_id) REFERENCES labs(lab_id)
         )
     """)
+
+    # Seed 20 PC slots for each lab (PC-414-01 to PC-414-20, etc.)
+    for lab_num in [414, 415, 416, 417, 418]:
+        lab_code = f"LAB-{lab_num}"
+        for i in range(1, 21):
+            p_id = f"PC-{lab_num}-{i:02d}"
+            c.execute("""
+                INSERT OR IGNORE INTO workstations (pc_id, lab_id, is_online, activity_type, active_window, active_app)
+                VALUES (?, ?, 0, 'neutral', '', '')
+            """, (p_id, lab_code))
 
     # Table 3: Daily Session Log Archives (For Historical Reports)
     c.execute("""
@@ -232,8 +242,8 @@ def get_lab_workstations(lab_id: str = "LAB-414") -> Dict[str, Any]:
     conn = get_connection()
     c = conn.cursor()
 
-    # Auto-mark PCs as offline if no heartbeat in last 25 seconds
-    cutoff = (datetime.now() - timedelta(seconds=25)).strftime("%Y-%m-%d %H:%M:%S")
+    # Auto-mark PCs as offline if no heartbeat in last 90 seconds
+    cutoff = (datetime.now() - timedelta(seconds=90)).strftime("%Y-%m-%d %H:%M:%S")
     c.execute("UPDATE workstations SET is_online = 0 WHERE is_online = 1 AND last_heartbeat < ?", (cutoff,))
     conn.commit()
 
@@ -258,7 +268,7 @@ def get_lab_workstations(lab_id: str = "LAB-414") -> Dict[str, Any]:
         img_file = f"{r['pc_id'].lower()}.jpg"
         full_p = os.path.join(SCREENSHOTS_DIR, img_file)
         if os.path.exists(full_p):
-            r["screenshot_url"] = f"/static/screenshots/{img_file}?t={int(os.path.getmtime(full_p))}"
+            r["screenshot_url"] = f"/screenshots/{img_file}?t={int(os.path.getmtime(full_p))}"
         else:
             r["screenshot_url"] = None
 
@@ -375,16 +385,25 @@ def generate_daily_report(lab_id: str = "LAB-414", date_str: Optional[str] = Non
     for p in pcs:
         t_secs = (p.get("fruitful_seconds", 0) + p.get("idle_seconds", 0) + p.get("distracted_seconds", 0)) or 1
         rate = round((p.get("fruitful_seconds", 0) / t_secs) * 100, 1)
+        is_online = bool(p.get("is_online"))
+        if is_online:
+            op_status = "Active In-Use" if p.get("fruitful_seconds", 0) > 0 else "Standby / Ready"
+        else:
+            op_status = "Serviceable"
+
         pc_summaries.append({
             "pc_id": p["pc_id"],
             "uptime": format_duration(p.get("uptime_seconds", 0)),
             "fruitful_time": format_duration(p.get("fruitful_seconds", 0)),
+            "work_time": format_duration(p.get("fruitful_seconds", 0)),
             "idle_time": format_duration(p.get("idle_seconds", 0)),
             "distracted_time": format_duration(p.get("distracted_seconds", 0)),
             "fruitful_percent": f"{rate}%",
+            "utilization_rate": f"{rate}%",
             "last_active_app": p.get("active_app") or "N/A",
             "has_warning": bool(p.get("has_warning")),
-            "warning_reason": p.get("warning_reason") or "None"
+            "warning_reason": p.get("warning_reason") or "None",
+            "operational_status": op_status
         })
 
     conn.close()
@@ -396,17 +415,17 @@ def generate_daily_report(lab_id: str = "LAB-414", date_str: Optional[str] = Non
         "total_workstations": total_pcs,
         "total_uptime": format_duration(total_uptime_secs),
         "total_fruitful_work": format_duration(total_fruitful_secs),
+        "total_work_time": format_duration(total_fruitful_secs),
         "overall_fruitful_rate": f"{fruitful_rate}%",
+        "overall_utilization_rate": f"{fruitful_rate}%",
         "total_idle_time": format_duration(total_idle_secs),
         "pcs": pc_summaries
     }
 
 
 def format_duration(seconds: int) -> str:
-    if seconds <= 0:
-        return "0m"
+    if not seconds or seconds <= 0:
+        return "0h 00m"
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
-    if hours > 0:
-        return f"{hours}h {minutes}m"
-    return f"{minutes}m"
+    return f"{hours}h {minutes:02d}m"

@@ -182,10 +182,59 @@
             display: block !important;
         }
         .letterhead-sub {
-            font-size: 12px !important;
-            font-weight: 600 !important;
-            color: #475569 !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
             margin-top: 2px !important;
+        }
+        .letterhead-audit-tag {
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            color: #008b38 !important;
+            margin-top: 3px !important;
+            letter-spacing: 0.4px !important;
+        }
+        .nba-report-meta {
+            display: flex !important;
+            justify-content: space-between !important;
+            background: #f8fafc !important;
+            border: 1.5px solid #000000 !important;
+            padding: 8px 16px !important;
+            margin-bottom: 14px !important;
+            font-size: 12px !important;
+            color: #1e293b !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+        }
+        .nba-signatures-block {
+            display: flex !important;
+            justify-content: space-between !important;
+            margin-top: 48px !important;
+            padding-top: 20px !important;
+            page-break-inside: avoid !important;
+        }
+        .sig-col {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            width: 220px !important;
+            text-align: center !important;
+        }
+        .sig-line {
+            width: 100% !important;
+            height: 1.5px !important;
+            background: #000000 !important;
+            margin-bottom: 8px !important;
+        }
+        .sig-title {
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+        }
+        .sig-dept {
+            font-size: 11px !important;
+            color: #64748b !important;
+            font-weight: 600 !important;
         }
 
         /* Header Right: Clock & Action Buttons */
@@ -623,7 +672,8 @@
                         <div class="letterhead-text">
                             <span class="letterhead-dept">DEPARTMENT OF ARTIFICIAL INTELLIGENCE & MACHINE LEARNING</span>
                             <h3>PANIPAT INSTITUTE OF ENGINEERING & TECHNOLOGY</h3>
-                            <div class="letterhead-sub">Smart Workstation Utilization & Academic Compliance Audit Report</div>
+                            <div class="letterhead-sub">Laboratory Workstation Utilization & Practical Work Hours Report</div>
+                            <div class="letterhead-audit-tag">NBA Accreditation Criterion 4 (Facilities &amp; Technical Support) &bull; Academic Lab Audit</div>
                         </div>
                     </div>
                     <div class="letterhead-actions">
@@ -631,9 +681,17 @@
                     </div>
                 </div>
 
+                <!-- NBA Report Metadata Strip -->
+                <div class="nba-report-meta">
+                    <div><strong>Laboratory:</strong> Lab 414 &mdash; AI &amp; Deep Learning</div>
+                    <div><strong>Department:</strong> AI &amp; ML (CSE)</div>
+                    <div><strong>Academic Session:</strong> 2026&ndash;2027</div>
+                    <div><strong>Inspection Standard:</strong> NBA Tier-1 / NAAC Criteria</div>
+                </div>
+
                 <div class="card-header" style="margin-top: 10px;">
-                    <h2>📑 Workstation Telemetry & Daily Utilization Audit</h2>
-                    <span class="card-subtitle">Automated session-based activity classification and academic compliance audit</span>
+                    <h2>🏛️ Workstation Operating & Practical Work Hours Log</h2>
+                    <span class="card-subtitle">Official departmental record of machine operating hours, student practical utilization, and software resource allocation</span>
                 </div>
                 <div class="report-summary-bar" id="report-summary-bar">
                     <!-- Populated dynamically -->
@@ -643,19 +701,37 @@
                         <thead>
                             <tr>
                                 <th>Workstation ID</th>
-                                <th>Session Uptime</th>
-                                <th>Academic Work Hours</th>
-                                <th>Standby Time</th>
-                                <th>Flagged Off-Task</th>
-                                <th>Utilization Compliance</th>
-                                <th>Foreground Application</th>
-                                <th>Audit Status</th>
+                                <th>Operating Hours (Uptime)</th>
+                                <th>Utilised Work Time</th>
+                                <th>Standby / Idle Time</th>
+                                <th>Utilization Rate</th>
+                                <th>Primary Software / Lab Tool</th>
+                                <th>Operational Status</th>
                             </tr>
                         </thead>
                         <tbody id="analytics-body">
                             <!-- Populated dynamically -->
                         </tbody>
                     </table>
+                </div>
+
+                <!-- NBA Verification & Signatures Block -->
+                <div class="nba-signatures-block">
+                    <div class="sig-col">
+                        <div class="sig-line"></div>
+                        <span class="sig-title">Lab Technical Assistant</span>
+                        <span class="sig-dept">Smart Lab 414</span>
+                    </div>
+                    <div class="sig-col">
+                        <div class="sig-line"></div>
+                        <span class="sig-title">Faculty Lab In-Charge</span>
+                        <span class="sig-dept">Dept. of AI &amp; ML</span>
+                    </div>
+                    <div class="sig-col">
+                        <div class="sig-line"></div>
+                        <span class="sig-title">Head of Department (HOD)</span>
+                        <span class="sig-dept">PIET AI &amp; ML Dept.</span>
+                    </div>
                 </div>
             </div>
         </section>
