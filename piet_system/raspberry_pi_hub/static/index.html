@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PIET AI/ML Dept. — Smart Lab Supervision System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Top Header Navigation -->
+    <header class="app-header">
+        <div class="header-brand">
+            <div class="brand-logo">PIET</div>
+            <div class="brand-text">
+                <h1>AI & ML Department</h1>
+                <span class="brand-sub">Smart Lab Supervision & Student Productivity Hub</span>
+            </div>
+        </div>
+
+        <!-- Department Lab Switcher Tabs -->
+        <div class="lab-switcher" id="lab-switcher">
+            <button class="lab-pill active" onclick="switchLab('LAB-414')">
+                <span class="dot live"></span> Lab 414 <span class="tag">Flagship</span>
+            </button>
+            <button class="lab-pill" onclick="switchLab('LAB-415')">Lab 415</button>
+            <button class="lab-pill" onclick="switchLab('LAB-416')">Lab 416</button>
+            <button class="lab-pill" onclick="switchLab('LAB-417')">Lab 417</button>
+            <button class="lab-pill" onclick="switchLab('LAB-418')">Lab 418</button>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="header-right">
+            <div class="live-clock" id="live-clock">10:00:00 AM</div>
+            <button class="btn btn-primary" onclick="requestAllScreenshots()" title="Dispatches stealth screenshot to all online PCs">
+                📸 Snap All PCs
+            </button>
+            <button class="btn btn-outline" onclick="exportDailyReport()" title="Export today's lab utilization report">
+                📑 Daily Report
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-wrapper">
+        <!-- Active Session & Timetable Banner -->
+        <section class="session-banner" id="session-banner">
+            <div class="session-info">
+                <div class="slot-badge">⚡ ACTIVE LAB SESSION</div>
+                <div class="session-title" id="slot-subject">Detecting Timetable...</div>
+                <div class="session-meta">
+                    <span id="slot-faculty">👨‍🏫 Faculty: Loading...</span>
+                    <span class="sep">•</span>
+                    <span id="slot-batch">🎓 Batch: Loading...</span>
+                    <span class="sep">•</span>
+                    <span id="slot-time">⏱️ Time: Loading...</span>
+                </div>
+            </div>
+            <div class="session-stats">
+                <div class="kpi-mini">
+                    <span class="kpi-num" id="kpi-total">30</span>
+                    <span class="kpi-lbl">Total PCs</span>
+                </div>
+                <div class="kpi-mini text-success">
+                    <span class="kpi-num" id="kpi-online">0</span>
+                    <span class="kpi-lbl">Online</span>
+                </div>
+                <div class="kpi-mini text-cyan">
+                    <span class="kpi-num" id="kpi-fruitful">0</span>
+                    <span class="kpi-lbl">Fruitful (Coding)</span>
+                </div>
+                <div class="kpi-mini text-amber">
+                    <span class="kpi-num" id="kpi-idle">0</span>
+                    <span class="kpi-lbl">Idle</span>
+                </div>
+                <div class="kpi-mini text-rose">
+                    <span class="kpi-num" id="kpi-warning">0</span>
+                    <span class="kpi-lbl">Warnings</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation Sub-Tabs -->
+        <div class="nav-subtabs">
+            <button class="subtab active" onclick="switchView('grid')">🖥️ Live Workstations Grid</button>
+            <button class="subtab" onclick="switchView('timetable')">📅 Lab Timetable</button>
+            <button class="subtab" onclick="switchView('analytics')">📊 Analytics & Productivity</button>
+        </div>
+
+        <!-- VIEW 1: LIVE WORKSTATIONS GRID -->
+        <section id="view-grid" class="view-panel active">
+            <div class="grid-controls">
+                <div class="filter-group">
+                    <button class="filter-btn active" onclick="filterPCs('all')">All Workstations</button>
+                    <button class="filter-btn" onclick="filterPCs('online')">🟢 Online Only</button>
+                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 Fruitful Work</button>
+                    <button class="filter-btn" onclick="filterPCs('idle')">💤 Idle PCs</button>
+                    <button class="filter-btn" onclick="filterPCs('warning')">⚠️ Warnings / Defaulters</button>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="pc-search-input" placeholder="Search PC (e.g. PC-414-05, Chrome)..." onkeyup="searchPCs()">
+                </div>
+            </div>
+
+            <!-- Workstations Cards Grid -->
+            <div class="workstations-grid" id="workstations-container">
+                <!-- Dynamically Populated via JS -->
+                <div class="grid-loader">
+                    <div class="spinner"></div>
+                    <p>Connecting to Lab 414 Workstations Hub...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: DEPARTMENT TIMETABLE -->
+        <section id="view-timetable" class="view-panel">
+            <div class="timetable-card">
+                <div class="card-header">
+                    <h2>📅 Lab 414 Weekly Class Schedule</h2>
+                    <span class="card-subtitle">Auto-syncs active sessions with PC productivity logs</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="piet-table">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Slot Time</th>
+                                <th>Course / Subject</th>
+                                <th>Faculty In-Charge</th>
+                                <th>Batch / Year</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timetable-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: ANALYTICS & DAILY REPORTS -->
+        <section id="view-analytics" class="view-panel">
+            <div class="analytics-card">
+                <div class="card-header">
+                    <h2>📑 Daily Departmental Utilization Report</h2>
+                    <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save PDF</button>
+                </div>
+                <div class="report-summary-bar" id="report-summary-bar">
+                    <!-- Populated dynamically -->
+                </div>
+                <div class="table-responsive">
+                    <table class="piet-table" id="analytics-table">
+                        <thead>
+                            <tr>
+                                <th>PC Identifier</th>
+                                <th>Total Uptime</th>
+                                <th>Fruitful (Work) Time</th>
+                                <th>Idle Time</th>
+                                <th>Distracted Time</th>
+                                <th>Productivity Ratio</th>
+                                <th>Primary App / Activity</th>
+                                <th>Compliance Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analytics-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Lightbox Briefing Modal -->
+    <div id="briefing-modal" class="modal-backdrop">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h3 id="modal-pc-title">PC-414-05 Detailed Briefing</h3>
+                    <span class="modal-badge" id="modal-status-badge">🟢 ONLINE</span>
+                </div>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-col-media">
+                    <div class="screen-preview-container">
+                        <img id="modal-screen-img" src="" alt="Workstation Screen Preview">
+                        <div id="modal-screen-placeholder" class="screen-placeholder">
+                            <span>📸 No screen captured yet</span>
+                            <small>Click "Grab Live Screen" below</small>
+                        </div>
+                    </div>
+                    <div class="screen-actions">
+                        <button class="btn btn-primary btn-block" id="modal-grab-btn" onclick="requestModalScreenGrab()">
+                            📸 Grab Fresh Screen
+                        </button>
+                        <span class="snap-timestamp" id="modal-snap-time">Last snap: N/A</span>
+                    </div>
+                </div>
+
+                <div class="modal-col-details">
+                    <!-- Productivity Gauge -->
+                    <div class="modal-section">
+                        <h4>🎯 Productivity & Work Time Breakdown</h4>
+                        <div class="prod-bar-wrap">
+                            <div class="prod-bar-fill" id="modal-prod-fill" style="width: 80%;"></div>
+                        </div>
+                        <div class="prod-metrics-grid">
+                            <div class="metric-box">
+                                <span class="metric-val text-cyan" id="modal-uptime">0h 0m</span>
+                                <span class="metric-lbl">Total Uptime</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-val text-success" id="modal-fruitful">0h 0m</span>
+                                <span class="metric-lbl">Fruitful Coding</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-val text-amber" id="modal-idle">0h 0m</span>
+                                <span class="metric-lbl">Idle Inactive</span>
+                            </div>
+                            <div class="metric-box">
+                                <span class="metric-val text-rose" id="modal-distracted">0h 0m</span>
+                                <span class="metric-lbl">Distracted</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Window & App -->
+                    <div class="modal-section">
+                        <h4>💻 Focused Window / Active Activity</h4>
+                        <div class="active-app-banner" id="modal-active-app">Visual Studio Code</div>
+                    </div>
+
+                    <!-- Hardware Stats -->
+                    <div class="modal-section">
+                        <h4>⚙️ Workstation Hardware Health</h4>
+                        <div class="hw-gauges">
+                            <div class="hw-chip">CPU: <strong id="modal-cpu">0%</strong></div>
+                            <div class="hw-chip">RAM: <strong id="modal-ram">0% (0/0 GB)</strong></div>
+                            <div class="hw-chip">GPU: <strong id="modal-gpu">0%</strong></div>
+                            <div class="hw-chip">IP: <strong id="modal-ip">0.0.0.0</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Running Processes & Tasks -->
+                    <div class="modal-section">
+                        <div class="tasks-header">
+                            <h4>⚡ Active Top Processes</h4>
+                            <span class="tasks-count" id="modal-tasks-count">5 reported</span>
+                        </div>
+                        <div class="tasks-list" id="modal-tasks-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Hub -->
+    <div id="toast-container" class="toast-hub"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
