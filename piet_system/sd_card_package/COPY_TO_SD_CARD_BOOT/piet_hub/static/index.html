@@ -10,38 +10,83 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Top Header Navigation -->
-    <header class="app-header">
-        <div class="header-brand">
-            <div class="brand-logo">PIET</div>
-            <div class="brand-text">
-                <h1>AI & ML Department</h1>
-                <span class="brand-sub">Smart Lab Supervision & Student Productivity Hub</span>
+    <!-- Official PIET Top Utility Bar -->
+    <div class="piet-top-bar">
+        <div class="piet-top-bar-inner">
+            <div class="piet-top-left">
+                <span>Panipat Institute of Engineering &amp; Technology &bull; An Autonomous Institute &bull; NAAC 'A' Grade</span>
+            </div>
+            <div class="piet-top-right">
+                <a href="https://www.piet.co.in/careers" target="_blank" class="piet-top-link">Careers</a>
+                <span class="piet-top-sep">|</span>
+                <a href="https://www.piet.co.in/iqac" target="_blank" class="piet-top-link">IQAC</a>
+                <span class="piet-top-sep">|</span>
+                <a href="https://www.piet.co.in/alumni" target="_blank" class="piet-top-link">Alumni</a>
+                <span class="piet-top-sep">|</span>
+                <a href="https://erp.piet.co.in" target="_blank" class="piet-top-link">ERP</a>
+                <span class="piet-top-sep">|</span>
+                <span class="piet-toll-free">📞 Toll-Free: <strong>1800 120 6884</strong></span>
+                <span class="piet-top-sep">|</span>
+                <span class="piet-mesh-badge" title="Campus Network Tailscale Mesh Active">🟢 Mesh Connected</span>
             </div>
         </div>
+    </div>
 
-        <!-- Department Lab Switcher Tabs -->
-        <div class="lab-switcher" id="lab-switcher">
-            <button class="lab-pill active" onclick="switchLab('LAB-414')">
-                <span class="dot live"></span> Lab 414 <span class="tag">Flagship</span>
-            </button>
-            <button class="lab-pill" onclick="switchLab('LAB-415')">Lab 415</button>
-            <button class="lab-pill" onclick="switchLab('LAB-416')">Lab 416</button>
-            <button class="lab-pill" onclick="switchLab('LAB-417')">Lab 417</button>
-            <button class="lab-pill" onclick="switchLab('LAB-418')">Lab 418</button>
+    <!-- Official PIET Master Institutional Header -->
+    <header class="app-header">
+        <div class="header-brand">
+            <a href="https://www.piet.co.in" target="_blank" class="piet-logo-link" title="Panipat Institute of Engineering & Technology">
+                <img src="piet_logo_wide.png" alt="PIET Logo" class="piet-logo-img">
+            </a>
+            <div class="brand-divider"></div>
+            <div class="brand-text">
+                <span class="univ-tag">DEPARTMENT OF ARTIFICIAL INTELLIGENCE &amp; MACHINE LEARNING</span>
+                <h1>Smart Computer Lab Supervision System</h1>
+                <span class="brand-sub">Centre of Excellence in Deep Learning, Computer Vision &amp; High-Performance Computing</span>
+            </div>
         </div>
 
         <!-- Header Actions -->
         <div class="header-right">
-            <div class="live-clock" id="live-clock">10:00:00 AM</div>
-            <button class="btn btn-primary" onclick="requestAllScreenshots()" title="Dispatches stealth screenshot to all online PCs">
-                📸 Snap All PCs
-            </button>
-            <button class="btn btn-outline" onclick="exportDailyReport()" title="Export today's lab utilization report">
-                📑 Daily Report
-            </button>
+            <div class="live-clock-card">
+                <span class="clock-label">CAMPUS TIME</span>
+                <div class="live-clock mono" id="live-clock">10:00:00 AM</div>
+            </div>
+            <div class="header-action-btns">
+                <button class="btn btn-primary" onclick="requestAllScreenshots()" title="Dispatches stealth screenshot to all online PCs">
+                    📸 Snap All PCs
+                </button>
+                <button class="btn btn-outline" onclick="exportDailyReport()" title="Export today's lab utilization report">
+                    📑 Daily Report
+                </button>
+            </div>
         </div>
     </header>
+
+    <!-- Official PIET Forest Green Navigation Ribbon -->
+    <nav class="piet-nav-ribbon">
+        <div class="nav-ribbon-inner">
+            <div class="nav-ribbon-left">
+                <div class="nav-dept-label">
+                    <span>🏛️ Department Labs:</span>
+                </div>
+                <div class="lab-switcher" id="lab-switcher">
+                    <button class="lab-pill active" onclick="switchLab('LAB-414')">
+                        <span class="dot live"></span> Lab 414 <span class="tag">Flagship DL</span>
+                    </button>
+                    <button class="lab-pill" onclick="switchLab('LAB-415')">Lab 415</button>
+                    <button class="lab-pill" onclick="switchLab('LAB-416')">Lab 416</button>
+                    <button class="lab-pill" onclick="switchLab('LAB-417')">Lab 417</button>
+                    <button class="lab-pill" onclick="switchLab('LAB-418')">Lab 418</button>
+                </div>
+            </div>
+            <div class="nav-ribbon-right">
+                <a href="https://www.piet.co.in" target="_blank" class="nav-ext-link">
+                    🌐 piet.co.in ↗
+                </a>
+            </div>
+        </div>
+    </nav>
 
     <!-- Main Content Container -->
     <main class="main-wrapper">
@@ -60,7 +105,7 @@
             </div>
             <div class="session-stats">
                 <div class="kpi-mini">
-                    <span class="kpi-num" id="kpi-total">30</span>
+                    <span class="kpi-num" id="kpi-total">20</span>
                     <span class="kpi-lbl">Total PCs</span>
                 </div>
                 <div class="kpi-mini text-success">
@@ -75,9 +120,9 @@
                     <span class="kpi-num" id="kpi-idle">0</span>
                     <span class="kpi-lbl">Idle</span>
                 </div>
-                <div class="kpi-mini text-rose">
-                    <span class="kpi-num" id="kpi-warning">0</span>
-                    <span class="kpi-lbl">Warnings</span>
+                <div class="kpi-mini">
+                    <span class="kpi-num" id="kpi-offline" style="color: #64748b;">20</span>
+                    <span class="kpi-lbl">Offline</span>
                 </div>
             </div>
         </section>
@@ -95,9 +140,9 @@
                 <div class="filter-group">
                     <button class="filter-btn active" onclick="filterPCs('all')">All Workstations</button>
                     <button class="filter-btn" onclick="filterPCs('online')">🟢 Online Only</button>
-                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 Fruitful Work</button>
+                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 Fruitful (Coding)</button>
                     <button class="filter-btn" onclick="filterPCs('idle')">💤 Idle PCs</button>
-                    <button class="filter-btn" onclick="filterPCs('warning')">⚠️ Warnings / Defaulters</button>
+                    <button class="filter-btn" onclick="filterPCs('offline')">⚪ Offline Only</button>
                 </div>
                 <div class="search-box">
                     <input type="text" id="pc-search-input" placeholder="Search PC (e.g. PC-414-05, Chrome)..." onkeyup="searchPCs()">
@@ -175,19 +220,19 @@
     </main>
 
     <!-- Lightbox Briefing Modal -->
-    <div id="briefing-modal" class="modal-backdrop">
+    <div id="briefing-modal" class="modal-backdrop" onclick="if(event.target === this) closeModal()">
         <div class="modal-box">
             <div class="modal-header">
                 <div class="modal-title-wrap">
-                    <h3 id="modal-pc-title">PC-414-05 Detailed Briefing</h3>
+                    <h3 id="modal-pc-title">PC Detailed Briefing</h3>
                     <span class="modal-badge" id="modal-status-badge">🟢 ONLINE</span>
                 </div>
-                <button class="modal-close" onclick="closeModal()">✕</button>
+                <button class="modal-close" onclick="closeModal()" title="Close Briefing">✕</button>
             </div>
             <div class="modal-body">
                 <div class="modal-col-media">
                     <div class="screen-preview-container">
-                        <img id="modal-screen-img" src="" alt="Workstation Screen Preview">
+                        <img id="modal-screen-img" src="" alt="Workstation Screen Preview" onclick="window.open(this.src, '_blank')" style="cursor: zoom-in;" title="Click to view full image in new tab">
                         <div id="modal-screen-placeholder" class="screen-placeholder">
                             <span>📸 No screen captured yet</span>
                             <small>Click "Grab Live Screen" below</small>
@@ -195,8 +240,11 @@
                     </div>
                     <div class="screen-actions">
                         <button class="btn btn-primary btn-block" id="modal-grab-btn" onclick="requestModalScreenGrab()">
-                            📸 Grab Fresh Screen
+                            📸 Grab Fresh Screen Now
                         </button>
+                        <a id="modal-full-img-btn" href="#" target="_blank" class="btn btn-outline btn-block" style="text-decoration: none; display: none;">
+                            🔗 Open High-Res Image ↗
+                        </a>
                         <span class="snap-timestamp" id="modal-snap-time">Last snap: N/A</span>
                     </div>
                 </div>
@@ -259,6 +307,24 @@
             </div>
         </div>
     </div>
+
+    <!-- Official PIET Departmental Institutional Footer -->
+    <footer class="piet-footer">
+        <div class="piet-footer-inner">
+            <div class="footer-col">
+                <div class="footer-logo-text">
+                    <strong>PANIPAT INSTITUTE OF ENGINEERING &amp; TECHNOLOGY</strong>
+                </div>
+                <p class="footer-desc">An Autonomous Institute &bull; Approved by AICTE, New Delhi &bull; Affiliated to Kurukshetra University, Kurukshetra &bull; Accredited with 'A' Grade by NAAC</p>
+                <p class="footer-campus">📍 70 Milestone, GT Road, Samalkha, Panipat, Haryana - 132102 &bull; 📞 1800 120 6884</p>
+            </div>
+            <div class="footer-col text-right">
+                <div class="footer-dept-title">DEPARTMENT OF ARTIFICIAL INTELLIGENCE &amp; MACHINE LEARNING</div>
+                <p class="footer-incharge">Head of Department / In-Charge: <strong>Prof. Dr. Richa Choudhary</strong></p>
+                <p class="footer-credits">Automated Lab Supervision &amp; Workstation Telemetry Network &bull; High-Performance Deep Learning Lab Node</p>
+            </div>
+        </div>
+    </footer>
 
     <!-- Toast Notification Hub -->
     <div id="toast-container" class="toast-hub"></div>

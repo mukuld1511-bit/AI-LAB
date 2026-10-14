@@ -17,9 +17,12 @@
     --text-secondary: #475569;
     --text-muted: #94a3b8;
 
-    --primary: #2563eb;
-    --primary-hover: #1d4ed8;
-    --primary-light: #eff6ff;
+    --primary: #008b38;
+    --primary-hover: #00732e;
+    --primary-light: #e8f5e9;
+    --primary-border: #a5d6a7;
+    --piet-dark-green: #005a24;
+    --piet-gold: #f59e0b;
 
     --success: #16a34a;
     --success-light: #dcfce7;
@@ -70,7 +73,60 @@ body {
 .text-rose { color: var(--danger) !important; }
 .mono { font-family: 'JetBrains Mono', monospace; }
 
-/* ── Top Header ── */
+/* ── Official PIET Top Bar ── */
+.piet-top-bar {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 11px;
+    color: #475569;
+    padding: 6px 28px;
+}
+.piet-top-bar-inner {
+    max-width: 1560px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.piet-top-left {
+    font-weight: 600;
+    color: #334155;
+    letter-spacing: 0.2px;
+}
+.piet-top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.piet-top-link {
+    color: #475569;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+.piet-top-link:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+.piet-top-sep {
+    color: #cbd5e1;
+}
+.piet-toll-free {
+    color: #0f172a;
+}
+.piet-mesh-badge {
+    background: #dcfce7;
+    color: #166534;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    border: 1px solid #bbf7d0;
+}
+
+/* ── Official PIET Header ── */
 .app-header {
     background: #ffffff;
     border-bottom: 1px solid var(--border-light);
@@ -79,26 +135,34 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 20px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow-sm);
+    position: relative;
+    z-index: 90;
 }
 
 .header-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
 }
 
-.brand-logo {
-    background: var(--primary);
-    color: #ffffff;
-    font-weight: 800;
-    font-size: 15px;
-    letter-spacing: 0.5px;
-    padding: 6px 12px;
-    border-radius: var(--radius-sm);
+.piet-logo-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.piet-logo-img {
+    height: 52px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.brand-divider {
+    width: 1.5px;
+    height: 44px;
+    background: #e2e8f0;
 }
 
 .brand-text h1 {
@@ -108,35 +172,152 @@ body {
     line-height: 1.2;
 }
 
+.univ-tag {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 0.8px;
+    margin-bottom: 2px;
+}
+
 .brand-sub {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--text-secondary);
     font-weight: 500;
 }
 
-/* Lab Switcher Segmented Control */
-.lab-switcher {
+.header-right {
     display: flex;
-    gap: 4px;
-    background: var(--bg-subtle);
-    padding: 4px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-light);
+    align-items: center;
+    gap: 14px;
 }
 
-.lab-pill {
+.live-clock-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.clock-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+}
+
+.live-clock {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.header-action-btns {
+    display: flex;
+    gap: 8px;
+}
+
+/* ── Official PIET Forest Green Navigation Ribbon ── */
+.piet-nav-ribbon {
+    background: linear-gradient(135deg, #008b38 0%, #00732e 100%);
+    color: #ffffff;
+    padding: 8px 28px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 139, 56, 0.18);
+}
+
+.nav-ribbon-inner {
+    max-width: 1560px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.nav-ribbon-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.nav-dept-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.3px;
+}
+
+.piet-nav-ribbon .lab-switcher {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 3px;
+    border-radius: 9999px;
+    display: flex;
+    gap: 4px;
+}
+
+.piet-nav-ribbon .lab-pill {
     background: transparent;
     border: none;
-    color: var(--text-secondary);
-    font-size: 13px;
+    color: #e2e8f0;
+    font-size: 12.5px;
     font-weight: 600;
-    padding: 6px 14px;
-    border-radius: var(--radius-sm);
+    padding: 5px 12px;
+    border-radius: 9999px;
     cursor: pointer;
     transition: all 0.15s ease;
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+.piet-nav-ribbon .lab-pill:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.piet-nav-ribbon .lab-pill.active {
+    background: #ffffff;
+    color: #00732e;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.piet-nav-ribbon .lab-pill .tag {
+    background: #fef08a;
+    color: #854d0e;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    margin-left: 2px;
+}
+
+.nav-ext-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.2s ease;
+}
+
+.nav-ext-link:hover {
+    background: #ffffff;
+    color: #00732e;
 }
 
 .lab-pill:hover {
@@ -1092,4 +1273,74 @@ body {
 @keyframes slideIn {
     from { transform: translateX(30px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
+}
+
+/* ── PIET University Institutional Footer ── */
+.piet-footer {
+    background: #0f172a;
+    color: #94a3b8;
+    border-top: 3px solid #008b38;
+    padding: 24px 28px;
+    margin-top: 40px;
+    font-size: 12px;
+}
+
+.piet-footer-inner {
+    max-width: 1560px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.footer-logo-text strong {
+    color: #ffffff;
+    font-size: 13.5px;
+    letter-spacing: 0.5px;
+}
+
+.footer-desc {
+    color: #cbd5e1;
+    margin-top: 4px;
+    font-size: 11.5px;
+}
+
+.footer-campus {
+    color: #94a3b8;
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+.footer-dept-title {
+    color: #4ade80;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+.footer-incharge {
+    color: #ffffff;
+    margin-top: 4px;
+    font-size: 11.5px;
+}
+
+.footer-credits {
+    color: #64748b;
+    margin-top: 2px;
+    font-size: 10.5px;
+}
+
+.text-right {
+    text-align: right;
+}
+
+@media (max-width: 900px) {
+    .text-right { text-align: left; }
+    .brand-divider { display: none; }
+    .header-brand { flex-direction: column; align-items: flex-start; }
+    .piet-top-bar { display: none; }
+    .piet-nav-ribbon { padding: 8px 16px; }
+    .app-header { padding: 12px 16px; flex-direction: column; align-items: flex-start; }
 }
