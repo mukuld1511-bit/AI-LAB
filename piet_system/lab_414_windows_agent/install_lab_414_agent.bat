@@ -41,7 +41,7 @@ echo.
 echo {
 echo     "pc_id": "%TARGET_PC%",
 echo     "lab_id": "LAB-414",
-echo     "hub_url": "https://labg418pc12.tailc8c1f6.ts.net",
+echo     "hub_url": "https://raspberrypi.tailc8c1f6.ts.net",
 echo     "heartbeat_interval": 6,
 echo     "idle_threshold_seconds": 180
 echo }
