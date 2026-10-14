@@ -2331,13 +2331,42 @@ async function deleteStudentProject(projectId) {
 
 // --- Custom Multi-Select for Technologies ---
 const predefinedTechs = [
-    "Python", "PyTorch", "TensorFlow", "Keras", "Scikit-Learn", "Pandas", "NumPy", "OpenCV", "YOLOv8", "YOLOv10",
-    "ROS", "ROS2", "CUDA", "TensorRT", "LangChain", "LlamaIndex", "Ollama", "vLLM", "HuggingFace", "Transformers",
+    // Core AI & ML Languages & Libraries
+    "Python", "PyTorch", "TensorFlow", "Keras", "Scikit-Learn", "Pandas", "NumPy", "SciPy", "Polars", "Statsmodels",
+    
+    // Reinforcement Learning (RL) & Simulation
+    "Reinforcement Learning (RL)", "Stable-Baselines3 (SB3)", "Gymnasium / OpenAI Gym", "RLlib / Ray", "CleanRL",
+    "Deep Q-Learning (DQN)", "PPO (Proximal Policy)", "SAC (Soft Actor-Critic)", "MuJoCo", "NVIDIA Isaac Sim", 
+    "NVIDIA Isaac Gym", "PyBullet", "PettingZoo (Multi-Agent RL)",
+
+    // Machine Learning & Gradient Boosting
+    "Machine Learning (ML)", "Deep Learning (DL)", "XGBoost", "LightGBM", "CatBoost", "Optuna (HPO)",
+    "MLflow", "Weights & Biases (W&B)", "DVC (Data Version Control)", "Seaborn", "Matplotlib",
+
+    // Computer Vision & Object Detection
+    "OpenCV", "YOLOv8", "YOLOv10", "YOLOv11", "MediaPipe", "Albumentations", "DeepFace", "SAM (Segment Anything)",
+
+    // LLM, Agents & GenAI
+    "LangChain", "LangGraph", "LlamaIndex", "CrewAI", "AutoGen", "Transformers", "HuggingFace", "Diffusers",
+    "ComfyUI", "Ollama", "vLLM", "DeepSpeed", "LoRA / QLoRA", "PEFT", "Unsloth", "Whisper",
+
+    // Hardware, Acceleration & Embedded
+    "CUDA", "TensorRT", "TensorRT-LLM", "OpenVINO", "Triton Inference Server", "TFLite", "ONNX",
+    "NVIDIA Jetson", "Raspberry Pi", "Arduino", "MATLAB", "ROS", "ROS2",
+
+    // Data & Notebook Environments
+    "Jupyter Lab / Notebook", "Google Colab", "Kaggle",
+
+    // Databases & Vector Stores
+    "MongoDB", "PostgreSQL", "SQLite", "MySQL", "Redis", "Elasticsearch", "Qdrant", "ChromaDB", "Pinecone", "Milvus",
+
+    // Web & Full-Stack
     "FastAPI", "Flask", "Django", "React", "Next.js", "Vue", "Angular", "Node.js", "Express", "TypeScript",
-    "MongoDB", "PostgreSQL", "SQLite", "MySQL", "Redis", "Elasticsearch", "Qdrant", "ChromaDB", "Pinecone",
-    "Docker", "Kubernetes", "AWS", "GCP", "Azure", "Linux", "Bash", "Git", "GitHub Actions", "Jenkins",
-    "Terraform", "Ansible", "WebRTC", "Socket.io", "Three.js", "WebGL", "C++", "C#", "Java", "Go", "Rust",
-    "MATLAB", "Arduino", "Raspberry Pi", "NVIDIA Jetson", "ONNX"
+    "Three.js", "WebGL", "WebRTC", "Socket.io",
+
+    // Systems, Languages & DevOps
+    "C++", "C#", "Java", "Go", "Rust", "Linux", "Bash", "Docker", "Kubernetes", "AWS", "GCP", "Azure",
+    "Git", "GitHub Actions", "Jenkins", "Terraform", "Ansible"
 ];
 
 let selectedTechs = new Set();

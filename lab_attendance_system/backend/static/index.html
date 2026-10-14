@@ -823,8 +823,11 @@ We will notify as soon as a slot frees up.
                     <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #166534; display: flex; align-items: center; gap: 6px;">
                         <span>👥 Add Partner / Teammate to this Workstation:</span>
                     </label>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="modal-add-partner-input" class="form-input" placeholder="Enter student name to add to this PC..." style="flex: 1;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <select id="modal-add-partner-select" class="form-input" style="flex: 1; min-width: 220px;" onchange="onAddPartnerSelectChange(this)">
+                            <option value="">-- Choose from Registered Students --</option>
+                        </select>
+                        <input type="text" id="modal-add-partner-input" list="registered-members-list" class="form-input" placeholder="Or type student name..." style="flex: 1; min-width: 180px;">
                         <button type="button" class="btn btn-secondary" onclick="submitAddPartnerToPC()" style="white-space: nowrap; background: #ffffff; border-color: #86efac; color: #15803d; font-weight: 700;">➕ Add Partner</button>
                     </div>
                     <div id="modal-current-partners-list" style="margin-top: 8px; font-size: 12px; color: #1e293b;"></div>

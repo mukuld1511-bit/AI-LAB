@@ -558,9 +558,46 @@ def add_occupant_endpoint(payload: AddOccupantRequest, pc_id: Optional[str] = No
     if not target_name:
         raise HTTPException(status_code=400, detail="student_name is required.")
 
-    result = database.add_occupant_to_pc(pc_id=target_pc, new_name=target_name, new_email=payload.email)
+    # Auto-resolve student's email and role from registered_users if not passed
+    target_email = (payload.email or "").strip()
+    user_role = "Student"
+    try:
+        all_users = database.get_registered_users()
+        for u in all_users:
+            if u.get("name", "").strip().lower() == target_name.lower():
+                if not target_email and u.get("email"):
+                    target_email = u["email"].strip()
+                if u.get("role"):
+                    user_role = u["role"]
+                break
+    except Exception as e:
+        print(f"[WARN] Error looking up user for add_occupant: {e}")
+
+    result = database.add_occupant_to_pc(pc_id=target_pc, new_name=target_name, new_email=target_email)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("message"))
+
+    # Automatically dispatch allotment email to newly added teammate
+    email_result = None
+    if target_email:
+        try:
+            all_pcs = database.get_all_pc_status()
+            pc_info = next((p for p in all_pcs if p.get("pc_id", "").upper() == target_pc.upper()), {})
+            email_result = mailer.send_allotment_email(
+                to_email=target_email,
+                student_name=target_name,
+                pc_id=target_pc,
+                start_time=pc_info.get("since_time") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                end_time=pc_info.get("end_time"),
+                duration_mins=pc_info.get("duration_mins"),
+                notes=f"Added as project teammate to {target_pc} with {result.get('all_occupants')}",
+                user_role=user_role,
+                current_project=pc_info.get("current_project") or ""
+            )
+        except Exception as e:
+            email_result = {"success": False, "error": str(e)}
+
+    result["email_result"] = email_result
     return result
 
 

@@ -766,25 +766,49 @@ function appendStudentPartner() {
     showToast(`👥 Added '${chosenName}' to group for ${currentPCId || 'Workstation'}`, "success");
 }
 
+function onAddPartnerSelectChange(sel) {
+    if (!sel) return;
+    const input = document.getElementById("modal-add-partner-input");
+    if (input && sel.value) {
+        input.value = sel.value;
+    }
+}
+
 async function submitAddPartnerToPC() {
     if (!currentPCId) return;
+    const select = document.getElementById("modal-add-partner-select");
     const input = document.getElementById("modal-add-partner-input");
-    const partnerName = (input ? input.value : "").trim();
+    const partnerName = ((input && input.value ? input.value : (select && select.value ? select.value : ""))).trim();
     if (!partnerName) {
-        showToast("Please enter a student name to add.", "error");
+        showToast("Please select or enter a student name to add.", "error");
         return;
     }
 
+    let partnerEmail = "";
+    if (select && select.selectedOptions && select.selectedOptions[0] && select.selectedOptions[0].dataset.email) {
+        partnerEmail = select.selectedOptions[0].dataset.email;
+    }
+    if (!partnerEmail && typeof registeredUsersList !== "undefined" && registeredUsersList) {
+        const found = registeredUsersList.find(u => u.name && u.name.toLowerCase() === partnerName.toLowerCase());
+        if (found && found.email) partnerEmail = found.email;
+    }
+
     try {
-        await apiFetch(`/pc/${currentPCId}/add_occupant`, {
+        const res = await apiFetch(`/pc/${currentPCId}/add_occupant`, {
             method: "POST",
             body: JSON.stringify({
                 pc_id: currentPCId,
-                student_name: partnerName
+                student_name: partnerName,
+                email: partnerEmail
             })
         });
-        showToast(`👥 Added '${partnerName}' to ${currentPCId}`, "success");
+        let msg = `👥 Added '${partnerName}' to ${currentPCId}`;
+        if (res && res.email_result && res.email_result.success) {
+            msg += ` • ✉️ Email Delivered`;
+        }
+        showToast(msg, "success");
         if (input) input.value = "";
+        if (select) select.value = "";
         closePCModal();
         loadPCStatus(false);
     } catch (e) {
@@ -1126,7 +1150,7 @@ function applyQuickTimePreset(mins) {
 // Populate Registered Members Dropdown for Allotment
 async function populateStudentSelect() {
     const select = document.getElementById("modal-student-select");
-    if (!select) return;
+    const partnerSelect = document.getElementById("modal-add-partner-select");
 
     if (!registeredUsersList || registeredUsersList.length === 0) {
         try {
@@ -1137,19 +1161,36 @@ async function populateStudentSelect() {
         }
     }
 
-    select.innerHTML = '<option value="">-- Choose from Registered Database --</option>';
-    registeredUsersList.forEach(user => {
-        const opt = document.createElement("option");
-        opt.value = user.name;
-        const role = user.role || "Student";
-        const icon = role.toLowerCase() === "faculty" ? "👨‍🏫" : role.toLowerCase() === "guest" ? "👤" : "🎓";
-        const rollStr = user.roll_no ? ` (${user.roll_no})` : "";
-        const emailStr = user.email ? ` • ${user.email}` : "";
-        opt.innerText = `${icon} [${role}] ${user.name}${rollStr}${emailStr}`;
-        opt.dataset.email = user.email || "";
-        opt.dataset.role = role;
-        select.appendChild(opt);
-    });
+    if (select) {
+        select.innerHTML = '<option value="">-- Choose from Registered Database --</option>';
+        registeredUsersList.forEach(user => {
+            const opt = document.createElement("option");
+            opt.value = user.name;
+            const role = user.role || "Student";
+            const icon = role.toLowerCase() === "faculty" ? "👨‍🏫" : role.toLowerCase() === "guest" ? "👤" : "🎓";
+            const rollStr = user.roll_no ? ` (${user.roll_no})` : "";
+            const emailStr = user.email ? ` • ${user.email}` : "";
+            opt.innerText = `${icon} [${role}] ${user.name}${rollStr}${emailStr}`;
+            opt.dataset.email = user.email || "";
+            opt.dataset.role = role;
+            select.appendChild(opt);
+        });
+    }
+
+    if (partnerSelect) {
+        partnerSelect.innerHTML = '<option value="">-- Choose from Registered Students --</option>';
+        registeredUsersList.forEach(user => {
+            const opt = document.createElement("option");
+            opt.value = user.name;
+            const role = user.role || "Student";
+            const icon = role.toLowerCase() === "faculty" ? "👨‍🏫" : role.toLowerCase() === "guest" ? "👤" : "🎓";
+            const rollStr = user.roll_no ? ` (${user.roll_no})` : "";
+            opt.innerText = `${icon} [${role}] ${user.name}${rollStr}`;
+            opt.dataset.email = user.email || "";
+            opt.dataset.role = role;
+            partnerSelect.appendChild(opt);
+        });
+    }
 
     // Also populate registered-members-list datalist
     const datalist = document.getElementById("registered-members-list");
@@ -1965,6 +2006,7 @@ async function submitNewStudent() {
 
         closeAddUserModal();
         await loadRegisteredFaces();
+        populateMembersDatalist();
     } catch (e) {
         showToast("Registration failed: " + e.message, "error");
     } finally {
@@ -2478,6 +2520,7 @@ function renderProjectsGrid(projects) {
 }
 
 function openAddProjectModal() {
+    populateMembersDatalist();
     document.getElementById("project-modal-title").innerText = "➕ Add Student Research Project";
     document.getElementById("proj-edit-id").value = "";
     document.getElementById("proj-title").value = "";
@@ -2486,7 +2529,6 @@ function openAddProjectModal() {
     document.getElementById("proj-details").value = "";
     document.getElementById("proj-description").value = "";
     setTechSelection("");
-        setStudentSelection("");
     setDurationSelection("");
     document.getElementById("proj-deployment-url").value = "";
     document.getElementById("proj-github-url").value = "";
@@ -2499,6 +2541,7 @@ function openAddProjectModal() {
 }
 
 function openEditProjectModal(projectId) {
+    populateMembersDatalist();
     const proj = allProjectsData.find(p => p.id === projectId);
     if (!proj) return;
 
@@ -2610,13 +2653,42 @@ async function deleteStudentProject(projectId) {
 
 // --- Custom Multi-Select for Technologies ---
 const predefinedTechs = [
-    "Python", "PyTorch", "TensorFlow", "Keras", "Scikit-Learn", "Pandas", "NumPy", "OpenCV", "YOLOv8", "YOLOv10",
-    "ROS", "ROS2", "CUDA", "TensorRT", "LangChain", "LlamaIndex", "Ollama", "vLLM", "HuggingFace", "Transformers",
+    // Core AI & ML Languages & Libraries
+    "Python", "PyTorch", "TensorFlow", "Keras", "Scikit-Learn", "Pandas", "NumPy", "SciPy", "Polars", "Statsmodels",
+    
+    // Reinforcement Learning (RL) & Simulation
+    "Reinforcement Learning (RL)", "Stable-Baselines3 (SB3)", "Gymnasium / OpenAI Gym", "RLlib / Ray", "CleanRL",
+    "Deep Q-Learning (DQN)", "PPO (Proximal Policy)", "SAC (Soft Actor-Critic)", "MuJoCo", "NVIDIA Isaac Sim", 
+    "NVIDIA Isaac Gym", "PyBullet", "PettingZoo (Multi-Agent RL)",
+
+    // Machine Learning & Gradient Boosting
+    "Machine Learning (ML)", "Deep Learning (DL)", "XGBoost", "LightGBM", "CatBoost", "Optuna (HPO)",
+    "MLflow", "Weights & Biases (W&B)", "DVC (Data Version Control)", "Seaborn", "Matplotlib",
+
+    // Computer Vision & Object Detection
+    "OpenCV", "YOLOv8", "YOLOv10", "YOLOv11", "MediaPipe", "Albumentations", "DeepFace", "SAM (Segment Anything)",
+
+    // LLM, Agents & GenAI
+    "LangChain", "LangGraph", "LlamaIndex", "CrewAI", "AutoGen", "Transformers", "HuggingFace", "Diffusers",
+    "ComfyUI", "Ollama", "vLLM", "DeepSpeed", "LoRA / QLoRA", "PEFT", "Unsloth", "Whisper",
+
+    // Hardware, Acceleration & Embedded
+    "CUDA", "TensorRT", "TensorRT-LLM", "OpenVINO", "Triton Inference Server", "TFLite", "ONNX",
+    "NVIDIA Jetson", "Raspberry Pi", "Arduino", "MATLAB", "ROS", "ROS2",
+
+    // Data & Notebook Environments
+    "Jupyter Lab / Notebook", "Google Colab", "Kaggle",
+
+    // Databases & Vector Stores
+    "MongoDB", "PostgreSQL", "SQLite", "MySQL", "Redis", "Elasticsearch", "Qdrant", "ChromaDB", "Pinecone", "Milvus",
+
+    // Web & Full-Stack
     "FastAPI", "Flask", "Django", "React", "Next.js", "Vue", "Angular", "Node.js", "Express", "TypeScript",
-    "MongoDB", "PostgreSQL", "SQLite", "MySQL", "Redis", "Elasticsearch", "Qdrant", "ChromaDB", "Pinecone",
-    "Docker", "Kubernetes", "AWS", "GCP", "Azure", "Linux", "Bash", "Git", "GitHub Actions", "Jenkins",
-    "Terraform", "Ansible", "WebRTC", "Socket.io", "Three.js", "WebGL", "C++", "C#", "Java", "Go", "Rust",
-    "MATLAB", "Arduino", "Raspberry Pi", "NVIDIA Jetson", "ONNX"
+    "Three.js", "WebGL", "WebRTC", "Socket.io",
+
+    // Systems, Languages & DevOps
+    "C++", "C#", "Java", "Go", "Rust", "Linux", "Bash", "Docker", "Kubernetes", "AWS", "GCP", "Azure",
+    "Git", "GitHub Actions", "Jenkins", "Terraform", "Ansible"
 ];
 
 let selectedTechs = new Set();
