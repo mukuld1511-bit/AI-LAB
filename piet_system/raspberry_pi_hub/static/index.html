@@ -334,6 +334,106 @@
         .nav-ribbon-right a:hover, .nav-ext-link:hover {
             background: rgba(255, 255, 255, 0.28) !important;
         }
+
+        /* Complete Institutional Print & PDF Optimization */
+        @media print {
+            .piet-top-bar,
+            .app-header,
+            .piet-nav-ribbon,
+            .session-banner,
+            .nav-subtabs,
+            .letterhead-actions,
+            .card-header,
+            .piet-footer,
+            #view-grid,
+            #view-timetable,
+            .toast-hub,
+            .modal-backdrop,
+            #toast-container {
+                display: none !important;
+            }
+            
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            .main-wrapper {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            
+            #view-analytics {
+                display: block !important;
+            }
+            
+            .analytics-card {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+            }
+            
+            .report-letterhead {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: flex-start !important;
+                align-items: center !important;
+                border: 2px solid #000000 !important;
+                box-shadow: none !important;
+                padding: 14px 20px !important;
+                margin-bottom: 16px !important;
+                gap: 20px !important;
+                page-break-inside: avoid !important;
+            }
+            
+            .report-piet-logo {
+                height: 72px !important;
+                width: auto !important;
+                border: 1.5px solid #000000 !important;
+            }
+            
+            .report-summary-boxes {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 10px !important;
+                margin-bottom: 16px !important;
+            }
+            
+            .summary-box {
+                border: 1.5px solid #000000 !important;
+                box-shadow: none !important;
+                padding: 8px 12px !important;
+                background: #ffffff !important;
+            }
+            
+            .table-responsive {
+                border: 1.5px solid #000000 !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+            
+            .piet-table {
+                width: 100% !important;
+            }
+            
+            .piet-table th {
+                background: #000000 !important;
+                color: #ffffff !important;
+                border: 1px solid #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            .piet-table td {
+                border-bottom: 1px solid #cbd5e1 !important;
+                color: #0f172a !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -363,7 +463,7 @@
     <header class="app-header">
         <div class="header-brand">
             <a href="https://www.piet.co.in" target="_blank" class="piet-logo-link" title="Panipat Institute of Engineering & Technology">
-                <img src="piet_logo_wide.png?v=2" alt="PIET Logo" class="piet-logo-img">
+                <img src="piet_logo_wide.png?v=3" alt="PIET Logo" class="piet-logo-img">
             </a>
             <div class="brand-divider"></div>
             <div class="brand-text">
@@ -380,11 +480,11 @@
                 <div class="live-clock mono" id="live-clock">10:00:00 AM</div>
             </div>
             <div class="header-action-btns">
-                <button class="btn btn-primary" onclick="requestAllScreenshots()" title="Dispatches stealth screenshot to all online PCs">
-                    📸 Snap All PCs
+                <button class="btn btn-primary" onclick="requestAllScreenshots()" title="Dispatches live screenshot capture to all online workstations">
+                    📸 Capture All Screens
                 </button>
                 <button class="btn btn-outline" onclick="exportDailyReport()" title="Export today's lab utilization report">
-                    📑 Daily Report
+                    📑 Utilization Report
                 </button>
             </div>
         </div>

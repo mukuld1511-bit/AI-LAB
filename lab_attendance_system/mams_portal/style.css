@@ -1427,58 +1427,101 @@ body {
 
 /* Institutional Report Print Styles */
 @media print {
-    body {
-        background: #ffffff !important;
-        color: #000000 !important;
-    }
-    .piet-topbar,
+    .piet-top-bar,
+    .app-header,
     .piet-nav-ribbon,
     .session-banner,
     .nav-subtabs,
     .letterhead-actions,
+    .card-header,
     .piet-footer,
     #view-grid,
     #view-timetable,
     .toast-hub,
-    .modal-backdrop {
+    .modal-backdrop,
+    #toast-container {
         display: none !important;
     }
-    #view-analytics {
-        display: block !important;
+    
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
+    
     .main-wrapper {
         padding: 0 !important;
         margin: 0 !important;
         max-width: 100% !important;
     }
+    
+    #view-analytics {
+        display: block !important;
+    }
+    
     .analytics-card {
         border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
     }
+    
     .report-letterhead {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
         border: 2px solid #000000 !important;
         box-shadow: none !important;
-        padding: 12px 16px !important;
-        margin-bottom: 20px !important;
-        page-break-inside: avoid;
+        padding: 14px 20px !important;
+        margin-bottom: 16px !important;
+        gap: 20px !important;
+        page-break-inside: avoid !important;
     }
+    
     .report-piet-logo {
-        height: 60px !important;
+        height: 72px !important;
+        width: auto !important;
+        border: 1.5px solid #000000 !important;
     }
+    
+    .report-summary-boxes {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        margin-bottom: 16px !important;
+    }
+    
+    .summary-box {
+        border: 1.5px solid #000000 !important;
+        box-shadow: none !important;
+        padding: 8px 12px !important;
+        background: #ffffff !important;
+    }
+    
     .table-responsive {
-        border: 1px solid #000000 !important;
+        border: 1.5px solid #000000 !important;
         box-shadow: none !important;
         overflow: visible !important;
     }
-    .piet-table th {
-        background: #f1f5f9 !important;
-        color: #000000 !important;
-        border: 1px solid #000000 !important;
+    
+    .piet-table {
+        width: 100% !important;
     }
+    
+    .piet-table th {
+        background: #000000 !important;
+        color: #ffffff !important;
+        border: 1px solid #000000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
     .piet-table td {
-        border: 1px solid #cbd5e1 !important;
-        color: #000000 !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
     }
 }
 
