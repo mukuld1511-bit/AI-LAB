@@ -10,6 +10,7 @@ set -e
 
 INSTALL_DIR="/opt/piet_system/raspberry_pi_hub"
 SERVICE_NAME="piet-lab-hub.service"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "================================================================="
 echo "  PIET AIML DEPARTMENT — RASPBERRY PI 5 HUB INSTALLER"
@@ -28,7 +29,11 @@ apt-get install -y python3 python3-pip python3-venv git curl
 # 2. Setup Application Directory
 echo "[2/4] Setting up hub directory in $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
-cp -r "$(dirname "$0")"/* "$INSTALL_DIR/" 2>/dev/null || true
+if [ -d "$SCRIPT_DIR/raspberry_pi_hub" ]; then
+  cp -r "$SCRIPT_DIR/raspberry_pi_hub"/* "$INSTALL_DIR/"
+else
+  cp -r "$SCRIPT_DIR"/* "$INSTALL_DIR/" 2>/dev/null || true
+fi
 
 # 3. Create Python Virtual Environment
 echo "[3/4] Creating virtual environment & installing fast dependencies..."
