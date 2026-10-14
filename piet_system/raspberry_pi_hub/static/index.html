@@ -60,7 +60,7 @@
             </div>
             <div class="session-stats">
                 <div class="kpi-mini">
-                    <span class="kpi-num" id="kpi-total">30</span>
+                    <span class="kpi-num" id="kpi-total">20</span>
                     <span class="kpi-lbl">Total PCs</span>
                 </div>
                 <div class="kpi-mini text-success">
@@ -75,9 +75,9 @@
                     <span class="kpi-num" id="kpi-idle">0</span>
                     <span class="kpi-lbl">Idle</span>
                 </div>
-                <div class="kpi-mini text-rose">
-                    <span class="kpi-num" id="kpi-warning">0</span>
-                    <span class="kpi-lbl">Warnings</span>
+                <div class="kpi-mini">
+                    <span class="kpi-num" id="kpi-offline" style="color: #64748b;">20</span>
+                    <span class="kpi-lbl">Offline</span>
                 </div>
             </div>
         </section>
@@ -95,9 +95,9 @@
                 <div class="filter-group">
                     <button class="filter-btn active" onclick="filterPCs('all')">All Workstations</button>
                     <button class="filter-btn" onclick="filterPCs('online')">🟢 Online Only</button>
-                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 Fruitful Work</button>
+                    <button class="filter-btn" onclick="filterPCs('fruitful')">🎯 Fruitful (Coding)</button>
                     <button class="filter-btn" onclick="filterPCs('idle')">💤 Idle PCs</button>
-                    <button class="filter-btn" onclick="filterPCs('warning')">⚠️ Warnings / Defaulters</button>
+                    <button class="filter-btn" onclick="filterPCs('offline')">⚪ Offline Only</button>
                 </div>
                 <div class="search-box">
                     <input type="text" id="pc-search-input" placeholder="Search PC (e.g. PC-414-05, Chrome)..." onkeyup="searchPCs()">

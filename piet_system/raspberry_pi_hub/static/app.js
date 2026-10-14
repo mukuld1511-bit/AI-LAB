@@ -91,11 +91,14 @@ function updateSessionBanner(data) {
     }
 
     // KPIs
-    document.getElementById("kpi-total").innerText = data.total_pcs || 30;
-    document.getElementById("kpi-online").innerText = data.online_count || 0;
-    document.getElementById("kpi-fruitful").innerText = data.fruitful_count || 0;
-    document.getElementById("kpi-idle").innerText = data.idle_count || 0;
-    document.getElementById("kpi-warning").innerText = data.warning_count || 0;
+    const tot = data.total_pcs || (allPCs ? allPCs.length : 20);
+    const onl = data.online_count || 0;
+    const off = Math.max(0, tot - onl);
+    if (document.getElementById("kpi-total")) document.getElementById("kpi-total").innerText = tot;
+    if (document.getElementById("kpi-online")) document.getElementById("kpi-online").innerText = onl;
+    if (document.getElementById("kpi-fruitful")) document.getElementById("kpi-fruitful").innerText = data.fruitful_count || 0;
+    if (document.getElementById("kpi-idle")) document.getElementById("kpi-idle").innerText = data.idle_count || 0;
+    if (document.getElementById("kpi-offline")) document.getElementById("kpi-offline").innerText = off;
 }
 
 // ── Render Workstation Cards Grid ──
@@ -112,6 +115,8 @@ function renderWorkstationsGrid() {
         filtered = filtered.filter(p => p.is_online && p.activity_type === "fruitful");
     } else if (currentFilter === "idle") {
         filtered = filtered.filter(p => p.is_online && p.activity_type === "idle");
+    } else if (currentFilter === "offline") {
+        filtered = filtered.filter(p => !p.is_online);
     } else if (currentFilter === "warning") {
         filtered = filtered.filter(p => p.is_online && p.has_warning);
     }

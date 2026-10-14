@@ -44,17 +44,17 @@ def init_db():
         )
     """)
 
-    # Seed Default 5 AIML Labs
+    # Seed Default 5 AIML Labs (20 PCs each)
     default_labs = [
-        ("LAB-414", "AI & Deep Learning Lab 414", 30, "Primary Windows Lab — High Performance AI Workstations"),
-        ("LAB-415", "Machine Learning & Vision Lab 415", 30, "Windows Workstations — Computer Vision & NLP"),
-        ("LAB-416", "Data Science & Analytics Lab 416", 30, "Windows Workstations — Big Data & Analytics"),
-        ("LAB-417", "Python & Core AI Lab 417", 30, "Windows Workstations — Algorithm & ML Labs"),
-        ("LAB-418", "Project & Research Lab 418", 30, "Windows Workstations — Capstone Projects & DGX Terminal")
+        ("LAB-414", "AI & Deep Learning Lab 414", 20, "Primary Windows Lab — High Performance AI Workstations"),
+        ("LAB-415", "Machine Learning & Vision Lab 415", 20, "Windows Workstations — Computer Vision & NLP"),
+        ("LAB-416", "Data Science & Analytics Lab 416", 20, "Windows Workstations — Big Data & Analytics"),
+        ("LAB-417", "Python & Core AI Lab 417", 20, "Windows Workstations — Algorithm & ML Labs"),
+        ("LAB-418", "Project & Research Lab 418", 20, "Windows Workstations — Capstone Projects & DGX Terminal")
     ]
     for lab in default_labs:
         c.execute("""
-            INSERT OR IGNORE INTO labs (lab_id, name, total_pcs, description)
+            INSERT OR REPLACE INTO labs (lab_id, name, total_pcs, description)
             VALUES (?, ?, ?, ?)
         """, lab)
 
@@ -91,6 +91,16 @@ def init_db():
             FOREIGN KEY (lab_id) REFERENCES labs(lab_id)
         )
     """)
+
+    # Seed 20 PC slots for each lab (PC-414-01 to PC-414-20, etc.)
+    for lab_num in [414, 415, 416, 417, 418]:
+        lab_code = f"LAB-{lab_num}"
+        for i in range(1, 21):
+            p_id = f"PC-{lab_num}-{i:02d}"
+            c.execute("""
+                INSERT OR IGNORE INTO workstations (pc_id, lab_id, is_online, activity_type, active_window, active_app)
+                VALUES (?, ?, 0, 'neutral', '', '')
+            """, (p_id, lab_code))
 
     # Table 3: Daily Session Log Archives (For Historical Reports)
     c.execute("""

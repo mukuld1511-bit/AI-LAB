@@ -85,6 +85,27 @@ systemctl daemon-reload
 systemctl enable $SERVICE_NAME
 systemctl restart $SERVICE_NAME
 
+# Setup Tailscale Funnel auto-start on boot
+cat << 'EOF' > /etc/systemd/system/piet-funnel.service
+[Unit]
+Description=Tailscale Funnel Auto-Start for PIET Lab Hub
+After=network-online.target tailscaled.service piet-lab-hub.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/tailscale funnel --bg 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable piet-funnel.service
+
 # 5. Install & Connect Tailscale
 echo "[5/6] Setting up Tailscale (Node Name: pi-lab414)..."
 if ! command -v tailscale &> /dev/null; then
