@@ -7,7 +7,210 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261014_piet_v5">
+    <style>
+        /* ── Critical PIET Institutional Theme & Header ── */
+        :root {
+            --piet-green: #008b38;
+            --piet-dark-green: #00732e;
+            --piet-light-green: #e8f5e9;
+        }
+        .piet-top-bar {
+            background: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            font-size: 11.5px !important;
+            color: #475569 !important;
+            padding: 7px 28px !important;
+            line-height: 1.4 !important;
+        }
+        .piet-top-bar-inner {
+            max-width: 1560px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .piet-top-left {
+            font-weight: 600;
+            color: #334155;
+            letter-spacing: 0.2px;
+        }
+        .piet-top-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .piet-top-bar a, .piet-top-link {
+            color: #475569 !important;
+            text-decoration: none !important;
+            font-weight: 500 !important;
+            font-size: 11.5px !important;
+            transition: color 0.15s ease;
+        }
+        .piet-top-bar a:hover, .piet-top-link:hover {
+            color: #008b38 !important;
+            text-decoration: underline !important;
+        }
+        .piet-top-sep {
+            color: #cbd5e1;
+        }
+        .piet-toll-free {
+            color: #0f172a;
+            font-weight: 600;
+        }
+        .piet-mesh-badge {
+            background: #dcfce7 !important;
+            color: #166534 !important;
+            font-weight: 700 !important;
+            font-size: 10.5px !important;
+            padding: 2px 10px !important;
+            border-radius: 9999px !important;
+            border: 1px solid #bbf7d0 !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .app-header {
+            background: #ffffff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 12px 28px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 20px !important;
+        }
+        .header-brand {
+            display: flex !important;
+            align-items: center !important;
+            gap: 16px !important;
+        }
+        .piet-logo-link {
+            display: inline-flex !important;
+            align-items: center !important;
+            text-decoration: none !important;
+            flex-shrink: 0 !important;
+        }
+        .piet-logo-img {
+            height: 52px !important;
+            width: auto !important;
+            object-fit: contain !important;
+            border-radius: 4px !important;
+        }
+        .brand-divider {
+            width: 1.5px !important;
+            height: 46px !important;
+            background: #e2e8f0 !important;
+        }
+        .univ-tag {
+            display: block !important;
+            font-size: 10.5px !important;
+            font-weight: 800 !important;
+            color: #008b38 !important;
+            letter-spacing: 0.8px !important;
+            margin-bottom: 2px !important;
+        }
+        .brand-text h1 {
+            font-size: 18px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+            line-height: 1.2 !important;
+            margin: 0 !important;
+        }
+        .brand-sub {
+            font-size: 11.5px !important;
+            color: #64748b !important;
+            font-weight: 500 !important;
+        }
+        .piet-nav-ribbon {
+            background: linear-gradient(135deg, #008b38 0%, #00732e 100%) !important;
+            color: #ffffff !important;
+            padding: 9px 28px !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 100 !important;
+            box-shadow: 0 4px 12px rgba(0, 139, 56, 0.2) !important;
+        }
+        .nav-ribbon-inner {
+            max-width: 1560px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        .nav-ribbon-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .nav-dept-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #dcfce7;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .lab-switcher {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.15) !important;
+            padding: 4px 6px !important;
+            border-radius: 9999px !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        }
+        .lab-pill {
+            background: transparent !important;
+            border: none !important;
+            color: #ffffff !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            padding: 5px 14px !important;
+            border-radius: 9999px !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+        }
+        .lab-pill:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+        }
+        .lab-pill.active {
+            background: #ffffff !important;
+            color: #00732e !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12) !important;
+        }
+        .lab-pill .tag {
+            background: rgba(0, 0, 0, 0.2) !important;
+            color: #ffffff !important;
+            font-size: 9px !important;
+            font-weight: 800 !important;
+            padding: 1px 5px !important;
+            border-radius: 4px !important;
+        }
+        .lab-pill.active .tag {
+            background: #e8f5e9 !important;
+            color: #00732e !important;
+        }
+        .nav-ribbon-right a, .nav-ext-link {
+            color: #ffffff !important;
+            text-decoration: none !important;
+            font-size: 11.5px !important;
+            font-weight: 600 !important;
+            background: rgba(255, 255, 255, 0.16) !important;
+            padding: 5px 14px !important;
+            border-radius: 6px !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            transition: background 0.15s !important;
+        }
+        .nav-ribbon-right a:hover, .nav-ext-link:hover {
+            background: rgba(255, 255, 255, 0.28) !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Official PIET Top Utility Bar -->
