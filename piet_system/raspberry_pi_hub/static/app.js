@@ -202,6 +202,13 @@ function renderWorkstationsGrid() {
                     <span>GPU: <strong>${pc.gpu_percent || 0}%</strong></span>
                 </div>
 
+                ${pc.screenshot_url ? `
+                    <div class="card-screenshot-wrap" onclick="openBriefingModal('${pc.pc_id}')" title="Click to view full screen">
+                        <img class="card-screenshot-img" src="${pc.screenshot_url.replace('/static/screenshots/', '/screenshots/')}" alt="Screen Preview" onerror="this.src='/screenshots/${pc.pc_id.toLowerCase()}.jpg'">
+                        <div class="card-screenshot-overlay">🔍 Click to enlarge</div>
+                    </div>
+                ` : ''}
+
                 <div class="card-footer">
                     <button class="btn btn-outline" onclick="requestSingleScreen('${pc.pc_id}', this)" ${!isOnline ? 'disabled' : ''}>
                         📸 Snap
@@ -329,7 +336,11 @@ function populateModalData(pc) {
     const img = document.getElementById("modal-screen-img");
     const placeholder = document.getElementById("modal-screen-placeholder");
     if (pc.screenshot_url) {
-        img.src = pc.screenshot_url;
+        let snapSrc = pc.screenshot_url;
+        if (snapSrc.startsWith("/static/screenshots/")) {
+            snapSrc = snapSrc.replace("/static/screenshots/", "/screenshots/");
+        }
+        img.src = snapSrc;
         img.style.display = "block";
         placeholder.style.display = "none";
     } else {

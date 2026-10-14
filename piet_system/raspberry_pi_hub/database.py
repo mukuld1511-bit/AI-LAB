@@ -268,7 +268,7 @@ def get_lab_workstations(lab_id: str = "LAB-414") -> Dict[str, Any]:
         img_file = f"{r['pc_id'].lower()}.jpg"
         full_p = os.path.join(SCREENSHOTS_DIR, img_file)
         if os.path.exists(full_p):
-            r["screenshot_url"] = f"/static/screenshots/{img_file}?t={int(os.path.getmtime(full_p))}"
+            r["screenshot_url"] = f"/screenshots/{img_file}?t={int(os.path.getmtime(full_p))}"
         else:
             r["screenshot_url"] = None
 
