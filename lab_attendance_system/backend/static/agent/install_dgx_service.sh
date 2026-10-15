@@ -23,19 +23,38 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# 1. Create Destination Directory and Fetch Python Agent
+PYTHON_BIN="$(which python3 2>/dev/null || echo /usr/bin/python3)"
+
+# 1. Install Essential Graphics & Screen Capture Packages
+echo "📦 Installing screen grab and telemetry packages (scrot, imagemagick, xhost, mss, grim)..."
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq && apt-get install -y -qq \
+    scrot \
+    imagemagick \
+    x11-xserver-utils \
+    xdotool \
+    grim \
+    slurp \
+    gnome-screenshot \
+    python3-pil \
+    python3-pip \
+    python3-psutil 2>/dev/null || true
+
+# Install pure-Python mss for lightning-fast direct X11 capture
+$PYTHON_BIN -m pip install --break-system-packages --quiet mss pillow psutil 2>/dev/null || \
+$PYTHON_BIN -m pip install --quiet mss pillow psutil 2>/dev/null || true
+
+# 2. Create Destination Directory and Fetch Python Agent
 mkdir -p "$INSTALL_DIR"
 echo "📥 Fetching latest telemetry agent from $BACKEND_URL/dgx_agent/dgx_telemetry_agent.py..."
 curl -sSL "$BACKEND_URL/dgx_agent/dgx_telemetry_agent.py" -o "$INSTALL_DIR/dgx_telemetry_agent.py"
 chmod +x "$INSTALL_DIR/dgx_telemetry_agent.py"
 
-PYTHON_BIN="$(which python3 2>/dev/null || echo /usr/bin/python3)"
-
-# 2. Generate Systemd Service
+# 3. Generate Systemd Service
 cat <<EOF > /etc/systemd/system/$SERVICE_NAME
 [Unit]
 Description=AI ML Lab DGX Telemetry & Heartbeat Daemon
-After=network.target
+After=network.target graphical.target
 
 [Service]
 Type=simple
@@ -50,7 +69,7 @@ TimeoutStopSec=10
 WantedBy=multi-user.target
 EOF
 
-# 3. Reload & Enable Service
+# 4. Reload & Enable Service
 systemctl daemon-reload
 systemctl enable $SERVICE_NAME
 systemctl restart $SERVICE_NAME

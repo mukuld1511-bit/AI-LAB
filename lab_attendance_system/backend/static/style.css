@@ -2318,6 +2318,85 @@ tbody tr:hover td {
     padding: 12px 20px !important;
 }
 
+/* Prominent High-Contrast Neo-Brutalist Modal Close Button */
+.modal-close-btn {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 6px !important;
+    border: 2.5px solid #000000 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 2.5px 2.5px 0px #000000 !important;
+    transition: all 0.1s ease !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+    user-select: none !important;
+}
+
+.modal-close-btn:hover {
+    background: #ff5555 !important;
+    color: #ffffff !important;
+    transform: translate(1px, 1px) !important;
+    box-shadow: 1.5px 1.5px 0px #000000 !important;
+}
+
+.modal-close-btn:active {
+    transform: translate(2.5px, 2.5px) !important;
+    box-shadow: 0px 0px 0px #000000 !important;
+}
+
+/* Workstation Briefing Lightbox (Edge-to-Edge Neo-Brutalist Shell) */
+.screen-lightbox-content {
+    background: #0b1120 !important;
+    border: 3.5px solid #000000 !important;
+    box-shadow: 8px 8px 0px #000000 !important;
+    border-radius: 8px !important;
+    max-width: 96vw !important;
+    width: 1180px !important;
+    max-height: 94vh !important;
+    overflow-y: auto !important;
+    padding: 0 !important;
+}
+
+.screen-lightbox-header {
+    background: #fef08a !important;
+    border-bottom: 3px solid #000000 !important;
+    padding: 14px 20px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+}
+
+.screen-lightbox-header h3 {
+    color: #000000 !important;
+    font-weight: 900 !important;
+}
+
+.screen-lightbox-content .briefing-grid-layout > div > div {
+    border: 2px solid #000000 !important;
+    box-shadow: 3.5px 3.5px 0px #000000 !important;
+}
+
+.screen-lightbox-content .badge {
+    border: 2px solid #000000 !important;
+    box-shadow: 1.5px 1.5px 0px #000000 !important;
+    font-weight: 800 !important;
+}
+
+#screen-lightbox-refresh-btn {
+    border: 2px solid #000000 !important;
+    box-shadow: 2.5px 2.5px 0px #000000 !important;
+    font-weight: 800 !important;
+}
+
 /* 9. Dropdown Menus */
 .dropdown-menu {
     background: #ffffff !important;

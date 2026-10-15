@@ -236,8 +236,9 @@ def get_linux_top_processes():
 def get_desktop_session_info():
     """
     Finds the active graphical desktop user and environment variables by inspecting:
-    1. Running processes in /proc (e.g. Chrome, GNOME Shell, Xorg, Firefox)
-    2. Active sessions via who / loginctl / /run/user
+    1. Running GUI processes in /proc (e.g. Chrome, Antigravity IDE, GNOME Shell, Xorg, Firefox)
+    2. Active display sockets in /tmp/.X11-unix/ and /run/user/<uid>/
+    3. Active sessions via who / loginctl / /run/user
     """
     info = {
         "user": None,
@@ -245,45 +246,61 @@ def get_desktop_session_info():
         "env": os.environ.copy()
     }
 
-    # 1. Scan /proc/[0-9]*/environ for active display environment
     target_env_keys = ("DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR", "USER", "LOGNAME")
-    try:
-        for p_dir in glob.glob("/proc/[0-9]*"):
-            try:
-                env_file = f"{p_dir}/environ"
-                if not os.path.exists(env_file):
+    gui_patterns = ("chrome", "google-chrome", "antigravity", "antigravity-ide", "code", "firefox", "gnome-shell", "xorg", "xwayland", "nautilus", "gnome-session", "terminal")
+
+    # 1. Prioritize scanning /proc/[0-9]* for active graphical application processes
+    all_pids = glob.glob("/proc/[0-9]*")
+    gui_pids = []
+    other_pids = []
+
+    for p_dir in all_pids:
+        try:
+            comm_file = f"{p_dir}/comm"
+            if os.path.exists(comm_file):
+                with open(comm_file, "r", errors="ignore") as f:
+                    comm = f.read().strip().lower()
+                if any(g in comm for g in gui_patterns):
+                    gui_pids.append(p_dir)
                     continue
-                with open(env_file, "rb") as f:
-                    raw = f.read(4096).decode("utf-8", errors="ignore")
+            other_pids.append(p_dir)
+        except Exception:
+            other_pids.append(p_dir)
 
-                if "DISPLAY=" in raw or "WAYLAND_DISPLAY=" in raw or "DBUS_SESSION_BUS_ADDRESS=" in raw:
-                    p_env = {}
-                    for item in raw.split("\0"):
-                        if "=" in item:
-                            k, v = item.split("=", 1)
-                            if k in target_env_keys:
-                                p_env[k] = v
-
-                    stat_val = os.stat(p_dir)
-                    p_uid = stat_val.st_uid
-
-                    # Prioritize real desktop user (UID >= 1000)
-                    if p_uid >= 1000:
-                        info["uid"] = p_uid
-                        try:
-                            import pwd
-                            info["user"] = pwd.getpwuid(p_uid).pw_name
-                        except Exception:
-                            info["user"] = p_env.get("USER") or p_env.get("LOGNAME")
-                        info["env"].update(p_env)
-                        if info["env"].get("DISPLAY") or info["env"].get("WAYLAND_DISPLAY"):
-                            break
-                    elif not info["env"].get("DISPLAY") and p_env.get("DISPLAY"):
-                        info["env"].update(p_env)
-            except Exception:
+    for p_dir in (gui_pids + other_pids):
+        try:
+            env_file = f"{p_dir}/environ"
+            if not os.path.exists(env_file):
                 continue
-    except Exception:
-        pass
+            with open(env_file, "rb") as f:
+                raw = f.read(8192).decode("utf-8", errors="ignore")
+
+            if "DISPLAY=" in raw or "WAYLAND_DISPLAY=" in raw or "DBUS_SESSION_BUS_ADDRESS=" in raw:
+                p_env = {}
+                for item in raw.split("\0"):
+                    if "=" in item:
+                        k, v = item.split("=", 1)
+                        if k in target_env_keys and v:
+                            p_env[k] = v
+
+                stat_val = os.stat(p_dir)
+                p_uid = stat_val.st_uid
+
+                # Prioritize human desktop user (UID >= 1000)
+                if p_uid >= 1000:
+                    info["uid"] = p_uid
+                    try:
+                        import pwd
+                        info["user"] = pwd.getpwuid(p_uid).pw_name
+                    except Exception:
+                        info["user"] = p_env.get("USER") or p_env.get("LOGNAME")
+                    info["env"].update(p_env)
+                    if (info["env"].get("DISPLAY") or info["env"].get("WAYLAND_DISPLAY")) and p_dir in gui_pids:
+                        break
+                elif not info["env"].get("DISPLAY") and p_env.get("DISPLAY"):
+                    info["env"].update(p_env)
+        except Exception:
+            continue
 
     # 2. If user not resolved, detect logged-in human user
     if not info["user"] or info["user"] == "root":
@@ -319,7 +336,7 @@ def get_desktop_session_info():
                 pass
 
     if not info["user"]:
-        info["user"] = os.environ.get("USER") or os.environ.get("LOGNAME") or "root"
+        info["user"] = os.environ.get("USER") or os.environ.get("LOGNAME") or "piet"
     if not info["uid"] and hasattr(os, "getuid"):
         info["uid"] = os.getuid()
 
@@ -335,14 +352,24 @@ def get_desktop_session_info():
             if os.path.exists(bus_sock):
                 info["env"]["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={bus_sock}"
 
-    if not info["env"].get("DISPLAY"):
-        info["env"]["DISPLAY"] = ":0"
+    # Verify or detect DISPLAY from active Unix sockets
+    x_sockets = glob.glob("/tmp/.X11-unix/X*")
+    detected_disp = info["env"].get("DISPLAY")
+    if not detected_disp:
+        if x_sockets:
+            # Sort and pick highest or active socket (e.g. /tmp/.X11-unix/X1 -> :1 or X0 -> :0)
+            sock_names = sorted([os.path.basename(s).replace("X", ":") for s in x_sockets], reverse=True)
+            info["env"]["DISPLAY"] = sock_names[0]
+        else:
+            info["env"]["DISPLAY"] = ":0"
 
     # Search for Xauthority if missing
     if not info["env"].get("XAUTHORITY") and u:
         for cand in [
             f"/run/user/{uid}/gdm/Xauthority",
             f"/run/user/{uid}/.Xauthority",
+            f"/run/user/{uid}/.mutter-Xwaylandauth.*",
+            f"/run/user/{uid}/xauth_*",
             f"/home/{u}/.Xauthority",
             f"/home/{u}/.Xauthority-*",
             "/root/.Xauthority"
@@ -474,15 +501,15 @@ def compress_and_b64(img_path):
 def capture_linux_screen(pc_id):
     """
     Captures real desktop display on Linux using a multi-tiered cascade:
-    1. GNOME Shell DBus API via gdbus (Native on Ubuntu 20.04/22.04/24.04 Wayland & X11)
-    2. GNOME Shell DBus API via dbus-send
-    3. gnome-screenshot CLI
-    4. scrot CLI
-    5. ImageMagick import
-    6. xwd + convert
-    7. ffmpeg x11grab
-    8. grim (Wayland)
-    9. PIL ImageGrab with explicit xdisplay
+    0. Python mss (Pure X11 protocol directly to X server - fastest & zero external binaries)
+    1. scrot CLI (Standard X11 screenshot tool)
+    2. ImageMagick import CLI (Robust root window grabber)
+    3. grim CLI (Native Wayland compositor grabber)
+    4. gnome-screenshot CLI
+    5. GNOME Shell DBus API (gdbus / dbus-send)
+    6. xwd + convert CLI
+    7. ffmpeg x11grab CLI
+    8. PIL ImageGrab with explicit display
     """
     session = get_desktop_session_info()
     user = session.get("user") or "piet"
@@ -491,9 +518,15 @@ def capture_linux_screen(pc_id):
     tmp_jpg = f"/tmp/snap_{pc_id}.jpg"
     tmp_xwd = f"/tmp/snap_{pc_id}.xwd"
 
-    print(f"[CAPTURE] Attempting screen grab for user '{user}' on display '{disp}'...")
+    # Candidate displays to probe
+    candidate_displays = [disp]
+    for d in (":0", ":1", ":2"):
+        if d not in candidate_displays:
+            candidate_displays.append(d)
 
-    # Clean old files and allow write access
+    print(f"[CAPTURE] Attempting screen grab for user '{user}' on displays {candidate_displays}...")
+
+    # Clean old files
     for p in (tmp_png, tmp_jpg, tmp_xwd):
         if os.path.exists(p):
             try:
@@ -501,14 +534,102 @@ def capture_linux_screen(pc_id):
             except Exception:
                 pass
 
-    # Grant local display access via xhost
-    try:
-        run_in_desktop_context(["xhost", "+local:"], session, timeout=2)
-    except Exception:
-        pass
+    # Authorize local display access via xhost
+    for xhost_cmd in (["xhost", "+local:"], ["xhost", "+SI:localuser:root"], ["xhost", "+"]):
+        try:
+            run_in_desktop_context(xhost_cmd, session, timeout=2)
+        except Exception:
+            pass
 
-    # Strategy 1: gdbus (Ubuntu default CLI for GNOME Shell Wayland & X11)
-    # Note: GVariant requires single quotes around string argument: "'/tmp/snap_PC-5.png'"
+    # Strategy 0: Python mss (Native pure-python X11 screen capture protocol)
+    try:
+        import mss
+        import mss.tools
+        for test_disp in candidate_displays:
+            try:
+                os.environ["DISPLAY"] = test_disp
+                session["env"]["DISPLAY"] = test_disp
+                with mss.mss(display=test_disp) as sct:
+                    mon = sct.monitors[1] if len(sct.monitors) > 1 else sct.monitors[0]
+                    sct_img = sct.grab(mon)
+                    mss.tools.to_png(sct_img.rgb, sct_img.size, output=tmp_png)
+                if os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
+                    b64 = compress_and_b64(tmp_png)
+                    if b64:
+                        print(f"[CAPTURE] 🟢 Successfully captured via python-mss on display '{test_disp}'")
+                        return b64
+            except Exception as me:
+                print(f"[CAPTURE-DEBUG] mss on {test_disp}: {me}")
+    except ImportError:
+        pass
+    except Exception as e:
+        print(f"[CAPTURE-DEBUG] mss overall: {e}")
+
+    # Strategy 1: scrot CLI
+    for test_disp in candidate_displays:
+        try:
+            cmd = ["scrot", "-z", "-q", "65", tmp_jpg]
+            test_session = session.copy()
+            test_session["env"] = session["env"].copy()
+            test_session["env"]["DISPLAY"] = test_disp
+            res = run_in_desktop_context(cmd, test_session, timeout=4)
+            if not res or res.returncode != 0:
+                res = subprocess.run(cmd, env=test_session["env"], capture_output=True, timeout=4)
+            if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
+                b64 = compress_and_b64(tmp_jpg)
+                if b64:
+                    print(f"[CAPTURE] 🟢 Successfully captured via scrot on '{test_disp}'")
+                    return b64
+        except Exception as se:
+            print(f"[CAPTURE-DEBUG] scrot on {test_disp}: {se}")
+
+    # Strategy 2: ImageMagick import CLI
+    for test_disp in candidate_displays:
+        try:
+            cmd = ["import", "-window", "root", "-display", test_disp, "-quality", "65", tmp_jpg]
+            test_session = session.copy()
+            test_session["env"] = session["env"].copy()
+            test_session["env"]["DISPLAY"] = test_disp
+            res = run_in_desktop_context(cmd, test_session, timeout=4)
+            if not res or res.returncode != 0:
+                res = subprocess.run(cmd, env=test_session["env"], capture_output=True, timeout=4)
+            if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
+                b64 = compress_and_b64(tmp_jpg)
+                if b64:
+                    print(f"[CAPTURE] 🟢 Successfully captured via ImageMagick import on '{test_disp}'")
+                    return b64
+        except Exception as ie:
+            print(f"[CAPTURE-DEBUG] import on {test_disp}: {ie}")
+
+    # Strategy 3: grim CLI (Wayland)
+    try:
+        cmd = ["grim", tmp_png]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if not res or res.returncode != 0:
+            res = subprocess.run(cmd, env=session["env"], capture_output=True, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
+            b64 = compress_and_b64(tmp_png)
+            if b64:
+                print(f"[CAPTURE] 🟢 Successfully captured via grim (Wayland)")
+                return b64
+    except Exception as ge:
+        print(f"[CAPTURE-DEBUG] grim: {ge}")
+
+    # Strategy 4: gnome-screenshot CLI
+    try:
+        cmd = ["gnome-screenshot", "-f", tmp_png]
+        res = run_in_desktop_context(cmd, session, timeout=4)
+        if not res or res.returncode != 0:
+            res = subprocess.run(cmd, env=session["env"], capture_output=True, timeout=4)
+        if res and res.returncode == 0 and os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
+            b64 = compress_and_b64(tmp_png)
+            if b64:
+                print(f"[CAPTURE] 🟢 Successfully captured via gnome-screenshot")
+                return b64
+    except Exception as gse:
+        print(f"[CAPTURE-DEBUG] gnome-screenshot: {gse}")
+
+    # Strategy 5: GNOME Shell DBus via gdbus / dbus-send
     try:
         cmd = [
             "gdbus", "call", "--session",
@@ -526,7 +647,6 @@ def capture_linux_screen(pc_id):
     except Exception as e:
         print(f"[CAPTURE-DEBUG] gdbus: {e}")
 
-    # Strategy 2: dbus-send (Alternative DBus utility)
     try:
         cmd = [
             "dbus-send", "--session", "--type=method_call", "--print-reply",
@@ -544,96 +664,62 @@ def capture_linux_screen(pc_id):
     except Exception as e:
         print(f"[CAPTURE-DEBUG] dbus-send: {e}")
 
-    # Strategy 3: gnome-screenshot
-    try:
-        cmd = ["gnome-screenshot", "-f", tmp_png]
-        res = run_in_desktop_context(cmd, session, timeout=4)
-        if res and res.returncode == 0 and os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
-            b64 = compress_and_b64(tmp_png)
-            if b64:
-                print(f"[CAPTURE] 🟢 Successfully captured via gnome-screenshot")
-                return b64
-    except Exception:
-        pass
+    # Strategy 6: xwd + convert CLI
+    for test_disp in candidate_displays:
+        try:
+            cmd = ["xwd", "-root", "-silent", "-display", test_disp, "-out", tmp_xwd]
+            test_session = session.copy()
+            test_session["env"] = session["env"].copy()
+            test_session["env"]["DISPLAY"] = test_disp
+            res = run_in_desktop_context(cmd, test_session, timeout=4)
+            if not res or res.returncode != 0:
+                res = subprocess.run(cmd, env=test_session["env"], capture_output=True, timeout=4)
+            if res and res.returncode == 0 and os.path.exists(tmp_xwd) and os.path.getsize(tmp_xwd) > 1000:
+                subprocess.run(["convert", tmp_xwd, tmp_jpg], timeout=3)
+                try:
+                    os.remove(tmp_xwd)
+                except Exception:
+                    pass
+                if os.path.exists(tmp_jpg):
+                    b64 = compress_and_b64(tmp_jpg)
+                    if b64:
+                        print(f"[CAPTURE] 🟢 Successfully captured via xwd on '{test_disp}'")
+                        return b64
+        except Exception:
+            pass
 
-    # Strategy 4: scrot
-    try:
-        cmd = ["scrot", "-q", "65", tmp_jpg]
-        res = run_in_desktop_context(cmd, session, timeout=4)
-        if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
-            b64 = compress_and_b64(tmp_jpg)
-            if b64:
-                print(f"[CAPTURE] 🟢 Successfully captured via scrot")
-                return b64
-    except Exception:
-        pass
-
-    # Strategy 5: ImageMagick import
-    try:
-        cmd = ["import", "-window", "root", "-display", disp, "-quality", "65", tmp_jpg]
-        res = run_in_desktop_context(cmd, session, timeout=4)
-        if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
-            b64 = compress_and_b64(tmp_jpg)
-            if b64:
-                print(f"[CAPTURE] 🟢 Successfully captured via ImageMagick import")
-                return b64
-    except Exception:
-        pass
-
-    # Strategy 6: xwd + convert
-    try:
-        cmd = ["xwd", "-root", "-silent", "-display", disp, "-out", tmp_xwd]
-        res = run_in_desktop_context(cmd, session, timeout=4)
-        if res and res.returncode == 0 and os.path.exists(tmp_xwd) and os.path.getsize(tmp_xwd) > 1000:
-            subprocess.run(["convert", tmp_xwd, tmp_jpg], timeout=3)
-            try:
-                os.remove(tmp_xwd)
-            except Exception:
-                pass
-            if os.path.exists(tmp_jpg):
+    # Strategy 7: ffmpeg x11grab CLI
+    for test_disp in candidate_displays:
+        try:
+            cmd = ["ffmpeg", "-f", "x11grab", "-i", test_disp, "-vframes", "1", "-q:v", "3", tmp_jpg, "-y"]
+            test_session = session.copy()
+            test_session["env"] = session["env"].copy()
+            test_session["env"]["DISPLAY"] = test_disp
+            res = run_in_desktop_context(cmd, test_session, timeout=4)
+            if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
                 b64 = compress_and_b64(tmp_jpg)
                 if b64:
-                    print(f"[CAPTURE] 🟢 Successfully captured via xwd")
+                    print(f"[CAPTURE] 🟢 Successfully captured via ffmpeg on '{test_disp}'")
                     return b64
-    except Exception:
-        pass
+        except Exception:
+            pass
 
-    # Strategy 7: ffmpeg x11grab
-    try:
-        cmd = ["ffmpeg", "-f", "x11grab", "-i", disp, "-vframes", "1", "-q:v", "3", tmp_jpg, "-y"]
-        res = run_in_desktop_context(cmd, session, timeout=4)
-        if res and res.returncode == 0 and os.path.exists(tmp_jpg) and os.path.getsize(tmp_jpg) > 1000:
-            b64 = compress_and_b64(tmp_jpg)
-            if b64:
-                print(f"[CAPTURE] 🟢 Successfully captured via ffmpeg")
-                return b64
-    except Exception:
-        pass
-
-    # Strategy 8: grim (Wayland)
-    try:
-        cmd = ["grim", tmp_png]
-        res = run_in_desktop_context(cmd, session, timeout=4)
-        if res and res.returncode == 0 and os.path.exists(tmp_png) and os.path.getsize(tmp_png) > 1000:
-            b64 = compress_and_b64(tmp_png)
-            if b64:
-                print(f"[CAPTURE] 🟢 Successfully captured via grim")
-                return b64
-    except Exception:
-        pass
-
-    # Strategy 9: PIL ImageGrab with explicit xdisplay
+    # Strategy 8: PIL ImageGrab with explicit display
     try:
         from PIL import ImageGrab
-        img = ImageGrab.grab(xdisplay=disp)
         import io
         import base64
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=60)
-        print(f"[CAPTURE] 🟢 Successfully captured via PIL ImageGrab")
-        return base64.b64encode(buf.getvalue()).decode("utf-8")
-    except Exception as e:
-        print(f"[CAPTURE-DEBUG] ImageGrab: {e}")
+        for test_disp in candidate_displays:
+            try:
+                img = ImageGrab.grab(xdisplay=test_disp)
+                buf = io.BytesIO()
+                img.save(buf, format="JPEG", quality=65)
+                print(f"[CAPTURE] 🟢 Successfully captured via PIL ImageGrab on '{test_disp}'")
+                return base64.b64encode(buf.getvalue()).decode("utf-8")
+            except Exception as ige:
+                print(f"[CAPTURE-DEBUG] ImageGrab on {test_disp}: {ige}")
+    except Exception:
+        pass
 
     return None
 
