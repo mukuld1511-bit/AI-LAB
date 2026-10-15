@@ -13,16 +13,16 @@
     <!-- Top Header -->
     <header class="top-header">
         <div class="header-left">
-            <img src="piet_logo.png" alt="PIET Logo" style="height: 42px; width: auto; border-radius: 4px; box-shadow: 0 2px 6px rgba(0, 139, 56, 0.2);">
+            <div class="logo-badge">🔬</div>
             <div>
-                <h1 style="color: #0f172a; font-size: 17px; font-weight: 800;">PIET AIML LAB MONITOR &amp; DIGITAL TWIN</h1>
-                <div class="header-sub">In-Charge: <strong>Prof. Richa Choudhary</strong> • <span style="color: #008b38; font-weight: 700;">Live Display &amp; Digital Twin (Read-Only)</span></div>
+                <h1>AI/ML LAB MONITOR</h1>
+                <div class="header-sub">In-Charge: <strong>Dr. Richa Choudhary</strong> • <span style="color: #6366f1; font-weight: 700;">Live Display & Digital Twin (Read-Only)</span></div>
             </div>
         </div>
 
         <div class="header-actions">
             <!-- Read-Only Badge Indicator -->
-            <span class="badge" style="background: rgba(0, 139, 56, 0.12); color: #00732e; border: 1px solid rgba(0, 139, 56, 0.3); font-weight: 700; font-size: 11px; padding: 5px 10px;">
+            <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #4338ca; border: 1px solid rgba(99, 102, 241, 0.3); font-weight: 700; font-size: 11px; padding: 5px 10px;">
                 👁️ Display Kiosk Mode
             </span>
 
@@ -33,13 +33,13 @@
 
             <!-- Gate Camera Stream Modal Button -->
             <button id="gate-camera-modal-btn" class="btn btn-secondary" onclick="openGateCameraModal()" title="View live gate camera stream" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px;">
-                📹 Live Gate Cam <span id="portal-cam-pill" class="pill-count" style="background: #008b38; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 700;">LIVE</span>
+                📹 Live Gate Cam <span id="portal-cam-pill" class="pill-count" style="background: #22c55e; color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 700;">LIVE</span>
             </button>
 
             <!-- DGX Spark / Server URL Connection UI -->
             <div id="connection-ui" style="display: none; gap: 6px; align-items: center;">
                 <input type="text" id="ngrok-url" class="form-input" placeholder="Server URL (https://...)" style="min-width: 200px; font-size: 12px; padding: 5px 8px;">
-                <button id="connect-btn" class="btn btn-primary" style="padding: 5px 10px; font-size: 12px; background: #008b38; border-color: #00732e;">Connect</button>
+                <button id="connect-btn" class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">Connect</button>
             </div>
 
             <!-- Connection Status Badge -->
@@ -49,12 +49,12 @@
 
     <!-- Tab Navigation -->
     <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="pc-status">🖥️ 3D Lab &amp; Workstations</button>
-        <button class="tab-btn" data-tab="projects">🚀 Research &amp; Projects <span id="nav-project-count" class="pill-count" style="background: #008b38; color: #fff;">0</span></button>
+        <button class="tab-btn active" data-tab="pc-status">🖥️ 3D Lab & Workstations</button>
+        <button class="tab-btn" data-tab="projects">🚀 Research & Projects <span id="nav-project-count" class="pill-count" style="background: #6366f1; color: #fff;">0</span></button>
         <button class="tab-btn" data-tab="attendance">📋 Attendance Logs</button>
         <button class="tab-btn" data-tab="registered-faces">👥 Registered Members <span id="nav-reg-count" class="pill-count">0</span></button>
         <button class="tab-btn" data-tab="unknown-faces">⚠️ Unwanted / Intruders <span id="nav-unknown-count" class="pill-count pill-alert">0</span></button>
-        <a href="https://raspberrypi.tailc8c1f6.ts.net/" target="_blank" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: rgba(0, 139, 56, 0.12); color: #00732e; border: 1px solid rgba(0, 139, 56, 0.35); font-weight: 700;" title="Open Raspberry Pi 1 Lab 414 Smart Supervision Hub">
+        <a href="https://raspberrypi.tailc8c1f6.ts.net/" target="_blank" class="tab-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.15); color: #0284c7; border: 1px solid rgba(56, 189, 248, 0.4); font-weight: 700;" title="Open Raspberry Pi 1 Lab 414 Smart Supervision Hub">
             🏛️ Lab 414 Live Hub ↗
         </a>
     </nav>
@@ -69,7 +69,7 @@
                 <p>Interactive spatial digital twin • Real-time occupancy status & active countdowns</p>
             </div>
             <div class="view-controls">
-                <button id="portal-stream-quick-btn" class="btn btn-secondary" onclick="openGateCameraModal()" style="color: #008b38; font-weight: 600;">📹 Gate Feed</button>
+                <button id="portal-stream-quick-btn" class="btn btn-secondary" onclick="openGateCameraModal()" style="color: #6366f1; font-weight: 600;">📹 Gate Feed</button>
                 <button id="rotate-90-btn" class="btn btn-secondary">🔄 Rotate 90°</button>
                 <button id="gate-view-btn" class="btn btn-secondary">🚪 Gate View</button>
                 <button id="top-view-btn" class="btn btn-secondary">🔝 Top View</button>
@@ -128,7 +128,7 @@
                 <p>Ongoing lab research domains, team members, durations, report statuses, and verified live deployments</p>
             </div>
             <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary" onclick="switchTab('projects')" style="font-size: 12px; padding: 6px 14px; font-weight: 600; color: #008b38;">
+                <button class="btn btn-secondary" onclick="switchTab('projects')" style="font-size: 12px; padding: 6px 14px; font-weight: 600; color: #6366f1;">
                     Open Full Projects Tab &rarr;
                 </button>
             </div>
@@ -159,8 +159,8 @@
                 <div class="metric-value" id="stat-proj-active">0</div>
                 <div class="metric-label">ACTIVE PROJECTS</div>
             </div>
-            <div class="metric-card" style="border-left: 4px solid #008b38;">
-                <div class="metric-value" id="stat-proj-deployed" style="color: #008b38;">0</div>
+            <div class="metric-card" style="border-left: 4px solid #6366f1;">
+                <div class="metric-value" id="stat-proj-deployed" style="color: #6366f1;">0</div>
                 <div class="metric-label">LIVE DEPLOYMENTS</div>
             </div>
             <div class="metric-card" style="border-left: 4px solid #10b981;">
