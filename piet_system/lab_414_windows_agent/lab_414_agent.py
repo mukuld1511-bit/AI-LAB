@@ -382,13 +382,18 @@ def main():
 
                     elif cmd_clean.startswith("warn:"):
                         msg = cmd_clean.split(":", 1)[1].strip()
-                        print(f"[{t_now}] ⚠️ LAB NOTICE: '{msg}'")
+                        print(f"[{t_now}] ⚠️ LAB NOTICE DISPATCHED: '{msg}'")
                         try:
-                            import threading
-                            threading.Thread(
-                                target=lambda: ctypes.windll.user32.MessageBoxW(0, msg, "PIET Lab Administrator Notice", 0x30 | 0x40000),
-                                daemon=True
-                            ).start()
+                            script_dir = os.path.dirname(os.path.abspath(__file__))
+                            alert_script = os.path.join(script_dir, "show_alert.py")
+                            if os.path.exists(alert_script):
+                                subprocess.Popen([sys.executable, alert_script, msg, "Dr. Richa Choudhary, Assistant Professor"])
+                            else:
+                                import threading
+                                threading.Thread(
+                                    target=lambda: ctypes.windll.user32.MessageBoxW(0, msg, "PIET Lab Administrator Notice", 0x30 | 0x40000 | 0x10000),
+                                    daemon=True
+                                ).start()
                         except Exception as we:
                             print(f"[WARN-ERR] {we}")
 

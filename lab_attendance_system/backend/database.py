@@ -501,10 +501,15 @@ def record_pc_telemetry(
     if float(gpu_temp or 0.0) <= 0.0:
         gpu_temp = 39.5
 
-    # Check for pending command to dispatch back to the agent
+    # Check for pending command to dispatch back to the agent (check both tables)
     cursor.execute("SELECT pending_command FROM pc_telemetry WHERE UPPER(pc_id) = UPPER(?)", (clean_pc_id,))
     cmd_row = cursor.fetchone()
     command_to_return = cmd_row["pending_command"] if cmd_row and cmd_row["pending_command"] else None
+
+    if not command_to_return:
+        cursor.execute("SELECT pending_command FROM workstations WHERE UPPER(pc_id) = UPPER(?)", (clean_pc_id,))
+        cmd_w_row = cursor.fetchone()
+        command_to_return = cmd_w_row["pending_command"] if cmd_w_row and cmd_w_row["pending_command"] else None
 
     cursor.execute("""
         INSERT INTO pc_telemetry (
@@ -541,6 +546,7 @@ def record_pc_telemetry(
     # Clear pending command once dispatched
     if command_to_return:
         cursor.execute("UPDATE pc_telemetry SET pending_command = '' WHERE UPPER(pc_id) = UPPER(?)", (clean_pc_id,))
+        cursor.execute("UPDATE workstations SET pending_command = '' WHERE UPPER(pc_id) = UPPER(?)", (clean_pc_id,))
 
     conn.commit()
     conn.close()
@@ -1565,14 +1571,20 @@ def record_heartbeat(data: Dict[str, Any]) -> Dict[str, Any]:
         act_type, has_warning, warn_reason, now_str
     ))
 
-    # Retrieve and consume any pending commands
-    c.execute("SELECT pending_command FROM workstations WHERE pc_id = ?", (pc_id,))
+    # Retrieve and consume any pending commands (check both workstations and pc_telemetry)
+    clean_id = pc_id.strip().upper()
+    c.execute("SELECT pending_command FROM workstations WHERE UPPER(pc_id) = ?", (clean_id,))
     row = c.fetchone()
     cmd = row["pending_command"] if row and row["pending_command"] else None
 
+    if not cmd:
+        c.execute("SELECT pending_command FROM pc_telemetry WHERE UPPER(pc_id) = ?", (clean_id,))
+        prow = c.fetchone()
+        cmd = prow["pending_command"] if prow and prow["pending_command"] else None
+
     if cmd:
-        c.execute("UPDATE workstations SET pending_command = '' WHERE pc_id = ?", (pc_id,))
-        c.execute("UPDATE pc_telemetry SET pending_command = '' WHERE UPPER(pc_id) = UPPER(?)", (pc_id,))
+        c.execute("UPDATE workstations SET pending_command = '' WHERE UPPER(pc_id) = ?", (clean_id,))
+        c.execute("UPDATE pc_telemetry SET pending_command = '' WHERE UPPER(pc_id) = ?", (clean_id,))
 
     conn.commit()
     conn.close()

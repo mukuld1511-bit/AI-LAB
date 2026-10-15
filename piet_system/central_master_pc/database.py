@@ -329,18 +329,19 @@ def record_relayed_heartbeat(data: dict, pi_gateway_id: str = "") -> dict:
         pi_gateway_id, now_str
     ))
 
-    # Check for pending commands to return to the workstation
-    c.execute("SELECT pending_command FROM workstations WHERE pc_id = ?", (pc_id,))
+    # Check for pending commands to return to the workstation (case-insensitive)
+    clean_pc = pc_id.strip().upper()
+    c.execute("SELECT pending_command FROM workstations WHERE UPPER(pc_id) = ?", (clean_pc,))
     row = c.fetchone()
     cmd = ""
     if row and row["pending_command"]:
         cmd = row["pending_command"]
-        c.execute("UPDATE workstations SET pending_command = '' WHERE pc_id = ?", (pc_id,))
+        c.execute("UPDATE workstations SET pending_command = '' WHERE UPPER(pc_id) = ?", (clean_pc,))
 
     conn.commit()
     conn.close()
 
-    return {"status": "ok", "pc_id": pc_id, "command": cmd}
+    return {"status": "ok", "pc_id": clean_pc, "command": cmd}
 
 
 def record_pi_gateway_heartbeat(data: dict) -> dict:
@@ -579,7 +580,8 @@ def set_pending_command(pc_id: str, command: str):
     """Queues a command for a workstation."""
     conn = get_connection()
     c = conn.cursor()
-    c.execute("UPDATE workstations SET pending_command = ? WHERE pc_id = ?", (command, pc_id))
+    clean_pc = pc_id.strip().upper()
+    c.execute("UPDATE workstations SET pending_command = ? WHERE UPPER(pc_id) = ?", (command, clean_pc))
     conn.commit()
     conn.close()
 

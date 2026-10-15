@@ -265,13 +265,14 @@ def record_heartbeat(data: Dict[str, Any]) -> Dict[str, Any]:
         act_type, procs_json, has_warning, warn_reason, now_str
     ))
 
-    # Retrieve and consume any pending commands (e.g. 'capture_screen' or 'kill:pid')
-    c.execute("SELECT pending_command FROM workstations WHERE pc_id = ?", (pc_id,))
+    # Retrieve and consume any pending commands (case-insensitive)
+    clean_pc = pc_id.strip().upper()
+    c.execute("SELECT pending_command FROM workstations WHERE UPPER(pc_id) = ?", (clean_pc,))
     row = c.fetchone()
     cmd = row["pending_command"] if row and row["pending_command"] else None
 
     if cmd:
-        c.execute("UPDATE workstations SET pending_command = '' WHERE pc_id = ?", (pc_id,))
+        c.execute("UPDATE workstations SET pending_command = '' WHERE UPPER(pc_id) = ?", (clean_pc,))
 
     conn.commit()
     conn.close()
@@ -345,7 +346,7 @@ def get_all_labs() -> List[Dict[str, Any]]:
 def set_pending_command(pc_id: str, cmd: str) -> bool:
     conn = get_connection()
     c = conn.cursor()
-    c.execute("UPDATE workstations SET pending_command = ? WHERE pc_id = ?", (cmd, pc_id.upper()))
+    c.execute("UPDATE workstations SET pending_command = ? WHERE UPPER(pc_id) = ?", (cmd, pc_id.strip().upper()))
     conn.commit()
     conn.close()
     return True
