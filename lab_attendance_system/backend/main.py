@@ -62,6 +62,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/api/health")
+@app.get("/health")
+def api_health():
+    """Health check endpoint for monitoring."""
+    return {
+        "status": "online",
+        "system": "PIET AIML Department Smart Lab Supervision Master Server",
+        "version": "3.5.0",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
 # Avatar dynamic handler with fallback SVG to prevent broken photo icons
 @app.get("/static/avatars/{filename}")
 def get_avatar_image(filename: str):
