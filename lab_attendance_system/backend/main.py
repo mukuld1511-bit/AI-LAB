@@ -447,6 +447,29 @@ def serve_screenshot_file(filename: str):
     raise HTTPException(status_code=404, detail="Screenshot not found")
 
 
+@app.get("/api/pc/download_all_screenshots")
+@app.get("/api/screenshots/download_zip")
+def download_all_screenshots_zip():
+    """Packages all available workstation screenshot JPGs into a single ZIP archive for instant download."""
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        if os.path.exists(SCREENSHOTS_DIR):
+            for fname in sorted(os.listdir(SCREENSHOTS_DIR)):
+                if fname.lower().endswith((".jpg", ".jpeg", ".png")):
+                    fpath = os.path.join(SCREENSHOTS_DIR, fname)
+                    if os.path.isfile(fpath) and os.path.getsize(fpath) > 0:
+                        zf.write(fpath, arcname=fname)
+    buf.seek(0)
+    now_str = datetime.now().strftime("%Y-%m-%d_%H%M")
+    filename = f"AI_LAB_Screenshots_{now_str}.zip"
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @app.get("/api/timetable/{lab_id}")
 def get_lab_timetable(lab_id: str):
     """Returns department schedule for a specific lab."""

@@ -2964,10 +2964,17 @@ function renderMonitoringGrid(pcs) {
                 </div>
 
                 <!-- Snapshot Action Controls -->
-                <div class="mon-snap-action-bar">
-                    <button class="btn btn-primary mon-snap-btn" id="btn-snap-${p.pc_id}" onclick="requestScreenGrab('${p.pc_id}')" ${!isOnline ? 'disabled style="opacity: 0.5;"' : ''}>
-                        📸 Grab Live Screen
-                    </button>
+                <div class="mon-snap-action-bar" style="display: flex; gap: 6px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="btn btn-primary mon-snap-btn" id="btn-snap-${p.pc_id}" onclick="requestScreenGrab('${p.pc_id}')" ${!isOnline ? 'disabled style="opacity: 0.5;"' : ''}>
+                            📸 Grab Live Screen
+                        </button>
+                        ${snapUrl ? `
+                            <a href="${snapUrl}" download="${p.pc_id}_screen.jpg" class="btn btn-secondary" style="font-size: 11px; padding: 5px 9px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; background: #f1f5f9; border: 1px solid #cbd5e1; color: #1e293b;" title="Download this workstation screen photo" onclick="event.stopPropagation()">
+                                📥 Save Photo
+                            </a>
+                        ` : ''}
+                    </div>
                     ${p.last_screenshot_at ? `
                         <span style="font-size: 10px; color: #64748b;" title="Last screenshot taken at ${p.last_screenshot_at}">
                             🕒 ${p.last_screenshot_at.split(' ')[1] || ''}
@@ -3180,6 +3187,8 @@ function openScreenLightbox(pcId, imgUrl, activeWin) {
     // Image & Fallback
     const img = document.getElementById("screen-lightbox-img");
     const fallback = document.getElementById("brief-screen-fallback");
+    const downloadBtn = document.getElementById("brief-download-btn");
+    const openFullBtn = document.getElementById("brief-open-full-btn");
     const resolvedUrl = imgUrl ? resolveImageUrl(imgUrl) : (pc.screenshot_url ? resolveImageUrl(pc.screenshot_url) : "");
 
     if (img && fallback) {
@@ -3190,6 +3199,24 @@ function openScreenLightbox(pcId, imgUrl, activeWin) {
         } else {
             img.style.display = "none";
             fallback.style.display = "flex";
+        }
+    }
+
+    if (downloadBtn) {
+        if (resolvedUrl) {
+            downloadBtn.href = resolvedUrl;
+            downloadBtn.download = `${cleanId}_${new Date().toISOString().slice(0, 10)}.jpg`;
+            downloadBtn.style.display = "inline-flex";
+        } else {
+            downloadBtn.style.display = "none";
+        }
+    }
+    if (openFullBtn) {
+        if (resolvedUrl) {
+            openFullBtn.href = resolvedUrl;
+            openFullBtn.style.display = "inline-flex";
+        } else {
+            openFullBtn.style.display = "none";
         }
     }
 
@@ -3354,6 +3381,17 @@ async function requestLightboxFreshSnap() {
                     img.src = freshUrl;
                     img.style.display = "block";
                     if (fallback) fallback.style.display = "none";
+                }
+                const downloadBtn = document.getElementById("brief-download-btn");
+                const openFullBtn = document.getElementById("brief-open-full-btn");
+                if (downloadBtn) {
+                    downloadBtn.href = freshUrl;
+                    downloadBtn.download = `${pcId}_${new Date().toISOString().slice(0, 10)}.jpg`;
+                    downloadBtn.style.display = "inline-flex";
+                }
+                if (openFullBtn) {
+                    openFullBtn.href = freshUrl;
+                    openFullBtn.style.display = "inline-flex";
                 }
                 if (refreshBtn) {
                     refreshBtn.innerText = "📸 Grab Fresh Snap";
