@@ -446,11 +446,14 @@ def main():
                 win_short = (active_win[:28] + "..") if len(active_win) > 30 else active_win
                 print(f"[{now_str}] 🟢 [{pc_id}] OK | CPU: {stats['cpu_percent']}% | RAM: {stats['ram_percent']}% | Focus: '{win_short}'{gpu_str}")
 
-                # Check if a command was returned (e.g. capture_screen or kill:pid)
+                # Check if a command was returned (e.g. capture_screen, shutdown, restart, lock, kill:pid)
                 command = res_data.get("command")
                 if command:
-                    print(f"[{now_str}] ⚡ Received Remote Command: '{command}'")
-                    if command == "capture_screen":
+                    cmd_clean = command.strip()
+                    cmd_lower = cmd_clean.lower()
+                    print(f"[{now_str}] ⚡ Received Remote Command: '{cmd_clean}'")
+
+                    if cmd_clean == "capture_screen":
                         print(f"[{now_str}] 📸 On-demand Screen Grab requested by Teacher! Capturing...")
                         snap_b64 = capture_screen_base64(pc_id=pc_id)
                         if snap_b64:
@@ -462,8 +465,47 @@ def main():
                                 print(f"[{now_str}] 🚀 Screen Snapshot uploaded successfully to Teacher Portal!")
                             else:
                                 print(f"[{now_str}] ⚠️ Failed to upload screenshot to backend")
-                    elif command.startswith("kill:"):
-                        target_kill = command.split(":", 1)[1]
+
+                    elif cmd_lower in ("shutdown", "poweroff", "shutdown:force"):
+                        print(f"[{now_str}] 🛑 SHUTDOWN INITIATED by Lab Administrator: Shutting down workstation in 5s...")
+                        try:
+                            subprocess.Popen(["shutdown", "/s", "/f", "/t", "5", "/c", "AI Lab Administrator: Remote shutdown sequence initiated."])
+                        except Exception as se:
+                            print(f"[SHUTDOWN-ERR] {se}")
+
+                    elif cmd_lower in ("restart", "reboot", "restart:force"):
+                        print(f"[{now_str}] 🔄 RESTART INITIATED by Lab Administrator: Rebooting workstation in 5s...")
+                        try:
+                            subprocess.Popen(["shutdown", "/r", "/f", "/t", "5", "/c", "AI Lab Administrator: Remote reboot sequence initiated."])
+                        except Exception as re:
+                            print(f"[REBOOT-ERR] {re}")
+
+                    elif cmd_lower in ("lock", "lockscreen"):
+                        print(f"[{now_str}] 🔒 LOCK INITIATED: Locking Windows workstation...")
+                        try:
+                            import ctypes
+                            ctypes.windll.user32.LockWorkStation()
+                        except Exception as le:
+                            try:
+                                subprocess.Popen(["rundll32.exe", "user32.dll,LockWorkStation"])
+                            except Exception:
+                                print(f"[LOCK-ERR] {le}")
+
+                    elif cmd_clean.startswith("warn:"):
+                        msg = cmd_clean.split(":", 1)[1].strip()
+                        print(f"[{now_str}] ⚠️ LAB NOTICE: '{msg}'")
+                        try:
+                            import ctypes
+                            import threading
+                            threading.Thread(
+                                target=lambda: ctypes.windll.user32.MessageBoxW(0, msg, "AI Lab Administrator Notice", 0x30 | 0x40000),
+                                daemon=True
+                            ).start()
+                        except Exception as we:
+                            print(f"[WARN-ERR] {we}")
+
+                    elif cmd_clean.startswith("kill:"):
+                        target_kill = cmd_clean.split(":", 1)[1]
                         execute_kill_command(target_kill)
             else:
                 print(f"[{now_str}] ⚠️ [{pc_id}] Backend unreachable (will retry in {interval}s)")

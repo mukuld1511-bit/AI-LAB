@@ -764,7 +764,48 @@ def execute_remote_command(cmd, pc_id, backend_url):
     cmd = cmd.strip()
     print(f"\n[REMOTE-COMMAND] Received: '{cmd}'")
 
-    if cmd.startswith("kill:"):
+    cmd_lower = cmd.lower()
+
+    if cmd_lower in ("shutdown", "poweroff", "shutdown:force"):
+        print(f"[SHUTDOWN] 🛑 Linux shutdown initiated on {pc_id} by AI Lab Administrator...")
+        try:
+            subprocess.Popen(["shutdown", "-h", "+0", "AI Lab Administrator: Remote shutdown"])
+        except Exception:
+            try:
+                subprocess.Popen(["systemctl", "poweroff"])
+            except Exception as se:
+                print(f"[SHUTDOWN-ERR] {se}")
+
+    elif cmd_lower in ("restart", "reboot", "restart:force"):
+        print(f"[REBOOT] 🔄 Linux reboot initiated on {pc_id} by AI Lab Administrator...")
+        try:
+            subprocess.Popen(["shutdown", "-r", "+0", "AI Lab Administrator: Remote reboot"])
+        except Exception:
+            try:
+                subprocess.Popen(["systemctl", "reboot"])
+            except Exception as re:
+                print(f"[REBOOT-ERR] {re}")
+
+    elif cmd_lower in ("lock", "lockscreen"):
+        print(f"[LOCK] 🔒 Locking Linux desktop session on {pc_id}...")
+        try:
+            subprocess.Popen(["loginctl", "lock-session"])
+        except Exception:
+            try:
+                subprocess.Popen(["xdg-screensaver", "lock"])
+            except Exception as le:
+                print(f"[LOCK-ERR] {le}")
+
+    elif cmd.startswith("warn:"):
+        msg = cmd.split(":", 1)[1].strip()
+        print(f"[WARN] ⚠️ Broadcast notice: '{msg}'")
+        try:
+            subprocess.Popen(["wall", f"AI Lab Administrator Notice: {msg}"])
+            subprocess.Popen(["notify-send", "AI Lab Administrator Notice", msg])
+        except Exception as we:
+            print(f"[WARN-ERR] {we}")
+
+    elif cmd.startswith("kill:"):
         target = cmd.split(":", 1)[1].strip()
         try:
             if target.isdigit():

@@ -206,6 +206,11 @@ class KillTaskRequest(BaseModel):
     name: Optional[str] = None
 
 
+class LabPowerPayload(BaseModel):
+    action: str  # 'shutdown', 'restart', 'lock'
+    force: Optional[bool] = True
+
+
 class PCOfflineRequest(BaseModel):
     pc_id: str
 
@@ -301,11 +306,37 @@ def receive_pc_heartbeat(payload: HeartbeatRequest):
 
 @app.post("/api/command")
 def dispatch_command_global(payload: CommandPayload):
-    """Dispatches remote command (e.g. 'capture_screen', 'kill:pid')."""
+    """Dispatches remote command (e.g. 'capture_screen', 'shutdown', 'restart', 'lock', 'kill:pid')."""
     clean_pc = payload.pc_id.strip().upper()
     cmd = payload.command.strip()
+    cmd_lower = cmd.lower()
+
+    if clean_pc == "BACKEND" and cmd_lower in ("shutdown", "poweroff", "restart", "reboot", "shutdown:force", "restart:force"):
+        return {
+            "status": "error",
+            "pc_id": "BACKEND",
+            "command": cmd,
+            "message": "Protected Host: The BACKEND master server cannot be powered off remotely to protect the lab database and services."
+        }
+
     database.set_pending_command(clean_pc, cmd)
     return {"status": "ok", "pc_id": clean_pc, "command": cmd, "message": f"Dispatched '{cmd}' to {clean_pc}."}
+
+
+@app.post("/api/lab/power")
+@app.post("/api/pc/bulk_power")
+def bulk_ai_lab_power(payload: LabPowerPayload):
+    """Dispatches remote power commands (shutdown/restart/lock) to all AI Lab client workstations."""
+    action = payload.action.strip().lower()
+    if action not in ("shutdown", "restart", "lock"):
+        raise HTTPException(status_code=400, detail="Action must be 'shutdown', 'restart', or 'lock'")
+    count = database.bulk_set_pending_command(None, action)
+    return {
+        "status": "ok",
+        "action": action,
+        "affected_workstations": count,
+        "message": f"Successfully queued '{action}' command for all {count} AI Lab workstations (BACKEND host protected)."
+    }
 
 
 @app.post("/api/pc/{pc_id}/request_screenshot")
@@ -314,6 +345,15 @@ def request_pc_command(pc_id: str, payload: Optional[CommandRequest] = None):
     """Dispatches an on-demand command (e.g. 'capture_screen') to the specified workstation."""
     clean_pc = pc_id.strip().upper()
     cmd = (payload.command if payload and payload.command else "capture_screen").strip()
+    cmd_lower = cmd.lower()
+
+    if clean_pc == "BACKEND" and cmd_lower in ("shutdown", "poweroff", "restart", "reboot", "shutdown:force", "restart:force"):
+        return {
+            "status": "error",
+            "pc_id": "BACKEND",
+            "command": cmd,
+            "message": "Protected Host: The BACKEND master server cannot be powered off remotely."
+        }
 
     if clean_pc == "BACKEND" and cmd == "capture_screen":
         try:

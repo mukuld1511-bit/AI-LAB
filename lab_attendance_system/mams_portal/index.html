@@ -164,8 +164,9 @@
                 <h2>📊 Live Lab Telemetry, Active Tasks & Screen Snaps</h2>
                 <p>Real-time active windows, background processes, hardware loads, and on-demand screen captures for Dr. Richa Choudhary</p>
             </div>
-            <div class="view-controls">
+            <div class="view-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="requestAllScreenshots()" style="font-weight: 600;">📸 Snap All Online PCs</button>
+                <button class="btn" onclick="openAILabPowerModal()" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 800;" title="Master power options (Shutdown / Restart / Lock) for all AI Lab client workstations">🛑 Lab Power</button>
                 <button id="mon-auto-toggle-btn" class="btn btn-secondary" onclick="toggleMonitoringAutoRefresh()">⚡ Auto-Refresh: 5s (ON)</button>
                 <button class="btn btn-secondary" onclick="loadMonitoringData()">🔄 Refresh Now</button>
             </div>
@@ -561,8 +562,12 @@
                         <p id="screen-lightbox-subtitle" style="margin: 3px 0 0 0; font-size: 12px; color: #334155; font-weight: 600;">Real-Time Session Telemetry, Screen Preview & Process Manager</p>
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <button id="screen-lightbox-refresh-btn" class="btn btn-primary" onclick="requestLightboxFreshSnap()" style="font-size: 12px; padding: 7px 15px; font-weight: 800;">📸 Grab Fresh Snap</button>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button id="screen-lightbox-refresh-btn" class="btn btn-primary" onclick="requestLightboxFreshSnap()" style="font-size: 12px; padding: 7px 14px; font-weight: 800;">📸 Grab Fresh Snap</button>
+                    <button class="btn btn-secondary" onclick="triggerAILabPower('lock')" style="font-size: 11.5px; padding: 7px 11px; background: #f8fafc; border: 1px solid #cbd5e1; font-weight: 700;" title="Lock this workstation screen">🔒 Lock</button>
+                    <button class="btn btn-secondary" onclick="triggerAILabPower('warn')" style="font-size: 11.5px; padding: 7px 11px; background: #fefce8; border: 1px solid #fef08a; color: #854d0e; font-weight: 700;" title="Send administrative popup alert">⚠️ Alert</button>
+                    <button class="btn btn-secondary" onclick="triggerAILabPower('restart')" style="font-size: 11.5px; padding: 7px 11px; background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; font-weight: 700;" title="Reboot this workstation">🔄 Reboot</button>
+                    <button class="btn" onclick="triggerAILabPower('shutdown')" style="font-size: 11.5px; padding: 7px 11px; background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; font-weight: 800;" title="Shut down this workstation">🛑 Turn Off</button>
                     <button class="modal-close-btn" onclick="closeScreenLightbox()" title="Close Briefing">✕</button>
                 </div>
             </div>
@@ -664,6 +669,46 @@
                             <!-- Injected tasks list with kill buttons -->
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Bulk AI Lab Power & Administrative Control -->
+    <div id="ai-lab-power-modal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeAILabPowerModal()">
+        <div class="modal-card" style="max-width: 520px; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.25);">
+            <div class="modal-header" style="border-bottom: 2px solid #fee2e2; background: #fff5f5; padding: 16px 20px;">
+                <h3 style="color: #991b1b; margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                    🛑 Bulk AI Lab Power & Control
+                </h3>
+                <button class="modal-close-btn" onclick="closeAILabPowerModal()" title="Close">✕</button>
+            </div>
+            <div style="padding: 22px;">
+                <p style="font-size: 13.5px; color: #475569; margin: 0 0 16px 0; line-height: 1.5;">
+                    Perform master remote operations across all <strong>AI Lab client workstations</strong> (PC-1 to PC-8, DGX station). The master host server (BACKEND) is automatically protected.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="executeAILabBulkPower('lock')" style="justify-content: flex-start; padding: 12px 16px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 13px; width: 100%; text-align: left; display: flex;">
+                        <span style="font-size: 20px; margin-right: 10px;">🔒</span>
+                        <div>
+                            <div style="font-weight: 800; color: #0f172a;">Lock All Workstation Screens</div>
+                            <div style="font-size: 11px; color: #64748b;">Instantly lock Windows & Linux sessions for faculty lecture or presentation</div>
+                        </div>
+                    </button>
+                    <button class="btn btn-secondary" onclick="executeAILabBulkPower('restart')" style="justify-content: flex-start; padding: 12px 16px; background: #fff7ed; border: 1px solid #fed7aa; font-size: 13px; width: 100%; text-align: left; display: flex;">
+                        <span style="font-size: 20px; margin-right: 10px;">🔄</span>
+                        <div>
+                            <div style="font-weight: 800; color: #c2410c;">Reboot All Lab Workstations</div>
+                            <div style="font-size: 11px; color: #9a3412;">Clean 5-second countdown reboot across the lab</div>
+                        </div>
+                    </button>
+                    <button class="btn" onclick="executeAILabBulkPower('shutdown')" style="justify-content: flex-start; padding: 12px 16px; background: #fee2e2; border: 1px solid #f87171; color: #991b1b; font-size: 13px; width: 100%; text-align: left; display: flex;">
+                        <span style="font-size: 20px; margin-right: 10px;">🛑</span>
+                        <div>
+                            <div style="font-weight: 800; color: #991b1b;">Turn Off All Workstations (Lab Shutdown)</div>
+                            <div style="font-size: 11px; color: #b91c1c;">Shuts down all client PCs at the end of the day (BACKEND server stays ON)</div>
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>

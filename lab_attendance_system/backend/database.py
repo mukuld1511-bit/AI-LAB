@@ -1668,6 +1668,22 @@ def set_pending_command(pc_id: str, cmd: str) -> bool:
     return True
 
 
+def bulk_set_pending_command(lab_id: Optional[str], cmd: str) -> int:
+    """
+    Queues a command (e.g. 'shutdown', 'restart', 'lock') for all workstations in AI Lab.
+    Note: BACKEND (the teacher/master host server) is explicitly protected and excluded from shutdown.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    clean_cmd = cmd.strip()
+    c.execute("UPDATE workstations SET pending_command = ? WHERE UPPER(pc_id) != 'BACKEND'", (clean_cmd,))
+    c.execute("UPDATE pc_telemetry SET pending_command = ? WHERE UPPER(pc_id) != 'BACKEND'", (clean_cmd,))
+    affected = c.rowcount
+    conn.commit()
+    conn.close()
+    return max(1, affected)
+
+
 def update_screenshot_timestamp(pc_id: str, timestamp_str: str):
     """Updates screenshot timestamp."""
     conn = get_db_connection()

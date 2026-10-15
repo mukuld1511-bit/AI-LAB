@@ -3429,3 +3429,91 @@ async function killWorkstationTask(pcId, pid, procName) {
         showToast(`Failed to kill process: ${e.message}`, "error");
     }
 }
+
+// ── AI Lab Workstation Remote Power & Control ──
+async function triggerAILabPower(action) {
+    const modal = document.getElementById("screen-lightbox-modal");
+    const pcId = modal ? modal.dataset.currentPc : currentPCId;
+    if (!pcId) {
+        showToast("No workstation selected", "warning");
+        return;
+    }
+
+    if (pcId.toUpperCase() === "BACKEND" && (action === "shutdown" || action === "restart")) {
+        alert("⚠️ Protected Host: The BACKEND master server cannot be powered off remotely to protect ongoing lab databases and background services.");
+        return;
+    }
+
+    let cmd = action;
+    if (action === "shutdown") {
+        if (!confirm(`🛑 CRITICAL CONFIRMATION:\n\nAre you sure you want to SHUT DOWN workstation ${pcId} remotely?\nThis will close all active applications and turn off the machine in 5 seconds.`)) {
+            return;
+        }
+    } else if (action === "restart") {
+        if (!confirm(`🔄 CONFIRM REBOOT:\n\nAre you sure you want to RESTART workstation ${pcId} remotely?\nSystem will reboot in 5 seconds.`)) {
+            return;
+        }
+    } else if (action === "lock") {
+        if (!confirm(`🔒 Lock screen on workstation ${pcId}?`)) {
+            return;
+        }
+    } else if (action === "warn") {
+        const msg = prompt(`Enter administrative alert message for student on ${pcId}:`, "AI Lab Administrator Notice: Please focus on your assigned lab work.");
+        if (!msg || !msg.trim()) return;
+        cmd = `warn:${msg.trim()}`;
+    }
+
+    try {
+        const resp = await apiFetch("/api/command", {
+            method: "POST",
+            body: JSON.stringify({ pc_id: pcId, command: cmd })
+        });
+        if (resp && resp.status === "error") {
+            showToast(`⚠️ ${resp.message}`, "warning");
+        } else {
+            showToast(`⚡ Command '${cmd}' dispatched to ${pcId}`, "success");
+        }
+    } catch (e) {
+        showToast(`Failed to dispatch command: ${e.message}`, "error");
+    }
+}
+
+function openAILabPowerModal() {
+    const modal = document.getElementById("ai-lab-power-modal");
+    if (modal) {
+        modal.style.display = "flex";
+    }
+}
+
+function closeAILabPowerModal() {
+    const modal = document.getElementById("ai-lab-power-modal");
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
+async function executeAILabBulkPower(action) {
+    let confirmMsg = "";
+    if (action === "shutdown") {
+        confirmMsg = `🛑 DANGER: MASTER AI LAB SHUTDOWN\n\nAre you sure you want to SHUT DOWN ALL WORKSTATIONS in the AI Lab?\n\nThis will send an immediate 5-second shutdown sequence to every active client PC (PC-1 to PC-8, DGX). The BACKEND server will remain protected and online.`;
+    } else if (action === "restart") {
+        confirmMsg = `🔄 MASTER AI LAB REBOOT\n\nAre you sure you want to REBOOT ALL CLIENT WORKSTATIONS in the AI Lab?`;
+    } else if (action === "lock") {
+        confirmMsg = `🔒 MASTER AI LAB SCREEN LOCK\n\nAre you sure you want to LOCK ALL WORKSTATION SCREENS in the AI Lab?`;
+    }
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        showToast(`Queuing master '${action}' command for AI Lab workstations...`, "info");
+        const resp = await apiFetch("/api/lab/power", {
+            method: "POST",
+            body: JSON.stringify({ action: action })
+        });
+        showToast(`✅ ${resp.message || `Dispatched ${action} across AI Lab`}`, "success");
+        closeAILabPowerModal();
+        loadMonitoringData(true);
+    } catch (e) {
+        showToast(`Bulk command failed: ${e.message}`, "error");
+    }
+}
