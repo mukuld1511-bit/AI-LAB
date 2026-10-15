@@ -1018,73 +1018,202 @@ body {
     background: var(--bg-hover);
 }
 
-/* ── Modal Light Theme ── */
+/* Workstation Offline Display (Display Gayab when PC is Powered Off) */
+.card-screenshot-wrap.offline-screen {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 210px;
+}
+
+.card-screenshot-wrap.offline-screen:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.offline-screen-inner {
+    text-align: center;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 16px;
+}
+
+.offline-power-icon {
+    font-size: 32px;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+
+.offline-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.offline-sub {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* Quick Screenshot Download Pill on Card */
+.card-quick-download {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 139, 56, 0.92);
+    color: #ffffff !important;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-decoration: none !important;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.15s ease;
+    z-index: 5;
+}
+
+.card-quick-download:hover {
+    background: #00732e;
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(0, 139, 56, 0.35);
+}
+
+.btn-download {
+    background: #008b38 !important;
+    color: #ffffff !important;
+    border: 1px solid #00732e !important;
+}
+
+.btn-download:hover {
+    background: #00732e !important;
+}
+
+/* Multi-Period Report Filter Selector Pills */
+.report-period-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.period-btn {
+    background: #ffffff;
+    border: 1px solid var(--border-medium);
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.period-btn:hover {
+    background: #f1f5f9;
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.period-btn.active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 2px 6px rgba(0, 139, 56, 0.25);
+}
+
+/* ── Modal Light Theme (Minimal PIET Theme) ── */
 .modal-backdrop {
     display: none;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 1000;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(6px);
+    z-index: 99999 !important;
     align-items: center;
     justify-content: center;
     padding: 20px;
+    box-sizing: border-box;
 }
 
 .modal-backdrop.active,
 .modal-backdrop.show {
-    display: flex;
+    display: flex !important;
 }
 
 .modal-box {
     background: #ffffff;
     border: 1px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    max-width: 900px;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 920px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 .modal-header {
-    padding: 16px 20px;
+    padding: 16px 22px;
     border-bottom: 1px solid var(--border-light);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background: #ffffff;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .modal-title-wrap {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .modal-title-wrap h3 {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 800;
     color: var(--text-primary);
+    margin: 0;
 }
 
 .modal-close {
-    background: none;
-    border: none;
-    font-size: 20px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    font-weight: 700;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: var(--radius-sm);
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
 }
 
 .modal-close:hover {
-    background: var(--bg-subtle);
-    color: var(--text-primary);
+    background: #fee2e2;
+    color: #ef4444;
+    border-color: #fca5a5;
 }
 
 .modal-body {

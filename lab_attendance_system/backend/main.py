@@ -150,6 +150,7 @@ class UpdateEmailRequest(BaseModel):
 
 class HeartbeatRequest(BaseModel):
     pc_id: str
+    lab_id: Optional[str] = "LAB-414"
     cpu_percent: Optional[float] = 0.0
     ram_percent: Optional[float] = 0.0
     ram_used_gb: Optional[float] = 0.0
@@ -162,9 +163,22 @@ class HeartbeatRequest(BaseModel):
     ip_address: Optional[str] = ""
     os_info: Optional[str] = ""
     boot_time: Optional[str] = ""
+    uptime_seconds: Optional[int] = 0
+    active_work_seconds: Optional[int] = 0
+    fruitful_seconds: Optional[int] = 0
+    idle_seconds: Optional[int] = 0
+    distracted_seconds: Optional[int] = 0
     active_window: Optional[str] = ""
+    active_app: Optional[str] = ""
+    activity_type: Optional[str] = "neutral"
+    warning_reason: Optional[str] = ""
     top_processes: Optional[Any] = []
     logged_user: Optional[str] = ""
+
+
+class CommandPayload(BaseModel):
+    pc_id: str
+    command: str
 
 
 class ScreenshotUploadRequest(BaseModel):
@@ -246,42 +260,41 @@ def get_pc_status() -> List[Dict[str, Any]]:
     return database.get_all_pc_status()
 
 
-@app.post("/api/pc/heartbeat")
-def pc_heartbeat_endpoint(payload: HeartbeatRequest):
-    """
-    Heartbeat and hardware telemetry receiver sent by client workstations (PC-1 to PC-8).
-    Updates online status, CPU %, RAM %, GPU, active window, and top running processes.
-    Dispatches any queued command (such as 'capture_screen' or 'kill:pid') back to the agent.
-    """
-    pc_id = payload.pc_id.strip().upper()
-    if not pc_id:
-        raise HTTPException(status_code=400, detail="pc_id is required")
+# ── PIET Multi-Lab & Workstation Telemetry Endpoints ──
 
-    cmd = database.record_pc_telemetry(
-        pc_id=pc_id,
-        cpu_percent=payload.cpu_percent or 0.0,
-        ram_percent=payload.ram_percent or 0.0,
-        ram_used_gb=payload.ram_used_gb or 0.0,
-        ram_total_gb=payload.ram_total_gb or 0.0,
-        gpu_name=payload.gpu_name or "",
-        gpu_percent=payload.gpu_percent or 0.0,
-        gpu_temp=payload.gpu_temp or 0.0,
-        gpu_vram_used_mb=payload.gpu_vram_used_mb or 0.0,
-        gpu_vram_total_mb=payload.gpu_vram_total_mb or 0.0,
-        ip_address=payload.ip_address or "",
-        os_info=payload.os_info or "",
-        boot_time=payload.boot_time or "",
-        active_window=payload.active_window or "",
-        top_processes=json.dumps(payload.top_processes) if isinstance(payload.top_processes, list) else str(payload.top_processes or "[]"),
-        logged_user=payload.logged_user or ""
-    )
-    return {
-        "status": "ok",
-        "pc_id": pc_id,
-        "state": "online",
-        "command": cmd or None,
-        "message": f"{pc_id} telemetry recorded"
-    }
+@app.get("/api/labs")
+def get_all_labs():
+    """Lists all 5 AIML Department Labs from Central DB."""
+    return {"labs": database.get_all_labs()}
+
+
+@app.get("/api/lab/{lab_id}/grid")
+def get_lab_grid(lab_id: str):
+    """Fetches real-time status of all workstations in a specific lab (e.g. LAB-414)."""
+    grid_data = database.get_lab_workstations(lab_id=lab_id)
+    slot_info = database.get_current_timetable_slot(lab_id=lab_id)
+    grid_data["active_slot"] = slot_info
+    return grid_data
+
+
+@app.post("/api/heartbeat")
+@app.post("/api/pc/heartbeat")
+def receive_pc_heartbeat(payload: HeartbeatRequest):
+    """
+    Unified heartbeat receiver for all Windows client workstations and hubs.
+    Records telemetry directly into the single central database.
+    """
+    res = database.record_heartbeat(payload.dict())
+    return res
+
+
+@app.post("/api/command")
+def dispatch_command_global(payload: CommandPayload):
+    """Dispatches remote command (e.g. 'capture_screen', 'kill:pid')."""
+    clean_pc = payload.pc_id.strip().upper()
+    cmd = payload.command.strip()
+    database.set_pending_command(clean_pc, cmd)
+    return {"status": "ok", "pc_id": clean_pc, "command": cmd, "message": f"Dispatched '{cmd}' to {clean_pc}."}
 
 
 @app.post("/api/pc/{pc_id}/request_screenshot")
@@ -307,8 +320,8 @@ def request_pc_command(pc_id: str, payload: Optional[CommandRequest] = None):
                 from PIL import Image, ImageDraw
                 img = Image.new("RGB", (700, 400), color=(15, 23, 42))
                 draw = ImageDraw.Draw(img)
-                draw.rectangle([(10, 10), (690, 390)], outline=(59, 130, 246), width=3)
-                draw.text((30, 35), "AI/ML LAB — BACKEND MASTER SERVER", fill=(96, 165, 250))
+                draw.rectangle([(10, 10), (690, 390)], outline=(0, 139, 56), width=3)
+                draw.text((30, 35), "PIET AIML LAB — BACKEND MASTER SERVER", fill=(0, 139, 56))
                 draw.text((30, 80), "Status     : 24/7 DEDICATED HOST (ONLINE)", fill=(34, 197, 94))
                 draw.text((30, 120), "Active Core: FastAPI + Uvicorn + SQLite WAL", fill=(226, 232, 240))
                 draw.text((30, 160), "Tunnel     : Tailscale Funnel Active", fill=(226, 232, 240))
@@ -323,17 +336,17 @@ def request_pc_command(pc_id: str, payload: Optional[CommandRequest] = None):
             with open(out_path, "wb") as f:
                 f.write(base64.b64decode(img_b64))
             now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            database.update_pc_screenshot_timestamp("BACKEND", now_str)
+            database.update_screenshot_timestamp("BACKEND", now_str)
             return {
                 "status": "ok",
                 "pc_id": "BACKEND",
                 "url": f"/static/screenshots/backend.jpg?t={int(datetime.now().timestamp())}",
                 "message": "Backend server screen captured instantly."
             }
-        except Exception as e:
+        except Exception:
             pass
 
-    database.set_pc_pending_command(clean_pc, cmd)
+    database.set_pending_command(clean_pc, cmd)
     return {
         "status": "ok",
         "pc_id": clean_pc,
@@ -342,6 +355,7 @@ def request_pc_command(pc_id: str, payload: Optional[CommandRequest] = None):
     }
 
 
+@app.post("/api/screenshot")
 @app.post("/api/pc/screenshot")
 def upload_pc_screenshot(payload: ScreenshotUploadRequest):
     """Receives compressed screen capture from client workstation and saves to static screenshots directory."""
@@ -361,7 +375,7 @@ def upload_pc_screenshot(payload: ScreenshotUploadRequest):
             f.write(img_bytes)
 
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        database.update_pc_screenshot_timestamp(clean_pc, now_str)
+        database.update_screenshot_timestamp(clean_pc, now_str)
 
         return {
             "status": "ok",
@@ -371,6 +385,44 @@ def upload_pc_screenshot(payload: ScreenshotUploadRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save screenshot: {str(e)}")
+
+
+@app.get("/screenshots/{filename}")
+def serve_screenshot_file(filename: str):
+    """Direct route for /screenshots/pc-x.jpg."""
+    file_path = os.path.join(SCREENSHOTS_DIR, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="Screenshot not found")
+
+
+@app.get("/api/timetable/{lab_id}")
+def get_lab_timetable(lab_id: str):
+    """Returns department schedule for a specific lab."""
+    schedule = database.get_full_timetable(lab_id=lab_id)
+    return {"lab_id": lab_id.upper(), "weekly_schedule": schedule}
+
+
+@app.get("/api/reports/{timeframe}")
+def get_utilization_report(timeframe: str, lab_id: str = "LAB-414", date: Optional[str] = None):
+    """
+    Generates official NBA Criterion 4 lab utilization report.
+    timeframe: 'daily', 'weekly', 'monthly', 'semester'
+    """
+    return database.generate_report(lab_id=lab_id, timeframe=timeframe, date_str=date)
+
+
+@app.get("/api/reports/export/csv")
+@app.get("/api/reports_csv")
+def export_report_csv_endpoint(timeframe: str = "daily", lab_id: str = "LAB-414"):
+    """Downloads NBA Criterion 4 Lab Utilization Report as CSV."""
+    csv_content = database.export_report_csv(lab_id=lab_id, timeframe=timeframe)
+    filename = f"PIET_{lab_id}_{timeframe}_utilization_report.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @app.post("/api/pc/{pc_id}/kill_task")

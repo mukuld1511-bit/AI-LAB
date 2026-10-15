@@ -24,7 +24,10 @@ The PIET AIML Department Smart Lab Supervision System is an enterprise-grade, mu
 2. **No Face Recognition on Student Workstations:** Face recognition is restricted exclusively to the Department Entrance Gate Security Camera (operated by the Central Server PC). Student workstations run a lightweight, non-intrusive background telemetry daemon.
 3. **No Student Manual Form Filing:** Workstations automatically detect active applications, mouse/keyboard idle time, and fruitful programming hours without asking students to submit manual allotment forms.
 4. **Stealth On-Demand Screenshots Only:** Workstations do **not** perform continuous video recording of desktops to conserve memory and network bandwidth. High-resolution desktop screen captures are performed strictly on-demand when requested by faculty or Dr. Richa Mam from the supervision dashboard.
-5. **Clean Light Theme & High-Visibility UI:** A professional university-grade light theme (`#ffffff` & `#f8fafc`) with large `360px+` workstation blocks displaying live captured desktop screenshots directly on the grid.
+5. **Clean Light Theme & High-Visibility UI:** A professional university-grade light theme (`#ffffff` & `#f8fafc`) with PIET Green (`#008b38`) branding across all portals (Main Central Dashboard, MAMS In-Charge Portal, Wall Display Kiosk, and Raspberry Pi Hub).
+6. **Single Central Database Architecture:** All laboratory data, heartbeats, timetables, and logs reside strictly in a single consolidated SQLite database on the Central Server PC (`lab_attendance.db`). No fragmented or split-brain databases exist across client machines.
+7. **Offline Workstation Display Gayab:** When a workstation powers down or goes offline (`is_online == 0`), old/stale desktop screenshots immediately vanish from the grid and modal, replaced with a clean powered-down offline indicator.
+8. **NBA Criterion 4 Multi-Period Audits:** Built-in automated reporting engine providing 1-click generation, printing, and CSV export for Daily, Weekly, Monthly, and Semester compliance audits with institutional letterhead and faculty signatures.
 
 ---
 
@@ -331,18 +334,23 @@ CREATE TABLE IF NOT EXISTS timetable (
 
 ## 8. REST APIS & ENDPOINTS DIRECTORY
 
-### Raspberry Pi Hub API (Port 8000)
+### Raspberry Pi Hub & Central Server PC API (Port 8000)
 
 | Endpoint | Method | Caller | Payload / Query | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `/api/health` | `GET` | Anyone | None | Returns JSON health check (`online`, active lab, timestamp). |
+| `/api/labs` | `GET` | Dashboard / Portal | None | Returns list of all department labs (`LAB-414` through `LAB-418`). |
 | `/api/heartbeat` | `POST` | Windows PC Agent | `HeartbeatPayload` JSON | Ingests PC metrics; returns pending remote commands (e.g. `capture_screen`). |
-| `/api/lab/{lab_id}/grid` | `GET` | Web Dashboard | `lab_id` (e.g. `LAB-414`) | Returns full 20 PC status array, fruitful stats, active timetable slot. |
+| `/api/lab/{lab_id}/grid` | `GET` | Web Dashboard | `lab_id` (e.g. `LAB-414`) | Returns full 20+ PC status array, fruitful stats, active timetable slot. |
 | `/api/command` | `POST` | Web Dashboard | `{"pc_id": "...", "command": "capture_screen"}` | Dispatches stealth command to workstation. |
 | `/api/screenshot` | `POST` | Windows PC Agent | `{"pc_id": "...", "image_base64": "..."}` | Saves screen capture to `static/screenshots/<pc_id>.jpg`. |
 | `/screenshots/{filename}` | `GET` | Web Browser | None | Direct image URL to view captured screen. |
 | `/api/timetable/{lab_id}` | `GET` | Web Dashboard | `lab_id` | Fetches active lecture slot and weekly department timetable. |
-| `/api/reports/daily` | `GET` | Web Dashboard | `date` (optional) | Generates printable daily departmental utilization report. |
+| `/api/reports/daily` | `GET` | Web Dashboard | `lab_id`, `date` (optional) | Generates printable daily departmental utilization report. |
+| `/api/reports/weekly` | `GET` | Web Dashboard | `lab_id`, `date` (optional) | Generates 6-day aggregated weekly lab audit report. |
+| `/api/reports/monthly` | `GET` | Web Dashboard | `lab_id`, `date` (optional) | Generates 4-week monthly academic utilization audit report. |
+| `/api/reports/semester` | `GET` | Web Dashboard | `lab_id`, `date` (optional) | Generates full 16-week NBA Criterion 4 laboratory compliance audit. |
+| `/api/reports/export/csv` | `GET` | Web Dashboard | `lab_id`, `timeframe` | Downloads structured CSV report with academic letterhead & signatures. |
 
 ---
 

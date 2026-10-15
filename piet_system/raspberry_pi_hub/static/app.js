@@ -170,17 +170,29 @@ function renderWorkstationsGrid() {
             snapUrl = `/screenshots/${pc.pc_id.toLowerCase()}.jpg?t=${Date.now()}`;
         }
 
+        // Display Rule: If workstation is offline/shut down -> DISPLAY GAYAB! No stale screenshots.
         let screenBlockHtml = "";
-        if (snapUrl) {
+        if (!isOnline) {
             screenBlockHtml = `
-                <div class="card-screenshot-wrap" onclick="openBriefingModal('${pc.pc_id}')" title="Click to view full screen">
-                    <img class="card-screenshot-img" src="${snapUrl}" alt="${pc.pc_id} Desktop" onerror="this.onerror=null; this.src='/screenshots/${pc.pc_id.toLowerCase()}.jpg'">
-                    <div class="card-screenshot-overlay">🔍 Click to enlarge • ${pc.last_screenshot_at || 'Captured'}</div>
+                <div class="card-screenshot-wrap offline-screen" onclick="openBriefingModal('${pc.pc_id}')" title="System is currently shut down — click to view audit dossier">
+                    <div class="offline-screen-inner">
+                        <span class="offline-power-icon">⏻</span>
+                        <strong class="offline-title">Workstation Offline</strong>
+                        <span class="offline-sub">Screen capture disabled while system is shut down</span>
+                    </div>
                 </div>
             `;
-        } else if (isOnline) {
+        } else if (snapUrl) {
             screenBlockHtml = `
-                <div class="card-screenshot-wrap empty-screen" onclick="requestSingleScreen('${pc.pc_id}', null)" title="Click to take fresh screenshot">
+                <div class="card-screenshot-wrap" onclick="openBriefingModal('${pc.pc_id}')" title="Click to view full screen & audit dossier">
+                    <img class="card-screenshot-img" src="${snapUrl}" alt="${pc.pc_id} Desktop" onerror="this.onerror=null; this.src='/screenshots/${pc.pc_id.toLowerCase()}.jpg'">
+                    <div class="card-screenshot-overlay">🔍 Click to audit • ${pc.last_screenshot_at || 'Captured'}</div>
+                    <a href="${snapUrl}" download="${pc.pc_id}_desktop.jpg" class="card-quick-download" onclick="event.stopPropagation();" title="Download Screenshot (JPG)">📥 Download</a>
+                </div>
+            `;
+        } else {
+            screenBlockHtml = `
+                <div class="card-screenshot-wrap empty-screen" onclick="event.stopPropagation(); requestSingleScreen('${pc.pc_id}', null)" title="Click to capture live screen">
                     <div class="empty-screen-inner">
                         <span class="camera-icon">📸</span>
                         <strong style="color: #0f172a; font-size: 13px;">No Screenshot Taken Yet</strong>
@@ -188,19 +200,10 @@ function renderWorkstationsGrid() {
                     </div>
                 </div>
             `;
-        } else {
-            screenBlockHtml = `
-                <div class="card-screenshot-wrap empty-screen" style="opacity: 0.7; cursor: default;">
-                    <div class="empty-screen-inner">
-                        <span style="font-size: 26px; filter: grayscale(1);">🖥️</span>
-                        <span style="font-size: 12px; color: #64748b;">Workstation is Offline</span>
-                    </div>
-                </div>
-            `;
         }
 
         return `
-            <div class="${cardClass}" id="card-${pc.pc_id}">
+            <div class="${cardClass}" id="card-${pc.pc_id}" onclick="openBriefingModal('${pc.pc_id}')" style="cursor: pointer;" title="Click workstation card to open academic audit dossier">
                 <div class="card-top">
                     <div class="card-title-group">
                         <span class="pc-name">🖥️ ${escapeHtml(pc.pc_id)}</span>
@@ -212,7 +215,7 @@ function renderWorkstationsGrid() {
                     ${badgeHtml}
                 </div>
 
-                <!-- Prominent Live Desktop Screenshot Area -->
+                <!-- Live Desktop Screenshot Area (Disappears when PC is Off) -->
                 ${screenBlockHtml}
 
                 <!-- Active App & Window Title -->
@@ -245,12 +248,17 @@ function renderWorkstationsGrid() {
                 </div>
 
                 <!-- Card Actions -->
-                <div class="card-footer">
+                <div class="card-footer" onclick="event.stopPropagation();">
                     <button class="btn btn-primary" onclick="requestSingleScreen('${pc.pc_id}', this)" ${!isOnline ? 'disabled' : ''}>
-                        📸 Capture Screen
+                        📸 Snap
                     </button>
+                    ${isOnline && snapUrl ? `
+                        <a href="${snapUrl}" download="${pc.pc_id}_desktop.jpg" class="btn btn-download" title="Download Screenshot (JPG)">
+                            📥 Download
+                        </a>
+                    ` : ''}
                     <button class="btn btn-outline" onclick="openBriefingModal('${pc.pc_id}')">
-                        📋 Audit Details
+                        📋 Audit Dossier
                     </button>
                 </div>
             </div>
@@ -373,30 +381,59 @@ function populateModalData(pc) {
         badge.style.background = isOnline ? "#dcfce7" : "#f1f5f9";
     }
 
-    // Image preview
+    // Image preview & offline rules
     const img = document.getElementById("modal-screen-img");
     const placeholder = document.getElementById("modal-screen-placeholder");
     const fullBtn = document.getElementById("modal-full-img-btn");
+    const downloadBtn = document.getElementById("modal-download-img-btn");
+    const grabBtn = document.getElementById("modal-grab-btn");
+    const isOnline = pc.is_online === 1 || pc.is_online === true;
 
     let snapSrc = pc.screenshot_url ? pc.screenshot_url.replace('/static/screenshots/', '/screenshots/') : null;
     if (!snapSrc && pc.last_screenshot_at) {
         snapSrc = `/screenshots/${pc.pc_id.toLowerCase()}.jpg?t=${Date.now()}`;
     }
 
-    if (snapSrc) {
-        if (img) {
-            img.src = snapSrc;
-            img.style.display = "block";
-        }
-        if (placeholder) placeholder.style.display = "none";
-        if (fullBtn) {
-            fullBtn.href = snapSrc;
-            fullBtn.style.display = "inline-flex";
-        }
-    } else {
+    if (!isOnline) {
+        // System is offline -> Display is GAYAB!
         if (img) img.style.display = "none";
-        if (placeholder) placeholder.style.display = "flex";
+        if (placeholder) {
+            placeholder.style.display = "flex";
+            placeholder.innerHTML = `
+                <span style="font-size: 32px; color: #94a3b8; margin-bottom: 8px;">⏻</span>
+                <strong style="color: #475569; font-size: 14px;">Workstation is Powered Down</strong>
+                <small style="color: #94a3b8; font-size: 11px;">Desktop display is inactive while system is shut down.</small>
+            `;
+        }
         if (fullBtn) fullBtn.style.display = "none";
+        if (downloadBtn) downloadBtn.style.display = "none";
+        if (grabBtn) grabBtn.disabled = true;
+    } else {
+        if (grabBtn) grabBtn.disabled = false;
+        if (snapSrc) {
+            if (img) {
+                img.src = snapSrc;
+                img.style.display = "block";
+            }
+            if (placeholder) placeholder.style.display = "none";
+            if (fullBtn) {
+                fullBtn.href = snapSrc;
+                fullBtn.style.display = "inline-flex";
+            }
+            if (downloadBtn) {
+                downloadBtn.href = snapSrc;
+                downloadBtn.download = `${pc.pc_id}_${new Date().toISOString().slice(0, 10)}.jpg`;
+                downloadBtn.style.display = "inline-flex";
+            }
+        } else {
+            if (img) img.style.display = "none";
+            if (placeholder) {
+                placeholder.style.display = "flex";
+                placeholder.innerHTML = `<span>📸 No screen capture on record</span><small>Click "Capture Screen Now" below</small>`;
+            }
+            if (fullBtn) fullBtn.style.display = "none";
+            if (downloadBtn) downloadBtn.style.display = "none";
+        }
     }
 
     // Productivity metrics
@@ -473,11 +510,18 @@ function closeModal() {
     }
 }
 
+// ESC Key listener to close modal
+window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" || e.keyCode === 27) {
+        closeModal();
+    }
+});
+
 // ── Timetable View ──
 async function loadTimetableView() {
     const tbody = document.getElementById("timetable-body");
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #64748b;">Loading Lab 414 schedule...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Loading ${currentLab} schedule...</td></tr>`;
 
     try {
         const resp = await fetch(`/api/timetable/${currentLab}`);
@@ -485,7 +529,7 @@ async function loadTimetableView() {
         const sched = data.weekly_schedule || [];
 
         if (sched.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #64748b;">No schedule entries configured for ${currentLab}.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">No schedule entries configured for ${currentLab}.</td></tr>`;
             return;
         }
 
@@ -506,28 +550,44 @@ async function loadTimetableView() {
             `;
         }).join("");
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="6" style="color: #f43f5e;">Failed to load timetable: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color: #f43f5e; padding: 20px;">Failed to load timetable: ${e.message}</td></tr>`;
     }
 }
 
-// ── Daily Analytics & Reports View ──
-async function loadAnalyticsView() {
+// ── Multi-Period Analytics & Reports View (Daily, Weekly, Monthly, Semester) ──
+let currentReportPeriod = "daily";
+
+function loadReportPeriod(period) {
+    currentReportPeriod = period;
+    document.querySelectorAll(".period-btn").forEach(b => {
+        if (b.getAttribute("onclick")?.includes(period)) b.classList.add("active");
+        else b.classList.remove("active");
+    });
+    loadAnalyticsView(period);
+}
+
+async function loadAnalyticsView(period = currentReportPeriod) {
     const tbody = document.getElementById("analytics-body");
     const summaryBar = document.getElementById("report-summary-bar");
+    const titleEl = document.getElementById("report-main-title");
+    const subEl = document.getElementById("report-sub-title");
     if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b;">Generating daily analytics for ${currentLab}...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 24px;">Generating ${period} analytics for ${currentLab}...</td></tr>`;
 
     try {
-        const resp = await fetch(`/api/reports/daily?lab_id=${currentLab}`);
+        const resp = await fetch(`/api/reports/${period}?lab_id=${currentLab}`);
         const rep = await resp.json();
+
+        if (titleEl) titleEl.innerText = rep.report_title || "LABORATORY WORK HOURS & UTILIZATION REPORT";
+        if (subEl) subEl.innerText = `Department of Artificial Intelligence & Machine Learning • Period: ${rep.report_date}`;
 
         if (summaryBar) {
             summaryBar.innerHTML = `
                 <div class="report-summary-boxes">
                     <div class="summary-box">
-                        <span class="lbl">AUDIT DATE</span>
-                        <span class="val">${rep.report_date}</span>
+                        <span class="lbl">AUDIT PERIOD</span>
+                        <span class="val font-semibold" style="font-size: 13px;">${rep.report_date}</span>
                     </div>
                     <div class="summary-box">
                         <span class="lbl">WORKSTATIONS</span>
@@ -555,13 +615,13 @@ async function loadAnalyticsView() {
 
         const pcs = rep.pcs || [];
         if (pcs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b;">No utilization data recorded for today yet.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">No utilization data recorded for ${period}.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = pcs.map(p => `
             <tr>
-                <td><strong class="mono" style="color: #0f172a;">${p.pc_id}</strong></td>
+                <td><strong class="mono" style="color: #0f172a;">${escapeHtml(p.pc_id)}</strong></td>
                 <td class="mono font-semibold" style="color: #0284c7;">${p.uptime}</td>
                 <td class="mono font-semibold" style="color: #008b38;"><strong>${p.work_time || p.fruitful_time}</strong></td>
                 <td class="mono" style="color: #d97706;">${p.idle_time}</td>
@@ -571,7 +631,7 @@ async function loadAnalyticsView() {
             </tr>
         `).join("");
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="7" style="color: #f43f5e;">Failed to generate report: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="color: #f43f5e; padding: 20px;">Failed to generate report: ${e.message}</td></tr>`;
     }
 }
 
@@ -580,6 +640,10 @@ function exportDailyReport() {
     setTimeout(() => {
         window.print();
     }, 500);
+}
+
+function downloadReportCSV() {
+    window.location.href = `/api/reports/export/csv?lab_id=${currentLab}&timeframe=${currentReportPeriod}`;
 }
 
 // ── Utilities ──

@@ -181,13 +181,32 @@ def get_lab_timetable(lab_id: str):
     }
 
 
-# ── Reports & Analytics ──
+# ── Reports & Analytics (NBA Criterion 4 Compliant) ──
 
 @app.get("/api/reports/daily")
 def get_daily_report(lab_id: str = "LAB-414", date: Optional[str] = None):
     """Generates comprehensive daily departmental utilization & fruitful work report."""
-    rep = database.generate_daily_report(lab_id=lab_id, date_str=date)
-    return rep
+    return database.generate_report(lab_id=lab_id, timeframe="daily", date_str=date)
+
+
+@app.get("/api/reports/{timeframe}")
+def get_utilization_report(timeframe: str, lab_id: str = "LAB-414", date: Optional[str] = None):
+    """Generates official NBA Criterion 4 lab utilization report (daily, weekly, monthly, semester)."""
+    return database.generate_report(lab_id=lab_id, timeframe=timeframe, date_str=date)
+
+
+@app.get("/api/reports/export/csv")
+@app.get("/api/reports_csv")
+def export_report_csv_endpoint(timeframe: str = "daily", lab_id: str = "LAB-414"):
+    """Downloads NBA Criterion 4 Lab Utilization Report as CSV."""
+    from fastapi.responses import Response
+    csv_content = database.export_report_csv(lab_id=lab_id, timeframe=timeframe)
+    filename = f"PIET_{lab_id}_{timeframe}_utilization_report.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 # ── Static Web App & Asset Mounting ──

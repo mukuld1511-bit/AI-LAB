@@ -676,9 +676,18 @@
                             <div class="letterhead-audit-tag">NBA Accreditation Criterion 4 (Facilities &amp; Technical Support) &bull; Academic Lab Audit</div>
                         </div>
                     </div>
-                    <div class="letterhead-actions">
+                    <div class="letterhead-actions" style="display: flex; gap: 8px;">
                         <button class="btn btn-primary" onclick="window.print()">🖨️ Print Official Report</button>
+                        <button class="btn btn-outline" onclick="downloadReportCSV()">📥 Export CSV</button>
                     </div>
+                </div>
+
+                <!-- NBA Multi-Period Filter Selector Pills -->
+                <div class="report-period-selector">
+                    <button class="period-btn active" onclick="loadReportPeriod('daily')">📅 Today (Daily)</button>
+                    <button class="period-btn" onclick="loadReportPeriod('weekly')">📅 Weekly Audit</button>
+                    <button class="period-btn" onclick="loadReportPeriod('monthly')">📅 Monthly Dossier</button>
+                    <button class="period-btn" onclick="loadReportPeriod('semester')">🎓 Semester Term Audit</button>
                 </div>
 
                 <!-- NBA Report Metadata Strip -->
@@ -690,8 +699,8 @@
                 </div>
 
                 <div class="card-header" style="margin-top: 10px;">
-                    <h2>🏛️ Workstation Operating & Practical Work Hours Log</h2>
-                    <span class="card-subtitle">Official departmental record of machine operating hours, student practical utilization, and software resource allocation</span>
+                    <h2 id="report-main-title">🏛️ Workstation Operating & Practical Work Hours Log</h2>
+                    <span class="card-subtitle" id="report-sub-title">Official departmental record of machine operating hours, student practical utilization, and software resource allocation</span>
                 </div>
                 <div class="report-summary-bar" id="report-summary-bar">
                     <!-- Populated dynamically -->
@@ -760,6 +769,9 @@
                         <button class="btn btn-primary btn-block" id="modal-grab-btn" onclick="requestModalScreenGrab()">
                             📸 Capture Screen Now
                         </button>
+                        <a id="modal-download-img-btn" href="#" download="screenshot.jpg" class="btn btn-download btn-block" style="text-decoration: none; display: none;">
+                            📥 Download Screenshot (JPG)
+                        </a>
                         <a id="modal-full-img-btn" href="#" target="_blank" class="btn btn-outline btn-block" style="text-decoration: none; display: none;">
                             🔗 Open High-Res Image ↗
                         </a>
