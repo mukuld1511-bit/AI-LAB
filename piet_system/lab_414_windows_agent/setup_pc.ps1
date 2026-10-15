@@ -30,10 +30,12 @@ if (-not (Test-Path $agentDir)) {
     New-Item -ItemType Directory -Path $agentDir -Force | Out-Null
 }
 
-# 2. Download Agent Code
-Write-Host "[1/4] Downloading latest telemetry agent..." -ForegroundColor Yellow
+# 2. Download Agent Code & Alert HUD Module
+Write-Host "[1/4] Downloading latest telemetry agent & alert HUD module..." -ForegroundColor Yellow
 $agentUrl = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/lab_414_agent.py"
 Invoke-WebRequest -Uri $agentUrl -OutFile "$agentDir\lab_414_agent.py" -UseBasicParsing
+$alertUrl = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/show_alert.py"
+Invoke-WebRequest -Uri $alertUrl -OutFile "$agentDir\show_alert.py" -UseBasicParsing
 
 # 3. Write Config
 Write-Host "[2/4] Saving configuration for $targetPc..." -ForegroundColor Yellow

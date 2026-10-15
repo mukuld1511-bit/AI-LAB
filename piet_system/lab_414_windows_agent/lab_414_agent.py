@@ -207,13 +207,40 @@ def load_config():
         except Exception:
             pass
 
-    # CLI Override: python lab_414_agent.py PC-414-05
-    if len(sys.argv) > 1:
-        arg_val = sys.argv[1].strip().upper()
+    # Flexible CLI Override:
+    # e.g.: python lab_414_agent.py 1
+    #       python lab_414_agent.py PC-414-01 http://localhost:8088
+    #       python lab_414_agent.py --pc PC-414-01 --hub https://raspberrypi.tailc8c1f6.ts.net
+    args = sys.argv[1:]
+    i = 0
+    pos_args = []
+    while i < len(args):
+        a = args[i]
+        if a in ("--pc", "-p") and i + 1 < len(args):
+            default_cfg["pc_id"] = args[i + 1].strip()
+            i += 2
+        elif a in ("--hub", "-h") and i + 1 < len(args):
+            default_cfg["hub_url"] = args[i + 1].strip()
+            i += 2
+        elif a in ("--lab", "-l") and i + 1 < len(args):
+            default_cfg["lab_id"] = args[i + 1].strip().upper()
+            i += 2
+        elif not a.startswith("-"):
+            pos_args.append(a)
+            i += 1
+        else:
+            i += 1
+
+    if pos_args:
+        arg_val = pos_args[0].strip()
         if arg_val.isdigit():
             default_cfg["pc_id"] = f"PC-414-{int(arg_val):02d}"
         else:
-            default_cfg["pc_id"] = arg_val
+            default_cfg["pc_id"] = arg_val.upper()
+    if len(pos_args) > 1:
+        default_cfg["hub_url"] = pos_args[1].strip()
+    if len(pos_args) > 2:
+        default_cfg["lab_id"] = pos_args[2].strip().upper()
 
     return default_cfg
 
