@@ -276,23 +276,70 @@ def init_db() -> None:
         )
     """)
 
-    # Seed timetable if empty
+    # Seed or refresh official PIET 55-minute timetable (09:05 to 16:25) across all 5 labs
     cursor.execute("SELECT count(*) as cnt FROM timetable")
-    if cursor.fetchone()["cnt"] == 0:
-        sample_slots = [
-            ("LAB-414", "Monday", "09:00", "11:00", "Deep Learning Lab (AIML-301)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A1"),
-            ("LAB-414", "Monday", "11:30", "01:30", "Machine Learning Lab (AIML-201)", "Er. Gaurav Sharma", "2nd Year AIML - Batch B1"),
-            ("LAB-414", "Monday", "02:00", "04:00", "Capstone Project Lab", "Faculty Mentor Panel", "4th Year AIML"),
-            ("LAB-414", "Tuesday", "09:00", "11:00", "Computer Vision Lab (AIML-302)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
-            ("LAB-414", "Tuesday", "11:30", "01:30", "NLP & LLM Studio (AIML-401)", "Dr. Amit Verma", "4th Year AIML"),
-            ("LAB-414", "Wednesday", "09:00", "11:00", "Deep Learning Lab (AIML-301)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A3"),
-            ("LAB-414", "Thursday", "09:00", "11:00", "Data Structures with Python", "Er. Priya Gupta", "2nd Year AIML - Batch B2"),
-            ("LAB-414", "Friday", "09:00", "11:00", "Advanced AI Lab", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - All Batches")
+    if cursor.fetchone()["cnt"] < 15:
+        cursor.execute("DELETE FROM timetable")
+        piet_55min_slots = [
+            # LAB-414 (AI & Deep Learning)
+            ("LAB-414", "Monday", "09:05", "10:55", "Deep Learning Lab (AIML-301, P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A1"),
+            ("LAB-414", "Monday", "10:55", "12:45", "Neural Networks & PyTorch Lab (P3-P4)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
+            ("LAB-414", "Monday", "13:40", "15:30", "Capstone Project Lab (P5-P6)", "Faculty Mentor Panel", "4th Year AIML"),
+            ("LAB-414", "Monday", "15:30", "16:25", "Research Seminar & AI Ethics (P7)", "Dr. Richa Choudhary, Assistant Professor", "4th Year AIML"),
+
+            ("LAB-414", "Tuesday", "09:05", "10:55", "Computer Vision Lab (AIML-302, P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
+            ("LAB-414", "Tuesday", "10:55", "12:45", "Deep Learning Studio (P3-P4)", "Er. Gaurav Sharma", "3rd Year AIML - Batch A3"),
+            ("LAB-414", "Tuesday", "13:40", "15:30", "Generative AI & LLM Studio (P5-P6)", "Dr. Amit Verma", "4th Year AIML"),
+            ("LAB-414", "Tuesday", "15:30", "16:25", "Guided Practical Mentoring (P7)", "Dr. Richa Choudhary, Assistant Professor", "2nd Year AIML"),
+
+            ("LAB-414", "Wednesday", "09:05", "10:55", "Deep Learning Lab (AIML-301, P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A3"),
+            ("LAB-414", "Wednesday", "10:55", "12:45", "Machine Learning Lab (AIML-201, P3-P4)", "Er. Gaurav Sharma", "2nd Year AIML - Batch B1"),
+            ("LAB-414", "Wednesday", "13:40", "15:30", "Autonomous Systems Lab (P5-P6)", "Er. Vikas Malik", "4th Year AIML"),
+            ("LAB-414", "Wednesday", "15:30", "16:25", "Project Code Review & Sync (P7)", "Faculty Mentor Panel", "3rd Year AIML"),
+
+            ("LAB-414", "Thursday", "09:05", "10:55", "Data Structures with Python (P1-P2)", "Er. Priya Gupta", "2nd Year AIML - Batch B2"),
+            ("LAB-414", "Thursday", "10:55", "12:45", "Deep Learning Lab (AIML-301, P3-P4)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A1"),
+            ("LAB-414", "Thursday", "13:40", "15:30", "Capstone AI Studio (P5-P6)", "Dr. Richa Choudhary, Assistant Professor", "4th Year AIML"),
+            ("LAB-414", "Thursday", "15:30", "16:25", "Technical Doubt & Skill Clinic (P7)", "Er. Gaurav Sharma", "2nd Year AIML"),
+
+            ("LAB-414", "Friday", "09:05", "10:55", "Advanced AI & GPU Computing (P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - All Batches"),
+            ("LAB-414", "Friday", "10:55", "12:45", "Model Deployment & MLOps (P3-P4)", "Er. Gaurav Sharma", "4th Year AIML"),
+            ("LAB-414", "Friday", "13:40", "15:30", "Hackathon & Research Sprint (P5-P6)", "Faculty Mentor Panel", "3rd & 4th Year AIML"),
+            ("LAB-414", "Friday", "15:30", "16:25", "Weekly Lab Audit & Handoff (P7)", "Dr. Richa Choudhary, Assistant Professor", "All Batches"),
+
+            # LAB-415 (Machine Learning & Vision)
+            ("LAB-415", "Monday", "09:05", "10:55", "Computer Vision & Edge AI (P1-P2)", "Dr. Amit Verma", "3rd Year AIML - Batch B1"),
+            ("LAB-415", "Monday", "10:55", "12:45", "Machine Learning Foundation (P3-P4)", "Er. Gaurav Sharma", "2nd Year AIML - Batch A1"),
+            ("LAB-415", "Monday", "13:40", "15:30", "Robotics Vision Studio (P5-P6)", "Er. Vikas Malik", "4th Year AIML"),
+            ("LAB-415", "Monday", "15:30", "16:25", "Open Source AI Contributions (P7)", "Dr. Amit Verma", "3rd Year AIML"),
+
+            ("LAB-415", "Tuesday", "09:05", "10:55", "Machine Learning Lab (AIML-201, P1-P2)", "Er. Gaurav Sharma", "2nd Year AIML - Batch B2"),
+            ("LAB-415", "Tuesday", "10:55", "12:45", "Computer Vision Lab (P3-P4)", "Dr. Amit Verma", "3rd Year AIML - Batch B2"),
+            ("LAB-415", "Tuesday", "13:40", "15:30", "Deep Learning Applications (P5-P6)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML"),
+            ("LAB-415", "Tuesday", "15:30", "16:25", "Practical AI Doubt Clinic (P7)", "Er. Gaurav Sharma", "2nd Year AIML"),
+
+            # LAB-416 (Data Science & Analytics)
+            ("LAB-416", "Monday", "09:05", "10:55", "Big Data Analytics Lab (P1-P2)", "Er. Priya Gupta", "3rd Year AIML"),
+            ("LAB-416", "Monday", "10:55", "12:45", "Data Visualization & BI (P3-P4)", "Dr. Amit Verma", "2nd Year AIML"),
+            ("LAB-416", "Monday", "13:40", "15:30", "Statistical Computing Lab (P5-P6)", "Er. Priya Gupta", "3rd Year AIML"),
+            ("LAB-416", "Monday", "15:30", "16:25", "Data Science Case Studies (P7)", "Dr. Amit Verma", "4th Year AIML"),
+
+            # LAB-417 (Python & Core AI)
+            ("LAB-417", "Monday", "09:05", "10:55", "Python Core Programming (P1-P2)", "Er. Priya Gupta", "1st/2nd Year AIML"),
+            ("LAB-417", "Monday", "10:55", "12:45", "Object Oriented AI Programming (P3-P4)", "Er. Gaurav Sharma", "2nd Year AIML"),
+            ("LAB-417", "Monday", "13:40", "15:30", "Algorithms & Problem Solving (P5-P6)", "Er. Priya Gupta", "2nd Year AIML"),
+            ("LAB-417", "Monday", "15:30", "16:25", "Competitive Coding Mentoring (P7)", "Er. Gaurav Sharma", "All Batches"),
+
+            # LAB-418 (Project & Research Lab)
+            ("LAB-418", "Monday", "09:05", "10:55", "AI Research Project Studio (P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "4th Year Research Batch"),
+            ("LAB-418", "Monday", "10:55", "12:45", "DGX Server Deep Learning Sprint (P3-P4)", "Dr. Richa Choudhary, Assistant Professor", "M.Tech / Capstone AI"),
+            ("LAB-418", "Monday", "13:40", "15:30", "Hardware-AI Integration Lab (P5-P6)", "Er. Vikas Malik", "4th Year AIML"),
+            ("LAB-418", "Monday", "15:30", "16:25", "Patent & Research Paper Writing (P7)", "Dr. Richa Choudhary, Assistant Professor", "4th Year Research Batch")
         ]
         cursor.executemany("""
             INSERT INTO timetable (lab_id, day_of_week, start_time, end_time, subject, faculty, batch)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, sample_slots)
+        """, piet_55min_slots)
 
     # Migrations for registered_users table
     cursor.execute("PRAGMA table_info(registered_users)")
@@ -1671,6 +1718,84 @@ def get_full_timetable(lab_id: str = "LAB-414") -> List[Dict[str, Any]]:
             END,
             start_time ASC
     """, (lab_id.upper(),))
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+
+def archive_slot_session_logs(lab_id: Optional[str] = None, slot_name: Optional[str] = None) -> int:
+    """
+    Archives a 55-minute lecture session snapshot into daily_session_logs on the Local PC.
+    Captures fruitful, idle, and distracted time for each PC in the lab.
+    """
+    conn = get_db_connection()
+    c = conn.cursor()
+    now = datetime.now()
+    log_date = now.strftime("%Y-%m-%d")
+    cur_time = now.strftime("%H:%M")
+
+    # Detect 55-minute slot if not specified
+    if not slot_name:
+        slot_name = f"Lecture ({cur_time})"
+        slots_55m = [
+            ("P1 (09:05 - 10:00)", "09:05", "10:00"),
+            ("P2 (10:00 - 10:55)", "10:00", "10:55"),
+            ("P3 (10:55 - 11:50)", "10:55", "11:50"),
+            ("P4 (11:50 - 12:45)", "11:50", "12:45"),
+            ("Recess / Lunch", "12:45", "13:40"),
+            ("P5 (13:40 - 14:35)", "13:40", "14:35"),
+            ("P6 (14:35 - 15:30)", "14:35", "15:30"),
+            ("P7 (15:30 - 16:25)", "15:30", "16:25")
+        ]
+        for s_title, s_start, s_end in slots_55m:
+            if s_start <= cur_time <= s_end:
+                slot_name = s_title
+                break
+
+    query = "SELECT * FROM workstations"
+    params = []
+    if lab_id:
+        query += " WHERE lab_id = ?"
+        params.append(lab_id.upper().strip())
+
+    c.execute(query, params)
+    pcs = c.fetchall()
+
+    inserted = 0
+    for p in pcs:
+        pc_id = p["pc_id"]
+        lid = p["lab_id"] or "LAB-414"
+        uptime = p["uptime_seconds"] or 0
+        fruitful = p["fruitful_seconds"] or 0
+        idle = p["idle_seconds"] or 0
+        distracted = p["distracted_seconds"] or 0
+        total = (fruitful + idle + distracted) or 1
+        fruitful_pct = round((fruitful / total) * 100, 1) if fruitful > 0 else 0.0
+        app_used = p["active_app"] or p["active_window"] or "Standby"
+        warnings = p["has_warning"] or 0
+
+        c.execute("""
+            INSERT INTO daily_session_logs 
+            (log_date, lab_id, slot_name, pc_id, uptime_seconds, fruitful_seconds, idle_seconds, distracted_seconds, fruitful_percent, top_apps_used, warning_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (log_date, lid, slot_name, pc_id, uptime, fruitful, idle, distracted, fruitful_pct, app_used, warnings))
+        inserted += 1
+
+    conn.commit()
+    conn.close()
+    return inserted
+
+
+def get_daily_session_logs(lab_id: str = "LAB-414", date_str: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Returns stored 55-minute slot logs for a lab and date."""
+    conn = get_db_connection()
+    c = conn.cursor()
+    target_date = date_str or datetime.now().strftime("%Y-%m-%d")
+    c.execute("""
+        SELECT * FROM daily_session_logs 
+        WHERE lab_id = ? AND log_date = ?
+        ORDER BY id DESC, pc_id ASC
+    """, (lab_id.upper().strip(), target_date))
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows

@@ -104,12 +104,41 @@ def health():
     }
 
 
+# ── Central Local PC Forwarding & Relaying Configuration ──
+import urllib.request
+import json
+import threading
+
+MAIN_LOCAL_PC_URL = os.environ.get("MAIN_LOCAL_PC_URL", "https://labg418pc12.tailc8c1f6.ts.net").rstrip("/")
+
+def relay_to_local_pc(endpoint: str, data: dict):
+    """Asynchronously forwards telemetry to Central Local PC to protect SD card from write locks."""
+    def _worker():
+        try:
+            url = f"{MAIN_LOCAL_PC_URL}{endpoint}"
+            body = json.dumps(data).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=body,
+                headers={"Content-Type": "application/json", "User-Agent": "PIET-LabHub/3.0"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                pass
+        except Exception:
+            pass
+    threading.Thread(target=_worker, daemon=True).start()
+
+
 # ── Workstations Telemetry & Grid Endpoints ──
 
 @app.post("/api/heartbeat")
 def receive_heartbeat(payload: HeartbeatPayload):
-    """Receives heartbeat from Lab Windows PCs and returns any pending remote command."""
-    res = database.record_heartbeat(payload.dict())
+    """Receives heartbeat from Lab Windows PCs, saves locally, and relays to Central Local PC."""
+    data_dict = payload.dict()
+    res = database.record_heartbeat(data_dict)
+    # Asynchronously forward to Central Local PC for unified historical storage
+    relay_to_local_pc("/api/heartbeat", data_dict)
     return res
 
 
@@ -141,7 +170,7 @@ def dispatch_command(payload: CommandPayload):
 
 @app.post("/api/screenshot")
 def upload_screenshot(payload: ScreenshotUploadPayload):
-    """Client workstation uploads on-demand screen capture."""
+    """Client workstation uploads on-demand screen capture. Relays to Central Local PC."""
     clean_pc = payload.pc_id.strip().upper()
     b64_data = payload.image_base64
     if "," in b64_data:
@@ -157,6 +186,9 @@ def upload_screenshot(payload: ScreenshotUploadPayload):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         database.update_screenshot_timestamp(clean_pc, now_str)
 
+        # Relay to Central Local PC
+        relay_to_local_pc("/api/screenshot", {"pc_id": clean_pc, "image_base64": b64_data})
+
         return {
             "status": "ok",
             "pc_id": clean_pc,
@@ -167,11 +199,11 @@ def upload_screenshot(payload: ScreenshotUploadPayload):
         raise HTTPException(status_code=500, detail=f"Failed to save screenshot: {e}")
 
 
-# ── Timetable & Schedule Endpoints ──
+# ── Timetable & 55-Minute Slot Logs Endpoints ──
 
 @app.get("/api/timetable/{lab_id}")
 def get_lab_timetable(lab_id: str):
-    """Returns active slot and full weekly schedule for a lab."""
+    """Returns active slot and full weekly schedule for a lab based on 55-minute slots (09:05 - 16:25)."""
     active = database.get_current_timetable_slot(lab_id=lab_id)
     schedule = database.get_full_timetable(lab_id=lab_id)
     return {
@@ -179,6 +211,20 @@ def get_lab_timetable(lab_id: str):
         "active_slot": active,
         "weekly_schedule": schedule
     }
+
+
+@app.post("/api/logs/archive_slot")
+def archive_slot_log(lab_id: Optional[str] = None, slot_name: Optional[str] = None):
+    """Archives 55-minute lecture session logs into daily_session_logs."""
+    count = database.archive_slot_session_logs(lab_id=lab_id, slot_name=slot_name)
+    return {"status": "ok", "archived_pcs": count, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+
+@app.get("/api/logs/daily_sessions")
+def get_daily_logs_endpoint(lab_id: str = "LAB-414", date: Optional[str] = None):
+    """Returns stored 55-minute slot session logs for NBA Criterion 4 audit."""
+    logs = database.get_daily_session_logs(lab_id=lab_id, date_str=date)
+    return {"status": "ok", "lab_id": lab_id.upper(), "date": date or datetime.now().strftime("%Y-%m-%d"), "logs": logs}
 
 
 # ── Reports & Analytics (NBA Criterion 4 Compliant) ──

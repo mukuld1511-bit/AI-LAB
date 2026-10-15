@@ -101,13 +101,19 @@ def get_avatar_image(filename: str):
 DGX_DIR = os.path.join(BASE_DIR, "dgx_agent")
 CLIENT_AGENT_DIR = os.path.join(BASE_DIR, "client_agent")
 
-# Mount unknown faces, static, and agent distribution directories
+# Mount unknown faces, static, agent distribution, and PIET supervision portals
 app.mount("/unknown_faces_static", StaticFiles(directory=UNKNOWN_FACES_DIR), name="unknown_faces_static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_dir")
 if os.path.exists(DGX_DIR):
     app.mount("/dgx_agent", StaticFiles(directory=DGX_DIR), name="dgx_agent_dir")
 if os.path.exists(CLIENT_AGENT_DIR):
     app.mount("/client_agent", StaticFiles(directory=CLIENT_AGENT_DIR), name="client_agent_dir")
+
+REPO_ROOT = os.path.dirname(BASE_DIR)
+PIET_HUB_STATIC = os.path.join(REPO_ROOT, "piet_system", "raspberry_pi_hub", "static")
+if os.path.exists(PIET_HUB_STATIC):
+    app.mount("/supervision", StaticFiles(directory=PIET_HUB_STATIC, html=True), name="supervision_portal")
+    app.mount("/piet", StaticFiles(directory=PIET_HUB_STATIC, html=True), name="piet_portal")
 
 
 # ── Pydantic Models ──
@@ -411,7 +417,33 @@ def serve_screenshot_file(filename: str):
 def get_lab_timetable(lab_id: str):
     """Returns department schedule for a specific lab."""
     schedule = database.get_full_timetable(lab_id=lab_id)
-    return {"lab_id": lab_id.upper(), "weekly_schedule": schedule}
+    active = database.get_current_timetable_slot(lab_id=lab_id)
+    return {"lab_id": lab_id.upper(), "active_slot": active, "weekly_schedule": schedule}
+
+
+@app.post("/api/logs/archive_slot")
+def archive_slot_log(lab_id: Optional[str] = None, slot_name: Optional[str] = None):
+    """Archives 55-minute lecture session logs into daily_session_logs on the Local PC."""
+    count = database.archive_slot_session_logs(lab_id=lab_id, slot_name=slot_name)
+    return {
+        "status": "ok",
+        "archived_pcs": count,
+        "lab_id": lab_id or "ALL_LABS",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+
+@app.get("/api/logs/daily_sessions")
+def get_daily_logs_endpoint(lab_id: str = "LAB-414", date: Optional[str] = None):
+    """Returns stored 55-minute slot session logs for NBA Criterion 4 audit."""
+    logs = database.get_daily_session_logs(lab_id=lab_id, date_str=date)
+    return {
+        "status": "ok",
+        "lab_id": lab_id.upper(),
+        "date": date or datetime.now().strftime("%Y-%m-%d"),
+        "total_records": len(logs),
+        "logs": logs
+    }
 
 
 @app.get("/api/reports/{timeframe}")
