@@ -1,0 +1,15 @@
+# Python Virtualenv
+venv/
+__pycache__/
+*.pyc
+
+# Runtime Databases and Logs
+data/
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+# Workstation Screenshots
+static/screenshots/*.jpg
+static/screenshots/*.png

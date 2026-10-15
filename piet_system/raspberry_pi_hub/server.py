@@ -104,23 +104,23 @@ def health():
     }
 
 
-# ── Central Local PC Forwarding & Relaying Configuration ──
+# ── Central Master PC Forwarding & Relaying Configuration ──
 import urllib.request
 import json
 import threading
 
-MAIN_LOCAL_PC_URL = os.environ.get("MAIN_LOCAL_PC_URL", "https://labg418pc12.tailc8c1f6.ts.net").rstrip("/")
+CENTRAL_MASTER_PC_URL = os.environ.get("CENTRAL_MASTER_PC_URL", os.environ.get("MAIN_LOCAL_PC_URL", "http://192.168.1.100:8080")).rstrip("/")
 
-def relay_to_local_pc(endpoint: str, data: dict):
-    """Asynchronously forwards telemetry to Central Local PC to protect SD card from write locks."""
+def relay_to_master_pc(endpoint: str, data: dict):
+    """Asynchronously forwards telemetry to Central Master PC to protect SD card from write locks."""
     def _worker():
         try:
-            url = f"{MAIN_LOCAL_PC_URL}{endpoint}"
+            url = f"{CENTRAL_MASTER_PC_URL}{endpoint}"
             body = json.dumps(data).encode("utf-8")
             req = urllib.request.Request(
                 url,
                 data=body,
-                headers={"Content-Type": "application/json", "User-Agent": "PIET-LabHub/3.0"},
+                headers={"Content-Type": "application/json", "User-Agent": "PIET-LabHub/3.2"},
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=4) as resp:
@@ -129,16 +129,19 @@ def relay_to_local_pc(endpoint: str, data: dict):
             pass
     threading.Thread(target=_worker, daemon=True).start()
 
+# Alias for backwards compatibility
+relay_to_local_pc = relay_to_master_pc
+
 
 # ── Workstations Telemetry & Grid Endpoints ──
 
 @app.post("/api/heartbeat")
 def receive_heartbeat(payload: HeartbeatPayload):
-    """Receives heartbeat from Lab Windows PCs, saves locally, and relays to Central Local PC."""
+    """Receives heartbeat from Lab Windows PCs, saves locally, and relays to Central Master PC."""
     data_dict = payload.dict()
     res = database.record_heartbeat(data_dict)
-    # Asynchronously forward to Central Local PC for unified historical storage
-    relay_to_local_pc("/api/heartbeat", data_dict)
+    # Asynchronously forward to Central Master PC for unified historical storage
+    relay_to_master_pc("/api/relay/heartbeat", data_dict)
     return res
 
 
@@ -186,8 +189,8 @@ def upload_screenshot(payload: ScreenshotUploadPayload):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         database.update_screenshot_timestamp(clean_pc, now_str)
 
-        # Relay to Central Local PC
-        relay_to_local_pc("/api/screenshot", {"pc_id": clean_pc, "image_base64": b64_data})
+        # Relay to Central Master PC
+        relay_to_master_pc("/api/relay/screenshot", {"pc_id": clean_pc, "image_base64": b64_data})
 
         return {
             "status": "ok",

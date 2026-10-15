@@ -1,0 +1,80 @@
+{
+  "system_name": "PIET Department of Artificial Intelligence & Machine Learning",
+  "system_role": "Central Department Master Server",
+  "version": "3.2.0",
+  "host": "0.0.0.0",
+  "port": 8080,
+  "data_directory": "data",
+  "database_file": "data/piet_department_master.db",
+  "screenshots_directory": "static/screenshots",
+  "total_labs": 5,
+  "pcs_per_lab": 20,
+  "total_workstations": 100,
+  "labs": [
+    {
+      "lab_id": "LAB-414",
+      "name": "AI & Deep Learning Lab 414",
+      "pcs": 20,
+      "pc_prefix": "PC-414-",
+      "pi_gateway_id": "PI-414",
+      "pi_default_ip": "100.126.217.27",
+      "description": "Primary High-Performance AI & Deep Learning Workstations"
+    },
+    {
+      "lab_id": "LAB-415",
+      "name": "Machine Learning & Vision Lab 415",
+      "pcs": 20,
+      "pc_prefix": "PC-415-",
+      "pi_gateway_id": "PI-415",
+      "pi_default_ip": "192.168.1.15",
+      "description": "Computer Vision & Advanced Machine Learning Lab"
+    },
+    {
+      "lab_id": "LAB-416",
+      "name": "Data Science & Analytics Lab 416",
+      "pcs": 20,
+      "pc_prefix": "PC-416-",
+      "pi_gateway_id": "PI-416",
+      "pi_default_ip": "192.168.1.16",
+      "description": "Big Data, Natural Language Processing & Analytics"
+    },
+    {
+      "lab_id": "LAB-417",
+      "name": "Python & Core AI Lab 417",
+      "pcs": 20,
+      "pc_prefix": "PC-417-",
+      "pi_gateway_id": "PI-417",
+      "pi_default_ip": "192.168.1.17",
+      "description": "Foundational Python, DSA & Core AI Algorithms Lab"
+    },
+    {
+      "lab_id": "LAB-418",
+      "name": "Project & Research Lab 418",
+      "pcs": 20,
+      "pc_prefix": "PC-418-",
+      "pi_gateway_id": "PI-418",
+      "pi_default_ip": "192.168.1.18",
+      "description": "Capstone AI Projects, Research Sprint & DGX Access Terminal"
+    }
+  ],
+  "academic_timetable": {
+    "slot_duration_minutes": 55,
+    "day_start": "09:05",
+    "day_end": "16:25",
+    "periods": [
+      { "id": "P1", "name": "Period 1", "start": "09:05", "end": "10:00", "type": "academic" },
+      { "id": "P2", "name": "Period 2", "start": "10:00", "end": "10:55", "type": "academic" },
+      { "id": "P3", "name": "Period 3", "start": "10:55", "end": "11:50", "type": "academic" },
+      { "id": "P4", "name": "Period 4", "start": "11:50", "end": "12:45", "type": "academic" },
+      { "id": "RECESS", "name": "Recess / Lunch", "start": "12:45", "end": "13:40", "type": "break" },
+      { "id": "P5", "name": "Period 5", "start": "13:40", "end": "14:35", "type": "academic" },
+      { "id": "P6", "name": "Period 6", "start": "14:35", "end": "15:30", "type": "academic" },
+      { "id": "P7", "name": "Period 7", "start": "15:30", "end": "16:25", "type": "academic" }
+    ]
+  },
+  "archival_settings": {
+    "auto_archive_at_slot_end": true,
+    "keep_logs_days": 365,
+    "export_format": ["csv", "json"]
+  }
+}
