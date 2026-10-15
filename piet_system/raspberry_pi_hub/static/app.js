@@ -460,7 +460,12 @@ function populateModalData(pc) {
 
     // Top processes
     const listCont = document.getElementById("modal-tasks-list");
-    const procs = pc.top_processes || [];
+    const rawProcs = pc.top_processes || [];
+    const procs = rawProcs.filter(pr => {
+        if (!pr || !pr.name) return false;
+        const n = pr.name.toLowerCase();
+        return !['ps', 'top', 'htop', 'grep', 'awk', 'sed', 'sh', 'bash', 'zsh', 'dash', 'systemd', 'sshd', 'sleep', 'snapd'].includes(n) && !n.startsWith('kworker');
+    });
     document.getElementById("modal-tasks-count").innerText = `${procs.length} reported`;
     if (listCont) {
         if (procs.length === 0) {
@@ -470,8 +475,8 @@ function populateModalData(pc) {
                 <div class="task-item">
                     <span><strong>${escapeHtml(pr.name)}</strong> (PID: ${pr.pid})</span>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="text-cyan">${pr.cpu}% C</span>
-                        <span class="text-secondary">${pr.ram}% M</span>
+                        <span class="text-cyan">${Math.min(100, Math.round(pr.cpu || 0))}% C</span>
+                        <span class="text-secondary">${Math.min(100, Math.round(pr.ram || 0))}% M</span>
                         <button class="task-kill-btn" title="Kill PID ${pr.pid}" onclick="killTask('${pc.pc_id}', ${pr.pid}, '${escapeHtml(pr.name)}')">✖</button>
                     </div>
                 </div>

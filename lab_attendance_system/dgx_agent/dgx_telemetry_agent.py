@@ -33,7 +33,13 @@ import urllib.error
 
 # DEFAULT CENTRAL BACKEND URL
 DEFAULT_BACKEND_URL = "https://labg418pc12.tailc8c1f6.ts.net"
-DEFAULT_INTERVAL = 10  # Seconds between heartbeats
+DEFAULT_INTERVAL = 4  # Seconds between heartbeats (fast responsive capture)
+
+IGNORED_PROCESS_NAMES = {
+    "ps", "top", "htop", "grep", "awk", "sed", "sh", "bash", "zsh", "dash",
+    "systemd", "sshd", "sleep", "sort", "head", "tail", "cut", "cat",
+    "dbus-daemon", "pulseaudio", "pipewire", "journald", "snapd"
+}
 
 
 def get_cpu_and_uptime():
@@ -209,23 +215,46 @@ def send_post(url, data_dict, timeout=6):
 
 
 def get_linux_top_processes():
-    """Queries top 5 CPU processes using native ps command without extra dependencies."""
+    """Queries top 5 real workload processes using native ps, filtering out transient inspection tools and capping CPU at 100%."""
     procs = []
+    my_pid = os.getpid()
     try:
         cmd = ["ps", "-eo", "pid,%cpu,%mem,comm", "--sort=-%cpu"]
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=2)
         if proc.returncode == 0:
             lines = proc.stdout.strip().splitlines()
-            for line in lines[1:6]:
+            for line in lines[1:30]:  # Inspect top 30 processes to find 5 real applications
                 parts = line.strip().split(None, 3)
                 if len(parts) >= 4:
                     try:
+                        pid = int(parts[0])
+                        raw_cpu = float(parts[1])
+                        raw_mem = float(parts[2])
+                        p_name = parts[3].strip()
+
+                        # Exclude agent's own PID
+                        if pid == my_pid:
+                            continue
+
+                        # Exclude transient inspection commands & kernel workers
+                        clean_name = p_name.lower()
+                        if clean_name in IGNORED_PROCESS_NAMES:
+                            continue
+                        if clean_name.startswith("kworker") or clean_name.startswith("systemd-"):
+                            continue
+
+                        # Cap CPU usage at 100.0% max so UI never shows 200% glitch
+                        capped_cpu = min(100.0, round(raw_cpu, 1))
+
                         procs.append({
-                            "pid": int(parts[0]),
-                            "cpu": float(parts[1]),
-                            "ram": float(parts[2]),
-                            "name": parts[3]
+                            "pid": pid,
+                            "cpu": capped_cpu,
+                            "ram": round(raw_mem, 1),
+                            "name": p_name
                         })
+
+                        if len(procs) >= 5:
+                            break
                     except Exception:
                         pass
     except Exception:
@@ -351,6 +380,10 @@ def get_desktop_session_info():
             bus_sock = f"/run/user/{uid}/bus"
             if os.path.exists(bus_sock):
                 info["env"]["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={bus_sock}"
+        if not info["env"].get("WAYLAND_DISPLAY"):
+            w_socks = glob.glob(f"/run/user/{uid}/wayland-*")
+            if w_socks:
+                info["env"]["WAYLAND_DISPLAY"] = os.path.basename(w_socks[0])
 
     # Verify or detect DISPLAY from active Unix sockets
     x_sockets = glob.glob("/tmp/.X11-unix/X*")

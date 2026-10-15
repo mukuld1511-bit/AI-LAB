@@ -2895,7 +2895,11 @@ function renderMonitoringGrid(pcs) {
         const isDistraction = ["youtube", "netflix", "instagram", "facebook", "game", "steam", "valorant", "roblox", "discord", "tiktok"].some(k => winLower.includes(k));
         if (isDistraction && isOnline) alertCount++;
 
-        const topProcs = p.top_processes || [];
+        const topProcs = (p.top_processes || []).filter(pr => {
+            if (!pr || !pr.name) return false;
+            const n = pr.name.toLowerCase();
+            return !['ps', 'top', 'htop', 'grep', 'awk', 'sed', 'sh', 'bash', 'zsh', 'dash', 'systemd', 'sshd', 'sleep', 'snapd'].includes(n) && !n.startsWith('kworker');
+        });
         const snapUrl = p.screenshot_url ? resolveImageUrl(p.screenshot_url) : null;
 
         return `
@@ -2983,8 +2987,8 @@ function renderMonitoringGrid(pcs) {
                                 ${escapeHtml(pr.name)}
                             </span>
                             <div class="mon-task-stats">
-                                <span>${pr.cpu}% C</span>
-                                <span>${pr.ram}% M</span>
+                                <span>${Math.min(100, Math.round(pr.cpu || 0))}% C</span>
+                                <span>${Math.min(100, Math.round(pr.ram || 0))}% M</span>
                                 ${pr.pid ? `
                                     <button class="mon-kill-btn" title="Terminate ${escapeHtml(pr.name)} (PID ${pr.pid})" onclick="killWorkstationTask('${p.pc_id}', ${pr.pid}, '${escapeHtml(pr.name)}')">
                                         ✖
@@ -3052,10 +3056,12 @@ async function requestScreenGrab(pcId) {
             return;
         }
 
-        // Poll for new image uploaded by client PC
+        // Poll for new image uploaded by client PC (10 attempts x 1.5s = 15s)
         let attempts = 0;
+        const maxAttempts = 10;
         const checkPoll = setInterval(async () => {
             attempts++;
+            if (btn) btn.innerText = `⏳ Capturing (${attempts}/${maxAttempts})...`;
             const pcs = await loadMonitoringData(true);
             const target = pcs.find(p => p.pc_id === cleanId);
             if (target && target.screenshot_url) {
@@ -3065,13 +3071,13 @@ async function requestScreenGrab(pcId) {
                     btn.disabled = false;
                 }
                 showToast(`✅ Live snapshot ready for ${cleanId}!`, "success");
-            } else if (attempts >= 4) {
+            } else if (attempts >= maxAttempts) {
                 clearInterval(checkPoll);
                 if (btn) {
                     btn.innerText = "📸 Grab Live Screen";
                     btn.disabled = false;
                 }
-                showToast(`⚠️ ${cleanId} par updated agent script nahi chal rahi (purani script active hai). Please run updated script command on ${cleanId}.`, "warning");
+                showToast(`⚠️ Workstation ${cleanId} par frame capture hone me time lag raha hai ya screen asleep hai. Please check agent status.`, "warning");
             }
         }, 1500);
     } catch (e) {
@@ -3246,7 +3252,12 @@ function openScreenLightbox(pcId, imgUrl, activeWin) {
     // Top Processes Table
     const tasksCount = document.getElementById("brief-tasks-count");
     const tasksCont = document.getElementById("brief-tasks-container");
-    const procs = pc.top_processes || [];
+    const rawProcs = pc.top_processes || [];
+    const procs = rawProcs.filter(pr => {
+        if (!pr || !pr.name) return false;
+        const n = pr.name.toLowerCase();
+        return !['ps', 'top', 'htop', 'grep', 'awk', 'sed', 'sh', 'bash', 'zsh', 'dash', 'systemd', 'sshd', 'sleep', 'snapd'].includes(n) && !n.startsWith('kworker');
+    });
     if (tasksCount) tasksCount.innerText = `${procs.length} reported`;
     if (tasksCont) {
         if (procs.length > 0) {
@@ -3259,8 +3270,8 @@ function openScreenLightbox(pcId, imgUrl, activeWin) {
                         <span style="color: #64748b; font-size: 10px;">(PID: ${pr.pid || 'N/A'})</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #38bdf8; font-weight: 700;">${pr.cpu}% C</span>
-                        <span style="color: #a78bfa;">${pr.ram}% M</span>
+                        <span style="color: #38bdf8; font-weight: 700;">${Math.min(100, Math.round(pr.cpu || 0))}% C</span>
+                        <span style="color: #a78bfa;">${Math.min(100, Math.round(pr.ram || 0))}% M</span>
                         ${pr.pid ? `
                             <button class="mon-kill-btn" title="Kill PID ${pr.pid}" onclick="killWorkstationTask('${cleanId}', ${pr.pid}, '${escapeHtml(pr.name)}')">
                                 ✖
@@ -3285,15 +3296,90 @@ function closeScreenLightbox(e) {
     if (modal) modal.style.display = "none";
 }
 
-function requestLightboxFreshSnap() {
+async function requestLightboxFreshSnap() {
     const modal = document.getElementById("screen-lightbox-modal");
     const pcId = modal ? modal.dataset.currentPc : null;
-    if (pcId) {
-        requestScreenGrab(pcId);
-        setTimeout(() => {
-            const img = document.getElementById("screen-lightbox-img");
-            if (img) img.src = resolveImageUrl(`/static/screenshots/${pcId.toLowerCase()}.jpg?t=${Date.now()}`);
-        }, 3000);
+    if (!pcId) return;
+
+    const refreshBtn = document.getElementById("screen-lightbox-refresh-btn");
+    const img = document.getElementById("screen-lightbox-img");
+    const fallback = document.getElementById("brief-screen-fallback");
+
+    if (refreshBtn) {
+        refreshBtn.innerText = "⏳ Capturing Frame...";
+        refreshBtn.disabled = true;
+    }
+
+    showToast(`📸 Requesting live frame from ${pcId}...`, "info");
+
+    try {
+        await apiFetch(`/api/pc/${pcId}/request_screenshot`, {
+            method: "POST",
+            body: JSON.stringify({ command: "capture_screen" })
+        });
+
+        // Instant capture for BACKEND
+        if (pcId === "BACKEND") {
+            setTimeout(async () => {
+                await loadMonitoringData(true);
+                if (img) {
+                    img.src = resolveImageUrl(`/static/screenshots/backend.jpg?t=${Date.now()}`);
+                    img.style.display = "block";
+                    if (fallback) fallback.style.display = "none";
+                }
+                if (refreshBtn) {
+                    refreshBtn.innerText = "📸 Grab Fresh Snap";
+                    refreshBtn.disabled = false;
+                }
+                showToast(`✅ Fresh snapshot loaded for ${pcId}!`, "success");
+            }, 800);
+            return;
+        }
+
+        // Active poll up to 10 attempts (15 seconds)
+        let attempts = 0;
+        const maxAttempts = 10;
+        const poll = setInterval(async () => {
+            attempts++;
+            if (refreshBtn) refreshBtn.innerText = `⏳ Capturing (${attempts}/${maxAttempts})...`;
+            const pcs = await loadMonitoringData(true);
+            const target = pcs.find(p => p.pc_id === pcId);
+
+            // Test image load
+            const testImg = new Image();
+            const freshUrl = resolveImageUrl(`/static/screenshots/${pcId.toLowerCase()}.jpg?t=${Date.now()}`);
+            testImg.onload = () => {
+                clearInterval(poll);
+                if (img) {
+                    img.src = freshUrl;
+                    img.style.display = "block";
+                    if (fallback) fallback.style.display = "none";
+                }
+                if (refreshBtn) {
+                    refreshBtn.innerText = "📸 Grab Fresh Snap";
+                    refreshBtn.disabled = false;
+                }
+                showToast(`✅ Fresh snapshot updated for ${pcId}!`, "success");
+            };
+            testImg.onerror = () => {
+                if (attempts >= maxAttempts) {
+                    clearInterval(poll);
+                    if (refreshBtn) {
+                        refreshBtn.innerText = "📸 Grab Fresh Snap";
+                        refreshBtn.disabled = false;
+                    }
+                    showToast(`⚠️ Workstation ${pcId} frame capture timed out. Device display may be asleep or locked.`, "warning");
+                }
+            };
+            testImg.src = freshUrl;
+        }, 1500);
+
+    } catch (e) {
+        showToast(`Failed to capture: ${e.message}`, "error");
+        if (refreshBtn) {
+            refreshBtn.innerText = "📸 Grab Fresh Snap";
+            refreshBtn.disabled = false;
+        }
     }
 }
 
