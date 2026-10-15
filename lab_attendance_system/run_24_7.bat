@@ -4,7 +4,7 @@ cd /d "%~dp0"
 
 echo =====================================================================
 echo       AI/ML LAB 24/7 ATTENDANCE & PC SYSTEM — SERVICE RUNNER
-echo       In-Charge: Prof. Richa Choudhary
+echo       In-Charge: Dr. Richa Choudhary (Assistant Professor)
 echo =====================================================================
 echo.
 echo Starting 24/7 Watchdog Supervisor...

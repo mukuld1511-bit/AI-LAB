@@ -3,7 +3,7 @@ AI/ML LAB ATTENDANCE & PC TRACKING ECOSYSTEM — SYSTEM ARCHITECTURE & PORTALS C
 ================================================================================
 System Version : 2.1.0 (Production 24/7 Ready)
 Department     : AI/ML Department, PIET
-In-Charge      : Prof. Richa Choudhary
+In-Charge      : Dr. Richa Choudhary, Assistant Professor
 
 --------------------------------------------------------------------------------
 1. SYSTEM OVERVIEW & CORE ARCHITECTURE

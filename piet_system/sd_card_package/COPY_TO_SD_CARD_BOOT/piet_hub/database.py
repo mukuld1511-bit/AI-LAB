@@ -137,14 +137,14 @@ def init_db():
 
     # Seed Default Sample Schedule for Lab 414
     sample_slots = [
-        ("LAB-414", "Monday", "09:00", "11:00", "Deep Learning Lab (AIML-301)", "Prof. Richa Choudhary", "3rd Year AIML - Batch A1"),
+        ("LAB-414", "Monday", "09:00", "11:00", "Deep Learning Lab (AIML-301)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A1"),
         ("LAB-414", "Monday", "11:30", "01:30", "Machine Learning Lab (AIML-201)", "Er. Gaurav Sharma", "2nd Year AIML - Batch B1"),
         ("LAB-414", "Monday", "02:00", "04:00", "Capstone Project Lab", "Faculty Mentor Panel", "4th Year AIML"),
-        ("LAB-414", "Tuesday", "09:00", "11:00", "Computer Vision Lab (AIML-302)", "Prof. Richa Choudhary", "3rd Year AIML - Batch A2"),
+        ("LAB-414", "Tuesday", "09:00", "11:00", "Computer Vision Lab (AIML-302)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
         ("LAB-414", "Tuesday", "11:30", "01:30", "NLP & LLM Studio (AIML-401)", "Dr. Amit Verma", "4th Year AIML"),
-        ("LAB-414", "Wednesday", "09:00", "11:00", "Deep Learning Lab (AIML-301)", "Prof. Richa Choudhary", "3rd Year AIML - Batch A3"),
+        ("LAB-414", "Wednesday", "09:00", "11:00", "Deep Learning Lab (AIML-301)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A3"),
         ("LAB-414", "Thursday", "09:00", "11:00", "Data Structures with Python", "Er. Priya Gupta", "2nd Year AIML - Batch B2"),
-        ("LAB-414", "Friday", "09:00", "11:00", "Advanced AI Lab", "Prof. Richa Choudhary", "3rd Year AIML - All Batches")
+        ("LAB-414", "Friday", "09:00", "11:00", "Advanced AI Lab", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - All Batches")
     ]
     c.execute("SELECT count(*) as cnt FROM timetable")
     if c.fetchone()["cnt"] == 0:
@@ -518,7 +518,7 @@ def export_report_csv(lab_id: str = "LAB-414", timeframe: str = "daily") -> str:
         ])
     writer.writerow([])
     writer.writerow(["Signatures:"])
-    writer.writerow(["Prof. Richa Choudhary (Lab In-Charge)", "", "HOD (AI & ML Department)", "", "Dean Academic / NBA Coordinator"])
+    writer.writerow(["Dr. Richa Choudhary (Assistant Professor & Lab In-Charge)", "", "HOD (AI & ML Department)", "", "Dean Academic / NBA Coordinator"])
     return output.getvalue()
 
 

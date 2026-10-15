@@ -1,6 +1,6 @@
 # 🖥️ AI/ML Lab PC — 24/7 Deployment & Setup Guide
 
-**In-Charge:** Prof. Richa Choudhary  
+**In-Charge:** Dr. Richa Choudhary, Assistant Professor  
 **Permanent Cloud Domain:** `https://amaretto-confess-subtract.ngrok-free.dev`  
 **Localhost Port:** `http://localhost:8000`
 

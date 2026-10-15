@@ -23,7 +23,7 @@ def get_smtp_config() -> Dict[str, Any]:
     except Exception:
         port = 587
         
-    sender_name = database.get_setting("SENDER_NAME") or os.getenv("SENDER_NAME", "Prof. Richa Choudhary - AI Lab")
+    sender_name = database.get_setting("SENDER_NAME") or os.getenv("SENDER_NAME", "Dr. Richa Choudhary, Assistant Professor - AI Lab")
     sender_email = database.get_setting("SENDER_EMAIL") or os.getenv("SENDER_EMAIL", user or "nvidea.lab.piet@gmail.com")
 
     # Clean sender name to prevent RFC header issues
@@ -121,17 +121,17 @@ def send_allotment_email(
     if role_clean == "Faculty":
         greeting = f"Respected {student_name},"
         role_label = "Faculty Member"
-        allot_desc = f"Workstation {pc_id} in the AI/ML Lab has been reserved for your session by Prof. Richa Choudhary."
+        allot_desc = f"Workstation {pc_id} in the AI/ML Lab has been reserved for your session by Dr. Richa Choudhary (Assistant Professor)."
         subject = f"Workstation Reservation: {pc_id} Reserved for Faculty"
     elif role_clean == "Guest":
         greeting = f"Dear Guest {student_name},"
         role_label = "Visiting Guest"
-        allot_desc = f"Workstation {pc_id} in the AI/ML Lab has been allocated for your visit by Prof. Richa Choudhary."
+        allot_desc = f"Workstation {pc_id} in the AI/ML Lab has been allocated for your visit by Dr. Richa Choudhary (Assistant Professor)."
         subject = f"Workstation Allotment: {pc_id} Allocated"
     else:
         greeting = f"Hello {student_name},"
         role_label = "Student"
-        allot_desc = f"You have been allocated a dedicated workstation in the AI/ML Lab by Prof. Richa Choudhary."
+        allot_desc = f"You have been allocated a dedicated workstation in the AI/ML Lab by Dr. Richa Choudhary (Assistant Professor)."
         subject = f"Workstation Allotment: {pc_id} Assigned to You"
 
     proj_line_plain = f"• Active Project: {proj_clean}\n" if proj_clean else ""
@@ -156,10 +156,10 @@ Allotment Details:
 Lab Guidelines:
 1. Please occupy your assigned workstation promptly.
 2. System session automatically releases after your time expires ({expiry_pretty}).
-3. For extensions, contact Prof. Richa Choudhary.
+3. For extensions, contact Dr. Richa Choudhary (Assistant Professor).
 
 Regards,
-Prof. Richa Choudhary
+Dr. Richa Choudhary, Assistant Professor
 AI/ML Research Laboratory
 """
 
@@ -314,7 +314,7 @@ Hello {name},
 {message}
 
 Best regards,
-Prof. Richa Choudhary
+Dr. Richa Choudhary, Assistant Professor
 AI/ML Research Laboratory
 """
 
@@ -326,7 +326,7 @@ AI/ML Research Laboratory
         <tr>
             <td style="background:#3730a3; padding:20px; text-align:center; color:#ffffff;">
                 <h2 style="margin:0; font-size:20px;">AI/ML Lab Notice</h2>
-                <p style="margin:4px 0 0 0; font-size:12px; opacity:0.85;">Prof. Richa Choudhary Laboratory</p>
+                <p style="margin:4px 0 0 0; font-size:12px; opacity:0.85;">Dr. Richa Choudhary Laboratory</p>
             </td>
         </tr>
         <tr>
@@ -337,8 +337,8 @@ AI/ML Research Laboratory
                 </div>
                 <p style="margin-top:20px; font-size:13px; color:#64748b;">
                     Best regards,<br>
-                    <strong>Prof. Richa Choudhary</strong><br>
-                    AI/ML Lab In-Charge
+                    <strong>Dr. Richa Choudhary</strong><br>
+                    Assistant Professor &amp; AI/ML Lab In-Charge
                 </p>
             </td>
         </tr>

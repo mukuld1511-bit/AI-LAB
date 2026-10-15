@@ -533,6 +533,9 @@ async function loadTimetableView() {
             return;
         }
 
+        const ttEl = document.getElementById("timetable-title");
+        if (ttEl) ttEl.innerText = `📅 ${currentLab} Class Schedule`;
+
         const now = new Date();
         const todayName = now.toLocaleDateString("en-US", { weekday: "long" });
 
@@ -581,6 +584,11 @@ async function loadAnalyticsView(period = currentReportPeriod) {
 
         if (titleEl) titleEl.innerText = rep.report_title || "LABORATORY WORK HOURS & UTILIZATION REPORT";
         if (subEl) subEl.innerText = `Department of Artificial Intelligence & Machine Learning • Period: ${rep.report_date}`;
+
+        const metaLab = document.getElementById("report-meta-lab");
+        if (metaLab) metaLab.innerText = `${rep.lab_id} — Department Laboratory`;
+        const sigLab = document.getElementById("sig-lab-dept");
+        if (sigLab) sigLab.innerText = `${rep.lab_id} Technical Staff`;
 
         if (summaryBar) {
             summaryBar.innerHTML = `

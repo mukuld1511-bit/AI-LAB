@@ -1048,7 +1048,7 @@ class EmailSettingsUpdate(BaseModel):
     smtp_password: str
     smtp_host: Optional[str] = "smtp.gmail.com"
     smtp_port: Optional[int] = 587
-    sender_name: Optional[str] = "Prof. Richa (AI/ML Lab)"
+    sender_name: Optional[str] = "Dr. Richa Choudhary, Assistant Professor (AI/ML Lab)"
     sender_email: Optional[str] = ""
 
 
@@ -1079,7 +1079,7 @@ def save_email_settings(payload: EmailSettingsUpdate):
     database.set_setting("SMTP_PASSWORD", payload.smtp_password.strip().replace(" ", ""))
     database.set_setting("SMTP_HOST", payload.smtp_host.strip() if payload.smtp_host else "smtp.gmail.com")
     database.set_setting("SMTP_PORT", str(payload.smtp_port or 587))
-    database.set_setting("SENDER_NAME", payload.sender_name.strip() if payload.sender_name else "Prof. Richa (AI/ML Lab)")
+    database.set_setting("SENDER_NAME", payload.sender_name.strip() if payload.sender_name else "Dr. Richa Choudhary, Assistant Professor (AI/ML Lab)")
     database.set_setting("SENDER_EMAIL", payload.sender_email.strip() if payload.sender_email else payload.smtp_user.strip())
     return {"status": "success", "message": "Email settings saved successfully!"}
 
@@ -1093,7 +1093,7 @@ def test_email_endpoint(payload: TestEmailRequest):
     result = mailer.send_custom_email(
         to_email=payload.test_email.strip(),
         subject="AI/ML Lab System - SMTP Email Verification",
-        message="This is a test notification confirming that live email dispatch from Prof. Richa Mam's AI/ML Lab Management System is configured and working perfectly!",
+        message="This is a test notification confirming that live email dispatch from Dr. Richa Choudhary's AI/ML Lab Management System is configured and working perfectly!",
         recipient_name="Faculty / Admin"
     )
     if not result["success"]:
@@ -1103,7 +1103,7 @@ def test_email_endpoint(payload: TestEmailRequest):
 
 @app.post("/api/send_email")
 def send_email_endpoint(payload: SendEmailRequest):
-    """Allows Prof. Richa Mam to send an email notice directly from the portal."""
+    """Allows Dr. Richa Choudhary (Assistant Professor) to send an email notice directly from the portal."""
     result = mailer.send_custom_email(
         to_email=payload.to_email,
         subject=payload.subject,

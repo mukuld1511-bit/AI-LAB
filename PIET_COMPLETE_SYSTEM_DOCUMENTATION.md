@@ -3,7 +3,7 @@
 
 **Version:** 3.5.0 (Production Multi-Tier Lab Deployment)  
 **Department:** Department of Artificial Intelligence & Machine Learning, Panipat Institute of Engineering & Technology (PIET)  
-**In-Charge:** Prof. Dr. Richa Choudhary  
+**In-Charge:** Dr. Richa Choudhary, Assistant Professor  
 **Date of Snapshot:** October 14, 2026  
 **Repository:** [https://github.com/mukuld1511-bit/AI-LAB.git](https://github.com/mukuld1511-bit/AI-LAB.git) (Branch: `main`)  
 
@@ -77,7 +77,7 @@ Used for official student workstation allocation receipts, team extension alerts
 - **Port:** `587` (TLS / STARTTLS)
 - **SMTP Username / Email:** `nvidea.lab.piet@gmail.com`
 - **Google App Password:** `ydeeyvvgdfvazuub` *(16-character space-stripped app password)*
-- **Sender Display Name:** `Prof. Richa Choudhary - AI Lab`
+- **Sender Display Name:** `Dr. Richa Choudhary, Assistant Professor - AI Lab`
 - **Default Official Recipient:** `tutejamadhav26@gmail.com` (Madhav Tuteja, Student Lead)
 
 ---

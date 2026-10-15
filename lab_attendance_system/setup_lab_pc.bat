@@ -4,7 +4,7 @@ title AI/ML Lab PC — 24/7 Setup Installer
 
 echo =====================================================================
 echo       AI/ML LAB 24/7 ATTENDANCE & PC SYSTEM — ONE-CLICK SETUP
-echo       In-Charge: Prof. Richa Choudhary  ^|  Target: Local Lab PC
+echo       In-Charge: Dr. Richa Choudhary (Assistant Professor)  ^|  Target: Local Lab PC
 echo =====================================================================
 echo.
 
