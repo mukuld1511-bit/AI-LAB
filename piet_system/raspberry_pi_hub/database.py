@@ -649,3 +649,18 @@ def format_duration(seconds: int) -> str:
     minutes = (seconds % 3600) // 60
     return f"{hours}h {minutes:02d}m"
 
+
+def bulk_set_pending_command(lab_id: str, command: str) -> int:
+    """Queues a power or control command for all workstations in a specific lab."""
+    conn = get_connection()
+    c = conn.cursor()
+    if lab_id.upper() == "ALL":
+        c.execute("UPDATE workstations SET pending_command = ?", (command,))
+    else:
+        c.execute("UPDATE workstations SET pending_command = ? WHERE lab_id = ?", (command, lab_id.upper()))
+    count = c.rowcount
+    conn.commit()
+    conn.close()
+    return count
+
+

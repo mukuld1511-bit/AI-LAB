@@ -515,10 +515,96 @@ function closeModal() {
     }
 }
 
-// ESC Key listener to close modal
+// ── Workstation Power & Administrative Controls ──
+async function triggerPowerCommand(action) {
+    if (!currentModalPcId) return;
+    const pcId = currentModalPcId;
+
+    let cmd = action;
+    if (action === "shutdown") {
+        if (!confirm(`🛑 CRITICAL CONFIRMATION:\n\nAre you sure you want to SHUT DOWN workstation ${pcId} remotely?\nThis will close all active applications and turn off the machine in 5 seconds.`)) {
+            return;
+        }
+    } else if (action === "restart") {
+        if (!confirm(`🔄 CONFIRM REBOOT:\n\nAre you sure you want to RESTART workstation ${pcId} remotely?\nSystem will reboot in 5 seconds.`)) {
+            return;
+        }
+    } else if (action === "lock") {
+        if (!confirm(`🔒 Lock Windows workstation screen on ${pcId}?`)) {
+            return;
+        }
+    } else if (action === "warn") {
+        const msg = prompt(`Enter administrative alert message for student on ${pcId}:`, "PIET AIML Lab Notice: Please focus on your assigned lab experiment.");
+        if (!msg || !msg.trim()) return;
+        cmd = `warn:${msg.trim()}`;
+    }
+
+    try {
+        const resp = await fetch("/api/command", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pc_id: pcId, command: cmd })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        showToast(`⚡ Command '${cmd}' dispatched to ${pcId}`, "success");
+    } catch (e) {
+        showToast(`Failed to dispatch command: ${e.message}`, "error");
+    }
+}
+
+// ── Bulk Lab Power Modal & Actions ──
+function openLabPowerModal() {
+    const targetEl = document.getElementById("lab-power-target");
+    if (targetEl) targetEl.innerText = currentLab;
+    const modal = document.getElementById("lab-power-modal");
+    if (modal) {
+        modal.classList.add("active", "show");
+        modal.style.display = "flex";
+    }
+}
+
+function closeLabPowerModal() {
+    const modal = document.getElementById("lab-power-modal");
+    if (modal) {
+        modal.classList.remove("active", "show");
+        modal.style.display = "none";
+    }
+}
+
+async function executeLabBulkPower(action) {
+    let confirmMsg = "";
+    if (action === "shutdown") {
+        confirmMsg = `🛑 DANGER: MASTER LAB SHUTDOWN\n\nAre you sure you want to SHUT DOWN ALL WORKSTATIONS in ${currentLab}?\n\nThis will send an immediate 5-second shutdown sequence to every active machine in the lab.`;
+    } else if (action === "restart") {
+        confirmMsg = `🔄 MASTER LAB REBOOT\n\nAre you sure you want to REBOOT ALL WORKSTATIONS in ${currentLab}?`;
+    } else if (action === "lock") {
+        confirmMsg = `🔒 MASTER LAB SCREEN LOCK\n\nAre you sure you want to LOCK ALL WORKSTATION SCREENS in ${currentLab}?`;
+    }
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        showToast(`Queuing master '${action}' command for ${currentLab}...`, "info");
+        const resp = await fetch(`/api/lab/${currentLab}/power`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: action })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        showToast(`✅ ${data.message || `Dispatched ${action} to ${currentLab}`}`, "success");
+        closeLabPowerModal();
+        loadLabData();
+    } catch (e) {
+        showToast(`Bulk command failed: ${e.message}`, "error");
+    }
+}
+
+// ESC Key listener to close modals
 window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" || e.keyCode === 27) {
         closeModal();
+        closeLabPowerModal();
     }
 });
 

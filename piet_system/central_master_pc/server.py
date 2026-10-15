@@ -223,13 +223,35 @@ def get_timetable(lab_id: str):
     return {"lab_id": lab_id.upper(), "active_slot": active, "weekly_schedule": schedule}
 
 
+class LabPowerPayload(BaseModel):
+    action: str  # 'shutdown', 'restart', 'lock'
+    force: Optional[bool] = True
+
+
 @app.post("/api/command")
 def dispatch_command(payload: CommandPayload):
-    """Teacher queues a command (e.g. 'capture_screen', 'kill:pid', 'warn:Focus')."""
+    """Teacher queues a command (e.g. 'capture_screen', 'shutdown', 'restart', 'lock', 'kill:pid')."""
     clean_pc = payload.pc_id.strip().upper()
     cmd = payload.command.strip()
     database.set_pending_command(clean_pc, cmd)
     return {"status": "ok", "pc_id": clean_pc, "command": cmd, "message": f"Queued '{cmd}' for {clean_pc}."}
+
+
+@app.post("/api/lab/{lab_id}/power")
+def bulk_lab_power(lab_id: str, payload: LabPowerPayload):
+    """Dispatches remote power commands (shutdown/restart/lock) to all workstations in a lab."""
+    action = payload.action.strip().lower()
+    if action not in ("shutdown", "restart", "lock"):
+        raise HTTPException(status_code=400, detail="Action must be 'shutdown', 'restart', or 'lock'")
+    count = database.bulk_set_pending_command(lab_id.upper(), action)
+    return {
+        "status": "ok",
+        "lab_id": lab_id.upper(),
+        "action": action,
+        "affected_workstations": count,
+        "message": f"Successfully queued '{action}' command for all {count} workstations in {lab_id.upper()}."
+    }
+
 
 
 # ── Archival & Report Endpoints ──

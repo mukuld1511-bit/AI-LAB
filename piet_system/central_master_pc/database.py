@@ -591,3 +591,17 @@ def update_screenshot_timestamp(pc_id: str, ts: str):
     c.execute("UPDATE workstations SET last_screenshot_at = ? WHERE pc_id = ?", (ts, pc_id))
     conn.commit()
     conn.close()
+
+
+def bulk_set_pending_command(lab_id: str, command: str) -> int:
+    """Queues a power or control command for all workstations in a specific lab."""
+    conn = get_connection()
+    c = conn.cursor()
+    if lab_id.upper() == "ALL":
+        c.execute("UPDATE workstations SET pending_command = ?", (command,))
+    else:
+        c.execute("UPDATE workstations SET pending_command = ? WHERE lab_id = ?", (command, lab_id.upper()))
+    count = c.rowcount
+    conn.commit()
+    conn.close()
+    return count

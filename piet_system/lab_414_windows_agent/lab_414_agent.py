@@ -336,11 +336,14 @@ def main():
                 act_tag = f"🎯 FRUITFUL" if activity_type == "fruitful" else (f"💤 IDLE ({int(idle_now)}s)" if activity_type == "idle" else (f"⚠️ DISTRACTED" if activity_type == "distracted" else "⚪ NORMAL"))
                 print(f"[{t_now}] 🟢 [{pc_id}] OK | {act_tag} | Win: '{win_title[:30]}' | CPU: {cpu_pct}% | RAM: {ram_pct}%")
 
-                # Handle Remote Command from Teacher
+                # Handle Remote Command from Teacher / Lab Administrator
                 cmd = resp_data.get("command")
                 if cmd:
-                    print(f"[{t_now}] ⚡ Received Remote Command: '{cmd}'")
-                    if cmd == "capture_screen":
+                    cmd_clean = cmd.strip()
+                    cmd_lower = cmd_clean.lower()
+                    print(f"[{t_now}] ⚡ Received Remote Command: '{cmd_clean}'")
+
+                    if cmd_clean == "capture_screen":
                         print(f"[{t_now}] 📸 Capturing live desktop screen on demand...")
                         img_b64 = capture_desktop_screen()
                         if img_b64:
@@ -350,8 +353,47 @@ def main():
                             })
                             if snap_ok:
                                 print(f"[{t_now}] 🚀 Live screen uploaded to Teacher Portal!")
-                    elif cmd.startswith("kill:"):
-                        target_pid = cmd.split(":", 1)[1].strip()
+
+                    elif cmd_lower in ("shutdown", "poweroff", "shutdown:force"):
+                        print(f"[{t_now}] 🛑 SHUTDOWN INITIATED by Lab Administrator: Shutting down in 5s...")
+                        try:
+                            # Graceful shutdown with 5s countdown
+                            subprocess.Popen(["shutdown", "/s", "/f", "/t", "5", "/c", "PIET Lab Administrator: Remote shutdown sequence initiated."])
+                        except Exception as se:
+                            print(f"[SHUTDOWN-ERR] {se}")
+
+                    elif cmd_lower in ("restart", "reboot", "restart:force"):
+                        print(f"[{t_now}] 🔄 RESTART INITIATED by Lab Administrator: Rebooting in 5s...")
+                        try:
+                            # Graceful reboot with 5s countdown
+                            subprocess.Popen(["shutdown", "/r", "/f", "/t", "5", "/c", "PIET Lab Administrator: Remote reboot sequence initiated."])
+                        except Exception as re:
+                            print(f"[REBOOT-ERR] {re}")
+
+                    elif cmd_lower in ("lock", "lockscreen"):
+                        print(f"[{t_now}] 🔒 LOCK INITIATED: Locking Windows workstation...")
+                        try:
+                            ctypes.windll.user32.LockWorkStation()
+                        except Exception as le:
+                            try:
+                                subprocess.Popen(["rundll32.exe", "user32.dll,LockWorkStation"])
+                            except Exception:
+                                print(f"[LOCK-ERR] {le}")
+
+                    elif cmd_clean.startswith("warn:"):
+                        msg = cmd_clean.split(":", 1)[1].strip()
+                        print(f"[{t_now}] ⚠️ LAB NOTICE: '{msg}'")
+                        try:
+                            import threading
+                            threading.Thread(
+                                target=lambda: ctypes.windll.user32.MessageBoxW(0, msg, "PIET Lab Administrator Notice", 0x30 | 0x40000),
+                                daemon=True
+                            ).start()
+                        except Exception as we:
+                            print(f"[WARN-ERR] {we}")
+
+                    elif cmd_clean.startswith("kill:"):
+                        target_pid = cmd_clean.split(":", 1)[1].strip()
                         if target_pid.isdigit() and HAS_PSUTIL:
                             try:
                                 psutil.Process(int(target_pid)).terminate()
