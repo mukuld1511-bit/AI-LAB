@@ -109,12 +109,6 @@ if os.path.exists(DGX_DIR):
 if os.path.exists(CLIENT_AGENT_DIR):
     app.mount("/client_agent", StaticFiles(directory=CLIENT_AGENT_DIR), name="client_agent_dir")
 
-REPO_ROOT = os.path.dirname(BASE_DIR)
-PIET_HUB_STATIC = os.path.join(REPO_ROOT, "piet_system", "raspberry_pi_hub", "static")
-if os.path.exists(PIET_HUB_STATIC):
-    app.mount("/supervision", StaticFiles(directory=PIET_HUB_STATIC, html=True), name="supervision_portal")
-    app.mount("/piet", StaticFiles(directory=PIET_HUB_STATIC, html=True), name="piet_portal")
-
 
 # ── Pydantic Models ──
 
