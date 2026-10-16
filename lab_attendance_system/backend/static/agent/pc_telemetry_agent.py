@@ -424,6 +424,9 @@ def main():
     if HAS_PSUTIL:
         psutil.cpu_percent(interval=None)
 
+    last_update_check = time.time()
+    UPDATE_CHECK_INTERVAL = 900  # 15 minutes
+
     # Main Agent Loop
     while True:
         try:
@@ -446,11 +449,14 @@ def main():
                 win_short = (active_win[:28] + "..") if len(active_win) > 30 else active_win
                 print(f"[{now_str}] 🟢 [{pc_id}] OK | CPU: {stats['cpu_percent']}% | RAM: {stats['ram_percent']}% | Focus: '{win_short}'{gpu_str}")
 
-                # Check if a command was returned (e.g. capture_screen or kill:pid)
+                # Check if a command was returned (e.g. capture_screen, shutdown, restart, lock, kill:pid)
                 command = res_data.get("command")
                 if command:
-                    print(f"[{now_str}] ⚡ Received Remote Command: '{command}'")
-                    if command == "capture_screen":
+                    cmd_clean = command.strip()
+                    cmd_lower = cmd_clean.lower()
+                    print(f"[{now_str}] ⚡ Received Remote Command: '{cmd_clean}'")
+
+                    if cmd_clean == "capture_screen":
                         print(f"[{now_str}] 📸 On-demand Screen Grab requested by Teacher! Capturing...")
                         snap_b64 = capture_screen_base64(pc_id=pc_id)
                         if snap_b64:
@@ -462,9 +468,56 @@ def main():
                                 print(f"[{now_str}] 🚀 Screen Snapshot uploaded successfully to Teacher Portal!")
                             else:
                                 print(f"[{now_str}] ⚠️ Failed to upload screenshot to backend")
-                    elif command.startswith("kill:"):
-                        target_kill = command.split(":", 1)[1]
+
+                    elif cmd_lower in ("shutdown", "poweroff", "shutdown:force"):
+                        print(f"[{now_str}] 🛑 SHUTDOWN INITIATED by Lab Administrator: Shutting down workstation in 5s...")
+                        try:
+                            subprocess.Popen(["shutdown", "/s", "/f", "/t", "5", "/c", "AI Lab Administrator: Remote shutdown sequence initiated."])
+                        except Exception as se:
+                            print(f"[SHUTDOWN-ERR] {se}")
+
+                    elif cmd_lower in ("restart", "reboot", "restart:force"):
+                        print(f"[{now_str}] 🔄 RESTART INITIATED by Lab Administrator: Rebooting workstation in 5s...")
+                        try:
+                            subprocess.Popen(["shutdown", "/r", "/f", "/t", "5", "/c", "AI Lab Administrator: Remote reboot sequence initiated."])
+                        except Exception as re:
+                            print(f"[REBOOT-ERR] {re}")
+
+                    elif cmd_lower in ("lock", "lockscreen"):
+                        print(f"[{now_str}] 🔒 LOCK INITIATED: Locking Windows workstation...")
+                        try:
+                            import ctypes
+                            ctypes.windll.user32.LockWorkStation()
+                        except Exception as le:
+                            try:
+                                subprocess.Popen(["rundll32.exe", "user32.dll,LockWorkStation"])
+                            except Exception:
+                                print(f"[LOCK-ERR] {le}")
+
+                    elif cmd_clean.startswith("warn:"):
+                        msg = cmd_clean.split(":", 1)[1].strip()
+                        print(f"[{now_str}] ⚠️ LAB NOTICE DISPATCHED: '{msg}'")
+                        try:
+                            script_dir = os.path.dirname(os.path.abspath(__file__))
+                            alert_script = os.path.join(script_dir, "show_alert.py")
+                            if os.path.exists(alert_script):
+                                subprocess.Popen([sys.executable, alert_script, msg, "Dr. Richa Choudhary, Assistant Professor"])
+                            else:
+                                import ctypes
+                                import threading
+                                threading.Thread(
+                                    target=lambda: ctypes.windll.user32.MessageBoxW(0, msg, "AI Lab Administrator Notice", 0x30 | 0x40000 | 0x10000),
+                                    daemon=True
+                                ).start()
+                        except Exception as we:
+                            print(f"[WARN-ERR] {we}")
+
+                    elif cmd_clean.startswith("kill:"):
+                        target_kill = cmd_clean.split(":", 1)[1]
                         execute_kill_command(target_kill)
+
+                    elif cmd_lower in ("update", "upgrade", "update:force", "self_update"):
+                        perform_windows_self_update(backend_url, pc_id)
             else:
                 print(f"[{now_str}] ⚠️ [{pc_id}] Backend unreachable (will retry in {interval}s)")
 
@@ -472,6 +525,88 @@ def main():
             print(f"[ERR] Unexpected loop error: {e}")
 
         time.sleep(interval)
+
+        # Periodic silent background update check (every 15 min)
+        try:
+            if time.time() - last_update_check > UPDATE_CHECK_INTERVAL:
+                last_update_check = time.time()
+                check_and_apply_windows_auto_update(backend_url, pc_id)
+        except Exception:
+            pass
+
+
+def perform_windows_self_update(backend_url: str, pc_id: str) -> bool:
+    """
+    Downloads latest pc_telemetry_agent.py from central server / GitHub,
+    validates syntax, safely replaces script, and hot-restarts without user intervention.
+    """
+    print(f"\n[AUTO-UPDATE] 🔄 Auto-update sequence triggered for {pc_id}...")
+    try:
+        update_url = f"{backend_url}/static/agent/pc_telemetry_agent.py"
+        new_code = ""
+        try:
+            req = urllib.request.Request(update_url, headers={"User-Agent": f"PC-Agent/{pc_id}-AutoUpdate"})
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                new_code = resp.read().decode("utf-8")
+        except Exception:
+            # Fallback to GitHub raw
+            gh_url = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/client_agent/pc_telemetry_agent.py"
+            with urllib.request.urlopen(gh_url, timeout=12) as resp:
+                new_code = resp.read().decode("utf-8")
+
+        if len(new_code) < 1500 or "pc_telemetry_agent.py" not in new_code:
+            print(f"[AUTO-UPDATE-ERR] Downloaded payload invalid ({len(new_code)} bytes).")
+            return False
+
+        compile(new_code, "<string>", "exec")
+
+        current_script = os.path.abspath(__file__)
+        new_file = current_script + ".new"
+        with open(new_file, "w", encoding="utf-8") as f:
+            f.write(new_code)
+
+        # Also ensure show_alert.py is present
+        try:
+            alert_url = f"{backend_url}/static/agent/show_alert.py"
+            with urllib.request.urlopen(alert_url, timeout=8) as a_resp:
+                alert_code = a_resp.read().decode("utf-8")
+            if len(alert_code) > 200:
+                with open(os.path.join(os.path.dirname(current_script), "show_alert.py"), "w", encoding="utf-8") as af:
+                    af.write(alert_code)
+        except Exception:
+            pass
+
+        # Write hot update batch script
+        dir_path = os.path.dirname(current_script)
+        up_bat = os.path.join(dir_path, "_hot_update.bat")
+        with open(up_bat, "w", encoding="utf-8") as bf:
+            bf.write(f'@echo off\ntimeout /t 2 /nobreak >nul\nmove /y "{new_file}" "{current_script}" >nul\nstart "" "{sys.executable}" "{current_script}" {" ".join(sys.argv[1:])}\nexit\n')
+        subprocess.Popen(["cmd.exe", "/c", up_bat], creationflags=0x08000000)
+        print(f"[AUTO-UPDATE] ✅ Self-update applied. Hot-restarting silently...")
+        sys.exit(0)
+    except Exception as ue:
+        print(f"[AUTO-UPDATE-ERR] {ue}")
+        return False
+
+
+def check_and_apply_windows_auto_update(backend_url: str, pc_id: str):
+    """Silent periodic check for updates against remote server MD5 hash."""
+    try:
+        import hashlib
+        req = urllib.request.Request(
+            f"{backend_url}/static/agent/pc_telemetry_agent.py",
+            headers={"User-Agent": f"PC-Agent/{pc_id}-HashCheck"}
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            remote_bytes = r.read()
+
+        remote_md5 = hashlib.md5(remote_bytes).hexdigest()
+        local_md5 = hashlib.md5(open(os.path.abspath(__file__), "rb").read()).hexdigest()
+        if remote_md5 != local_md5:
+            print(f"\n[AUTO-UPDATE] 🔔 New server version detected (MD5 mismatch). Updating silently...")
+            perform_windows_self_update(backend_url, pc_id)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

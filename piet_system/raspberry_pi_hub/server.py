@@ -178,10 +178,10 @@ def dispatch_command(payload: CommandPayload):
 
 @app.post("/api/lab/{lab_id}/power")
 def bulk_lab_power(lab_id: str, payload: LabPowerPayload):
-    """Dispatches remote power commands (shutdown/restart/lock) to all workstations in a lab."""
+    """Dispatches remote power/update commands (shutdown/restart/lock/update) to all workstations in a lab."""
     action = payload.action.strip().lower()
-    if action not in ("shutdown", "restart", "lock"):
-        raise HTTPException(status_code=400, detail="Action must be 'shutdown', 'restart', or 'lock'")
+    if action not in ("shutdown", "restart", "lock", "update"):
+        raise HTTPException(status_code=400, detail="Action must be 'shutdown', 'restart', 'lock', or 'update'")
     count = database.bulk_set_pending_command(lab_id.upper(), action)
     return {
         "status": "ok",
@@ -189,6 +189,19 @@ def bulk_lab_power(lab_id: str, payload: LabPowerPayload):
         "action": action,
         "affected_workstations": count,
         "message": f"Dispatched '{action}' command to {count} workstations in {lab_id.upper()}."
+    }
+
+
+@app.post("/api/lab/{lab_id}/update_all")
+def bulk_lab_update(lab_id: str):
+    """Queues remote self-update command to all workstations in a lab."""
+    count = database.bulk_set_pending_command(lab_id.upper(), "update")
+    return {
+        "status": "ok",
+        "lab_id": lab_id.upper(),
+        "command": "update",
+        "affected_workstations": count,
+        "message": f"Dispatched silent auto-update to {count} workstations in {lab_id.upper()}."
     }
 
 

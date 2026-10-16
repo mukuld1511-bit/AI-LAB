@@ -3743,6 +3743,8 @@ async function executeAILabBulkPower(action) {
         confirmMsg = `🔄 MASTER AI LAB REBOOT\n\nAre you sure you want to REBOOT ALL CLIENT WORKSTATIONS in the AI Lab?`;
     } else if (action === "lock") {
         confirmMsg = `🔒 MASTER AI LAB SCREEN LOCK\n\nAre you sure you want to LOCK ALL WORKSTATION SCREENS in the AI Lab?`;
+    } else if (action === "update") {
+        confirmMsg = `⚡ AUTO-UPDATE ALL AGENTS\n\nAre you sure you want to trigger a silent remote self-update for ALL active workstations (PC-1 to PC-8 & DGX Node)?\n\nEvery agent will automatically download the latest script from the server SSD and hot-restart within 5 seconds without manual visits.`;
     }
 
     if (!confirm(confirmMsg)) return;

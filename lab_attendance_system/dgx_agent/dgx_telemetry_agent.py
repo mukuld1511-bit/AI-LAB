@@ -847,6 +847,90 @@ def execute_remote_command(cmd, pc_id, backend_url):
         except Exception as e:
             print(f"[CAPTURE-ERR] {e}")
 
+    elif cmd_lower in ("update", "upgrade", "update:force", "self_update"):
+        perform_self_update(backend_url, pc_id)
+
+
+def perform_self_update(backend_url: str, pc_id: str) -> bool:
+    """
+    Downloads latest dgx_telemetry_agent.py from central server,
+    validates Python syntax, backs up old version, replaces script, and hot-restarts.
+    Zero manual intervention required!
+    """
+    print(f"\n[AUTO-UPDATE] 🔄 Auto-update sequence triggered for {pc_id} from {backend_url}...")
+    try:
+        update_url = f"{backend_url}/dgx_agent/dgx_telemetry_agent.py"
+        req = urllib.request.Request(
+            update_url,
+            headers={"User-Agent": f"DGX-Agent/{pc_id}-AutoUpdate"}
+        )
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            new_code = resp.read().decode("utf-8")
+
+        # Sanity check: must be valid Python and have substantial content
+        if len(new_code) < 1500 or "dgx_telemetry_agent.py" not in new_code:
+            print(f"[AUTO-UPDATE-ERR] Downloaded payload invalid or incomplete ({len(new_code)} bytes). Aborting.")
+            return False
+
+        # Validate syntax before replacing
+        compile(new_code, "<string>", "exec")
+
+        current_script = os.path.abspath(__file__)
+        backup_path = current_script + ".bak"
+
+        # Safe backup
+        try:
+            with open(current_script, "r", encoding="utf-8") as cf:
+                with open(backup_path, "w", encoding="utf-8") as bf:
+                    bf.write(cf.read())
+        except Exception:
+            pass
+
+        # Write new script atomically
+        tmp_path = current_script + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as tf:
+            tf.write(new_code)
+        os.replace(tmp_path, current_script)
+
+        print(f"[AUTO-UPDATE] ✅ Code updated successfully to latest server version!")
+        print(f"[AUTO-UPDATE] 🚀 Hot-restarting process seamlessly...")
+        time.sleep(1)
+
+        if platform.system() == "Windows":
+            dir_p = os.path.dirname(current_script)
+            bat_p = os.path.join(dir_p, "_hot_restart.bat")
+            with open(bat_p, "w", encoding="utf-8") as bf:
+                bf.write(f'@echo off\ntimeout /t 2 /nobreak >nul\nstart "" "{sys.executable}" "{current_script}" {" ".join(sys.argv[1:])}\nexit\n')
+            subprocess.Popen(["cmd.exe", "/c", bat_p], creationflags=0x08000000)
+            sys.exit(0)
+        else:
+            # Native Linux / DGX hot restart
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        return True
+    except Exception as e:
+        print(f"[AUTO-UPDATE-ERR] Update failed: {e}")
+        return False
+
+
+def check_and_apply_auto_update(backend_url: str, pc_id: str):
+    """Silent periodic check for updates against remote server MD5 hash."""
+    try:
+        import hashlib
+        req = urllib.request.Request(
+            f"{backend_url}/dgx_agent/dgx_telemetry_agent.py",
+            headers={"User-Agent": f"DGX-Agent/{pc_id}-HashCheck"}
+        )
+        with urllib.request.urlopen(req, timeout=8) as r:
+            remote_bytes = r.read()
+
+        remote_md5 = hashlib.md5(remote_bytes).hexdigest()
+        local_md5 = hashlib.md5(open(os.path.abspath(__file__), "rb").read()).hexdigest()
+        if remote_md5 != local_md5:
+            print(f"\n[AUTO-UPDATE] 🔔 New server version detected (MD5 mismatch). Updating silently...")
+            perform_self_update(backend_url, pc_id)
+    except Exception:
+        pass
+
 
 def resolve_pc_id(arg_id=None):
     """Determines PC ID from CLI argument, environment variable, or hostname."""
@@ -897,6 +981,9 @@ def main():
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
 
 
+    last_update_check = time.time()
+    UPDATE_CHECK_INTERVAL = 900  # 15 minutes
+
     while True:
         try:
             cpu_pct, btime = get_cpu_and_uptime()
@@ -942,6 +1029,14 @@ def main():
             print(f"[ERR] Telemetry loop exception: {e}")
 
         time.sleep(interval)
+
+        # Periodic silent background update check (every 15 min)
+        try:
+            if time.time() - last_update_check > UPDATE_CHECK_INTERVAL:
+                last_update_check = time.time()
+                check_and_apply_auto_update(backend_url, pc_id)
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

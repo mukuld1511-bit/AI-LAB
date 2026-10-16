@@ -701,6 +701,13 @@
                     Perform master remote operations across all <strong>AI Lab client workstations</strong> (PC-1 to PC-8, DGX station). The master host server (BACKEND) is automatically protected.
                 </p>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="executeAILabBulkPower('update')" style="justify-content: flex-start; padding: 12px 16px; background: #f0fdf4; border: 1px solid #86efac; font-size: 13px; width: 100%; text-align: left; display: flex;">
+                        <span style="font-size: 20px; margin-right: 10px;">⚡</span>
+                        <div>
+                            <div style="font-weight: 800; color: #166534;">Auto-Update All Agents (Zero-Touch)</div>
+                            <div style="font-size: 11px; color: #15803d;">Hot-reloads all active workstations (PC-1 to PC-8, DGX) with latest server code in 5s (No manual visits needed)</div>
+                        </div>
+                    </button>
                     <button class="btn btn-secondary" onclick="executeAILabBulkPower('lock')" style="justify-content: flex-start; padding: 12px 16px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 13px; width: 100%; text-align: left; display: flex;">
                         <span style="font-size: 20px; margin-right: 10px;">🔒</span>
                         <div>

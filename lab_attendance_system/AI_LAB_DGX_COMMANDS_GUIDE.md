@@ -132,3 +132,8 @@ Commands can be triggered directly from the MAMS / Teacher supervision dashboard
    Graceful 5-second countdown shutdown.
 5. **🔄 Reboot Workstation (`restart`):**  
    Reboots the system cleanly.
+6. **⚡ Zero-Touch Auto-Update (`update` / `/api/pc/update_all`):**  
+   **No need to physically visit PCs!**  
+   Dispatches remote update to all active lab workstations (PC-1 to PC-8 & DGX). Each agent fetches the newest code from the server SSD, verifies it, and hot-reloads itself within 5 seconds.  
+   *(Trigger via MAMS Dashboard: **`🛑 Lab Power`** ➔ **`⚡ Auto-Update All Agents`** or via API `curl -X POST https://labg418pc12.tailc8c1f6.ts.net/api/pc/update_all`).*  
+   *Additionally, every running agent silently checks for code updates every 15 minutes automatically!*

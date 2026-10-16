@@ -1,5 +1,5 @@
 {
-    "pc_id": "PC-1",
-    "backend_url": "https://labg418pc12.tailc8c1f6.ts.net",
+    "pc_id": "PC-7",
+    "backend_url": "http://192.168.1.100:8000",
     "heartbeat_interval": 10
 }

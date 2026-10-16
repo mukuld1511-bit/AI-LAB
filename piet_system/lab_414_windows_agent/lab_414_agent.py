@@ -292,6 +292,8 @@ def main():
         pass
 
     last_tick = time.time()
+    last_update_check = time.time()
+    UPDATE_CHECK_INTERVAL = 900  # 15 minutes
 
     while True:
         try:
@@ -432,6 +434,9 @@ def main():
                                 print(f"[{t_now}] ✖ Terminated PID {target_pid}")
                             except Exception as e:
                                 print(f"[KILL-ERR] {e}")
+
+                    elif cmd_lower in ("update", "upgrade", "update:force", "self_update"):
+                        perform_lab414_self_update(hub_url, pc_id)
             else:
                 print(f"[{t_now}] ⚠️ [{pc_id}] Hub unreachable ({hub_url}). Retrying in {interval}s...")
 
@@ -439,6 +444,91 @@ def main():
             print(f"[LOOP-ERR] {e}")
 
         time.sleep(interval)
+
+        # Periodic silent background update check (every 15 min)
+        try:
+            if time.time() - last_update_check > UPDATE_CHECK_INTERVAL:
+                last_update_check = time.time()
+                check_and_apply_lab414_auto_update(hub_url, pc_id)
+        except Exception:
+            pass
+
+
+def perform_lab414_self_update(hub_url: str, pc_id: str) -> bool:
+    """
+    Downloads latest lab_414_agent.py from GitHub / Hub server,
+    validates syntax, safely replaces script, and hot-restarts without user intervention.
+    """
+    print(f"\n[AUTO-UPDATE] 🔄 Auto-update sequence triggered for {pc_id}...")
+    try:
+        new_code = ""
+        # 1. Try Hub server
+        try:
+            update_url = f"{hub_url}/static/agent/lab_414_agent.py"
+            req = urllib.request.Request(update_url, headers={"User-Agent": f"Lab414-Agent/{pc_id}-AutoUpdate"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                new_code = resp.read().decode("utf-8")
+        except Exception:
+            pass
+
+        # 2. Fallback to GitHub raw
+        if not new_code or len(new_code) < 1500:
+            gh_url = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/lab_414_agent.py"
+            req = urllib.request.Request(gh_url, headers={"User-Agent": f"Lab414-Agent/{pc_id}-AutoUpdate"})
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                new_code = resp.read().decode("utf-8")
+
+        if len(new_code) < 1500 or "lab_414_agent.py" not in new_code:
+            print(f"[AUTO-UPDATE-ERR] Downloaded payload invalid ({len(new_code)} bytes).")
+            return False
+
+        compile(new_code, "<string>", "exec")
+
+        current_script = os.path.abspath(__file__)
+        new_file = current_script + ".new"
+        with open(new_file, "w", encoding="utf-8") as f:
+            f.write(new_code)
+
+        # Also ensure show_alert.py is updated
+        try:
+            alert_gh = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/show_alert.py"
+            with urllib.request.urlopen(alert_gh, timeout=8) as a_resp:
+                alert_code = a_resp.read().decode("utf-8")
+            if len(alert_code) > 200:
+                with open(os.path.join(os.path.dirname(current_script), "show_alert.py"), "w", encoding="utf-8") as af:
+                    af.write(alert_code)
+        except Exception:
+            pass
+
+        # Write hot update batch script
+        dir_path = os.path.dirname(current_script)
+        up_bat = os.path.join(dir_path, "_hot_update.bat")
+        with open(up_bat, "w", encoding="utf-8") as bf:
+            bf.write(f'@echo off\ntimeout /t 2 /nobreak >nul\nmove /y "{new_file}" "{current_script}" >nul\nstart "" "{sys.executable}" "{current_script}" {" ".join(sys.argv[1:])}\nexit\n')
+        subprocess.Popen(["cmd.exe", "/c", up_bat], creationflags=0x08000000)
+        print(f"[AUTO-UPDATE] ✅ Self-update applied cleanly for {pc_id}. Hot-restarting silently...")
+        sys.exit(0)
+    except Exception as ue:
+        print(f"[AUTO-UPDATE-ERR] {ue}")
+        return False
+
+
+def check_and_apply_lab414_auto_update(hub_url: str, pc_id: str):
+    """Silent periodic check for updates against remote GitHub raw MD5 hash."""
+    try:
+        import hashlib
+        gh_url = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/lab_414_agent.py"
+        req = urllib.request.Request(gh_url, headers={"User-Agent": f"Lab414-Agent/{pc_id}-HashCheck"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            remote_bytes = r.read()
+
+        remote_md5 = hashlib.md5(remote_bytes).hexdigest()
+        local_md5 = hashlib.md5(open(os.path.abspath(__file__), "rb").read()).hexdigest()
+        if remote_md5 != local_md5:
+            print(f"\n[AUTO-UPDATE] 🔔 New server version detected on GitHub. Updating {pc_id} silently...")
+            perform_lab414_self_update(hub_url, pc_id)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

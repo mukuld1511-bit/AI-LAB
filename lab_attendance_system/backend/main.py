@@ -406,6 +406,52 @@ def request_pc_command(pc_id: str, payload: Optional[CommandRequest] = None):
     }
 
 
+@app.post("/api/pc/update_all")
+def update_all_agents():
+    """Queues a remote self-update command for all AI Lab workstations and DGX nodes."""
+    count = database.bulk_set_pending_command(None, "update")
+    return {
+        "status": "ok",
+        "command": "update",
+        "affected_workstations": count,
+        "message": f"Dispatched remote update command to {count} workstations. All active agents will hot-reload within 5s."
+    }
+
+
+@app.post("/api/pc/{pc_id}/update")
+def update_single_agent(pc_id: str):
+    """Queues a remote self-update command for a specific workstation or DGX node."""
+    clean_pc = pc_id.strip().upper()
+    database.set_pending_command(clean_pc, "update")
+    return {
+        "status": "ok",
+        "pc_id": clean_pc,
+        "command": "update",
+        "message": f"Update dispatched to {clean_pc}. It will pull latest code and hot-reload on next heartbeat."
+    }
+
+
+class LabPowerRequest(BaseModel):
+    action: str  # 'shutdown', 'restart', 'lock', 'update'
+    force: Optional[bool] = True
+
+
+@app.post("/api/lab/power")
+@app.post("/api/lab/{lab_id}/power")
+def bulk_lab_power_ai_lab(payload: LabPowerRequest, lab_id: Optional[str] = None):
+    """Dispatches bulk power or update action (shutdown, restart, lock, update) to all AI Lab workstations."""
+    action = payload.action.strip().lower()
+    if action not in ("shutdown", "restart", "lock", "update"):
+        raise HTTPException(status_code=400, detail="Action must be 'shutdown', 'restart', 'lock', or 'update'")
+    count = database.bulk_set_pending_command(None, action)
+    return {
+        "status": "ok",
+        "action": action,
+        "affected_workstations": count,
+        "message": f"Successfully dispatched '{action}' command across {count} AI Lab workstations."
+    }
+
+
 @app.post("/api/screenshot")
 @app.post("/api/pc/screenshot")
 def upload_pc_screenshot(payload: ScreenshotUploadRequest):

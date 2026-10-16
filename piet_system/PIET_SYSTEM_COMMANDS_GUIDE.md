@@ -135,3 +135,7 @@ From the supervision portal (`https://raspberrypi.tailc8c1f6.ts.net/` or `http:/
    Allows one-click **Shutdown**, **Restart**, or **Lock** for all 20 PCs in a lab simultaneously (excluding protected host machine).
 3. **📸 Live On-Demand Desktop Screen Capture:**  
    Captures active desktop session and updates the teacher briefing modal in seconds.
+4. **⚡ Zero-Touch Auto-Update (`update` / `/api/lab/{lab_id}/update_all`):**  
+   **No need to physically visit the lab PCs!**  
+   Dispatches remote self-update command to all 20 workstations in the lab. Each agent pulls the latest code from GitHub / Hub server, verifies it, and silently hot-reloads within 5 seconds.  
+   *(Additionally, every running agent silently checks GitHub for updates every 15 minutes automatically).*
