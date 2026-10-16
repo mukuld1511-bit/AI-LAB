@@ -79,17 +79,36 @@ def load_config():
                 config["pc_id"] = f"PC-{i}"
                 break
 
-    # Command-line arguments override (e.g. python pc_telemetry_agent.py PC-2)
-    if len(sys.argv) > 1:
-        for i, arg in enumerate(sys.argv[1:], 1):
-            upper_arg = arg.strip().upper()
-            if upper_arg in ("--PC-ID", "-P") and i < len(sys.argv) - 1:
-                config["pc_id"] = sys.argv[i + 1].strip().upper()
-            elif upper_arg.startswith("PC-") or upper_arg.startswith("PC"):
-                digits = "".join([c for c in upper_arg if c.isdigit()])
-                config["pc_id"] = f"PC-{digits}" if digits else upper_arg
-            elif upper_arg in ("--URL", "-U") and i < len(sys.argv) - 1:
-                config["backend_url"] = sys.argv[i + 1].strip()
+    # Command-line arguments override (e.g. python pc_telemetry_agent.py 2)
+    args = sys.argv[1:]
+    i = 0
+    pos_args = []
+    while i < len(args):
+        a = args[i]
+        upper_a = a.strip().upper()
+        if upper_a in ("--PC-ID", "--PC", "-P") and i + 1 < len(args):
+            val = args[i + 1].strip()
+            digits = "".join([c for c in val if c.isdigit()])
+            config["pc_id"] = f"PC-{int(digits)}" if digits else val.upper()
+            i += 2
+        elif upper_a in ("--URL", "-U", "--BACKEND") and i + 1 < len(args):
+            config["backend_url"] = args[i + 1].strip()
+            i += 2
+        elif not a.startswith("-"):
+            pos_args.append(a)
+            i += 1
+        else:
+            i += 1
+
+    if pos_args:
+        first = pos_args[0].strip()
+        digits = "".join([c for c in first if c.isdigit()])
+        if digits:
+            config["pc_id"] = f"PC-{int(digits)}"
+        else:
+            config["pc_id"] = first.upper()
+    if len(pos_args) > 1:
+        config["backend_url"] = pos_args[1].strip()
 
     try:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
