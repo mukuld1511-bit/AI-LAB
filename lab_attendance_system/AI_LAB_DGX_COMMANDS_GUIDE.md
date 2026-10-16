@@ -17,44 +17,34 @@
 
 ---
 
-## 🖥️ Section 1: NVIDIA DGX Station Commands (Linux / Ubuntu)
+## 🖥️ Section 1: DGX Station & Linux Workstations (PC-5 / DGX)
 
-The DGX Agent tracks Multi-GPU utilization, VRAM usage, temperature, CPU/RAM load, and captures live desktop sessions.
-
-### 1. 1-Click Auto-Install as Permanent Service (Recommended)
-Run this single command on the DGX Station terminal (as root or with `sudo`):
+### 🌟 Primary Standard Command (Run Anytime to Update & Start)
+Ye aapki **fixed, permanent standard command** hai. Jab bhi koi update ho, DGX / Linux PC par bas yahi ek command chalani hai:
 
 ```bash
-curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/install_dgx_service.sh | sudo bash -s DGX-1
+curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/dgx_telemetry_agent.py -o dgx_telemetry_agent.py && python3 dgx_telemetry_agent.py --pc-id PC-5
 ```
-*(Replace `DGX-1` with your preferred identifier if needed, e.g., `DGX-STATION` or `PC-6`)*
-
-* **GitHub Raw Fallback:**
-  ```bash
-  curl -sSL https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/install_dgx_service.sh | sudo bash -s DGX-1 https://labg418pc12.tailc8c1f6.ts.net
-  ```
-
----
-
-### 2. Live Console Test Mode (Interactive Terminal)
-To verify heartbeats and GPU stats in real-time before installing the service:
-
-```bash
-mkdir -p ~/dgx_agent && cd ~/dgx_agent
-curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/dgx_telemetry_agent.py -o dgx_telemetry_agent.py
-python3 dgx_telemetry_agent.py --pc-id DGX-1 --url https://labg418pc12.tailc8c1f6.ts.net
-```
+*(Agar kisi aur PC par chalana ho, to bas aakhri me `--pc-id PC-6` ya `--pc-id DGX-1` kar sakte hain).*
 
 **Expected Terminal Output:**
 ```text
 =================================================================
-🚀 AI LAB DGX TELEMETRY & SCREEN SUPERVISION AGENT
-🖥️ PC ID        : DGX-1
+🚀 AI/ML LAB DGX & WORKSTATION TELEMETRY AGENT v2.1
+🖥️ Target PC ID : PC-5
 🌐 Backend URL  : https://labg418pc12.tailc8c1f6.ts.net
-⏱️ Heartbeat    : Every 4s
-🎮 GPU Metrics  : Active (nvidia-smi Multi-GPU Tracker)
+⏱️ Interval     : 4 seconds
 =================================================================
-[12:30:00] 🟢 [DGX-1] OK | GPU: NVIDIA A100 | VRAM: 18.2/80GB | CPU: 12% | RAM: 24%
+[12:30:00] 🟢 [PC-5] OK | User: piet | CPU: 12% | RAM: 24% | GPU: NVIDIA A100 (15%)
+```
+
+---
+
+### 2. Optional: 1-Click Background Service (Permanent Auto-Startup on Boot)
+Agar aap terminal khula nahi rakhna chahte aur chahte hain ki PC start hote hi background me chalu ho jaye:
+
+```bash
+curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/install_dgx_service.sh | sudo bash -s PC-5
 ```
 
 ---
