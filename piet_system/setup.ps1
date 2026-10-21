@@ -46,6 +46,18 @@ if (-not (Test-Path $agentDir)) {
 
 # Helper: Locate existing Python 3 installations
 function Get-ValidPython {
+    # Check py launcher first
+    try {
+        $pyLauncher = Get-Command "py.exe" -ErrorAction SilentlyContinue
+        if ($pyLauncher) {
+            $pyPath = (& $pyLauncher.Source -3 -c "import sys; print(sys.executable)" 2>$null).Trim()
+            if ($pyPath -and (Test-Path $pyPath)) {
+                return $pyPath
+            }
+        }
+    } catch {}
+
+    # Check python in PATH
     try {
         $pyCmd = Get-Command "python.exe" -ErrorAction SilentlyContinue
         if ($pyCmd -and ($pyCmd.Source -notlike "*WindowsApps*")) {
@@ -57,21 +69,28 @@ function Get-ValidPython {
     } catch {}
 
     $candidates = @(
+        "C:\Python313\python.exe",
         "C:\Python312\python.exe",
         "C:\Python311\python.exe",
         "C:\Python310\python.exe",
         "C:\Python39\python.exe",
+        "C:\Python38\python.exe",
+        "C:\Program Files\Python313\python.exe",
         "C:\Program Files\Python312\python.exe",
         "C:\Program Files\Python311\python.exe",
         "C:\Program Files\Python310\python.exe",
         "C:\Program Files\Python39\python.exe",
+        "C:\Program Files\Python38\python.exe",
         "C:\Program Files (x86)\Python312\python.exe",
         "C:\Program Files (x86)\Python311\python.exe",
         "C:\Program Files (x86)\Python310\python.exe",
+        "C:\Program Files (x86)\Python39\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python310\python.exe",
         "$env:LOCALAPPDATA\Programs\Python\Python39\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python38\python.exe",
         "C:\ProgramData\anaconda3\python.exe",
         "C:\ProgramData\miniconda3\python.exe",
         "C:\anaconda3\python.exe"
@@ -102,24 +121,36 @@ if (-not $pythonExe) {
 
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest -Uri $pyInstallerUrl -OutFile $installerPath -UseBasicParsing
+        Invoke-WebRequest -Uri $pyInstallerUrl -OutFile $installerPath -UseBasicParsing -TimeoutSec 30
         Write-Host "      Installing Python silently in background (approx 20 seconds)..." -ForegroundColor Yellow
-        Start-Process -FilePath $installerPath -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0" -Wait
+        $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        $installArgs = if ($isAdmin) {
+            "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0 SimpleInstall=1"
+        } else {
+            "/quiet InstallAllUsers=0 PrependPath=1 Include_test=0 SimpleInstall=1"
+        }
+        Start-Process -FilePath $installerPath -ArgumentList $installArgs -Wait
         Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
     } catch {
-        Write-Host "      Auto-install download failed: $_" -ForegroundColor Red
+        Write-Host "      Direct download warning: $_" -ForegroundColor DarkGray
     }
 
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
     $pythonExe = Get-ValidPython
-    if (-not $pythonExe -and (Test-Path "C:\Program Files\Python310\python.exe")) {
-        $pythonExe = "C:\Program Files\Python310\python.exe"
+    if (-not $pythonExe) {
+        if (Test-Path "C:\Program Files\Python310\python.exe") {
+            $pythonExe = "C:\Program Files\Python310\python.exe"
+        } elseif (Test-Path "$env:LOCALAPPDATA\Programs\Python\Python310\python.exe") {
+            $pythonExe = "$env:LOCALAPPDATA\Programs\Python\Python310\python.exe"
+        } elseif (Test-Path "C:\Python310\python.exe") {
+            $pythonExe = "C:\Python310\python.exe"
+        }
     }
 }
 
 if (-not $pythonExe) {
     Write-Host "❌ ERROR: Python 3 could not be located or installed automatically." -ForegroundColor Red
-    Write-Host "   Please install Python 3 manually from https://www.python.org and re-run." -ForegroundColor Yellow
+    Write-Host "   Please install Python 3 from https://www.python.org or winget install Python.Python.3.10" -ForegroundColor Yellow
     exit 1
 }
 
