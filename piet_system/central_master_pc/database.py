@@ -288,53 +288,41 @@ def seed_official_55min_timetable(cursor: sqlite3.Cursor):
     P7: 15:30 - 16:25
     """
     schedule_data = [
-        # Monday
-        ("LAB-414", "Monday", "P1-P2", "09:05", "10:55", "Deep Learning Lab (AIML-301)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A1"),
-        ("LAB-414", "Monday", "P3-P4", "10:55", "12:45", "Neural Networks & PyTorch Lab", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
-        ("LAB-414", "Monday", "P5-P6", "13:40", "15:30", "Capstone Project Lab", "Faculty Mentor Panel", "4th Year AIML"),
-        ("LAB-414", "Monday", "P7", "15:30", "16:25", "Research Seminar & AI Ethics", "Dr. Richa Choudhary, Assistant Professor", "4th Year AIML"),
+        # LAB-413 (Advanced Computing Lab 413)
+        ("LAB-413", "Tuesday", "P3-P4", "10:55", "12:45", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A3"),
+        ("LAB-413", "Thursday", "P1-P2", "09:05", "10:55", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A1"),
+        ("LAB-413", "Wednesday", "P5-P6", "12:45", "14:35", "Advanced Computing & AI Lab Practice", "Ms. Neha Sharma", "5th Sem AI&ML - All Batches"),
+        ("LAB-413", "Friday", "P5-P6", "12:45", "14:35", "Distributed AI Systems & Practical Studio", "Faculty Mentor Panel", "AIML Department"),
 
-        # Tuesday
-        ("LAB-414", "Tuesday", "P1-P2", "09:05", "10:55", "Computer Vision Lab (AIML-302)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
-        ("LAB-414", "Tuesday", "P3-P4", "10:55", "12:45", "Deep Learning Studio", "Er. Gaurav Sharma", "3rd Year AIML - Batch A3"),
-        ("LAB-414", "Tuesday", "P5-P6", "13:40", "15:30", "Generative AI & LLM Studio", "Dr. Amit Verma", "4th Year AIML"),
-        ("LAB-414", "Tuesday", "P7", "15:30", "16:25", "Guided Practical Mentoring", "Dr. Richa Choudhary, Assistant Professor", "2nd Year AIML"),
+        # LAB-414 (Deep Learning Lab 414 — Primary Lab)
+        ("LAB-414", "Thursday", "P1-P2", "09:05", "10:55", "Database Management Systems Lab (DBMS Lab)", "Ms. Pooja Sharma", "5th Sem AI&ML - Batch A2"),
+        ("LAB-414", "Thursday", "P5-P6", "12:45", "14:35", "Database Management Systems Lab (DBMS Lab)", "Ms. Pooja Sharma", "5th Sem AI&ML - Batch A3"),
+        ("LAB-414", "Monday", "P1-P2", "09:05", "10:55", "Deep Learning & Neural Networks Studio", "Dr. Richa Choudhary, Assistant Professor", "3rd/4th Year AIML"),
+        ("LAB-414", "Tuesday", "P3-P4", "10:55", "12:45", "Computer Vision & PyTorch Practice", "Dr. Richa Choudhary, Assistant Professor", "AIML Batches"),
+        ("LAB-414", "Wednesday", "P1-P2", "09:05", "10:55", "Deep Learning Lab Mentoring", "Dr. Richa Choudhary, Assistant Professor", "AIML Batches"),
+        ("LAB-414", "Friday", "P5-P6", "13:40", "15:30", "Capstone AI Research Sprint", "Faculty Mentor Panel", "AIML Department"),
 
-        # Wednesday
-        ("LAB-414", "Wednesday", "P1-P2", "09:05", "10:55", "Deep Learning Lab (AIML-301)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A3"),
-        ("LAB-414", "Wednesday", "P3-P4", "10:55", "12:45", "Machine Learning Lab (AIML-201)", "Er. Gaurav Sharma", "2nd Year AIML - Batch B1"),
-        ("LAB-414", "Wednesday", "P5-P6", "13:40", "15:30", "Autonomous Systems Lab", "Er. Vikas Malik", "4th Year AIML"),
-        ("LAB-414", "Wednesday", "P7", "15:30", "16:25", "Project Code Review & Sync", "Faculty Mentor Panel", "3rd Year AIML"),
+        # LAB-415 (Machine Learning Lab 415)
+        ("LAB-415", "Monday", "P5-P6", "12:45", "14:35", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A2"),
+        ("LAB-415", "Monday", "P7", "15:30", "16:25", "Minor Project Lab", "Ms. Jyoti Sharma", "5th Sem AI&ML - Batch A1"),
+        ("LAB-415", "Wednesday", "P5-P6", "12:45", "14:35", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A3"),
+        ("LAB-415", "Thursday", "P5-P6", "12:45", "14:35", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A2"),
+        ("LAB-415", "Friday", "P3-P4", "10:55", "12:45", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A1"),
+        ("LAB-415", "Tuesday", "P1-P2", "09:05", "10:55", "Machine Learning & Vision Practice", "Ms. Neha Sharma", "AIML Batches"),
 
-        # Thursday
-        ("LAB-414", "Thursday", "P1-P2", "09:05", "10:55", "Data Structures with Python", "Er. Priya Gupta", "2nd Year AIML - Batch B2"),
-        ("LAB-414", "Thursday", "P3-P4", "10:55", "12:45", "Deep Learning Lab (AIML-301)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A1"),
-        ("LAB-414", "Thursday", "P5-P6", "13:40", "15:30", "Capstone AI Studio", "Dr. Richa Choudhary, Assistant Professor", "4th Year AIML"),
-        ("LAB-414", "Thursday", "P7", "15:30", "16:25", "Technical Doubt & Skill Clinic", "Er. Gaurav Sharma", "2nd Year AIML"),
+        # LAB-418 (Project & Research Lab 418)
+        ("LAB-418", "Tuesday", "P7", "15:30", "16:25", "Coding Class (Competitive Programming)", "Mr. Dinesh Kumar", "5th Sem AI&ML - Batch A1"),
+        ("LAB-418", "Friday", "P7", "15:30", "16:25", "Minor Project Lab", "Ms. Lalita", "5th Sem AI&ML - Batch A1"),
+        ("LAB-418", "Monday", "P3-P4", "10:55", "12:45", "AI Research Project Studio", "Dr. Richa Choudhary, Assistant Professor", "4th Year Research Batch"),
+        ("LAB-418", "Wednesday", "P5-P6", "13:40", "15:30", "Hardware-AI Integration Lab", "Faculty Mentor Panel", "AIML Department"),
+        ("LAB-418", "Thursday", "P3-P4", "10:55", "12:45", "Competitive Coding & Algorithms Lab", "Mr. Dinesh Kumar", "AIML Department"),
 
-        # Friday
-        ("LAB-414", "Friday", "P1-P2", "09:05", "10:55", "Advanced AI & GPU Computing", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - All Batches"),
-        ("LAB-414", "Friday", "P3-P4", "10:55", "12:45", "Model Deployment & MLOps", "Er. Gaurav Sharma", "4th Year AIML"),
-        ("LAB-414", "Friday", "P5-P6", "13:40", "15:30", "Hackathon & Research Sprint", "Faculty Mentor Panel", "3rd & 4th Year AIML"),
-        ("LAB-414", "Friday", "P7", "15:30", "16:25", "Weekly Lab Audit & Handoff", "Dr. Richa Choudhary, Assistant Professor", "All Batches"),
-
-        # Lab 415 Schedule
-        ("LAB-415", "Monday", "P1-P2", "09:05", "10:55", "Computer Vision Lab", "Er. Gaurav Sharma", "3rd Year AIML - Batch B1"),
-        ("LAB-415", "Monday", "P3-P4", "10:55", "12:45", "Pattern Recognition & Image Proc", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch B2"),
-        ("LAB-415", "Wednesday", "P1-P2", "09:05", "10:55", "Robotics Vision Studio", "Er. Vikas Malik", "4th Year AIML"),
-
-        # Lab 416 Schedule
-        ("LAB-416", "Tuesday", "P1-P2", "09:05", "10:55", "Big Data Analytics Lab", "Dr. Amit Verma", "3rd Year AIML"),
-        ("LAB-416", "Thursday", "P1-P2", "09:05", "10:55", "Natural Language Processing Lab", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
-
-        # Lab 417 Schedule
-        ("LAB-417", "Monday", "P1-P2", "09:05", "10:55", "Python for AI Foundations", "Er. Priya Gupta", "1st Year AIML"),
-        ("LAB-417", "Wednesday", "P3-P4", "10:55", "12:45", "Object Oriented Programming in Python", "Er. Priya Gupta", "2nd Year AIML"),
-
-        # Lab 418 Schedule (Project & Research Lab)
-        ("LAB-418", "Monday", "P1-P2", "09:05", "10:55", "DGX High-Performance Computing Practicum", "Dr. Richa Choudhary, Assistant Professor", "4th Year AIML"),
-        ("LAB-418", "Wednesday", "P5-P6", "13:40", "15:30", "Research Paper Implementation Sprint", "Dr. Richa Choudhary, Assistant Professor", "M.Tech & Capstone AIML"),
-        ("LAB-418", "Friday", "P1-P2", "09:05", "10:55", "Autonomous Agents & LLM Fine-Tuning", "Dr. Richa Choudhary, Assistant Professor", "Research Scholars & 4th Year")
+        # LAB-419 (Intelligent Systems Lab 419)
+        ("LAB-419", "Monday", "P5-P6", "12:45", "14:35", "Database Management Systems Lab (DBMS Lab)", "Ms. Pooja Sharma", "5th Sem AI&ML - Batch A1"),
+        ("LAB-419", "Tuesday", "P5-P6", "12:45", "14:35", "Database Systems & SQL Studio", "Ms. Pooja Sharma", "AIML Batches"),
+        ("LAB-419", "Wednesday", "P3-P4", "10:55", "12:45", "Intelligent Systems & Data Engineering", "Faculty Mentor Panel", "AIML Department"),
+        ("LAB-419", "Thursday", "P5-P6", "13:40", "15:30", "Autonomous Systems & Robotics Practical", "Faculty Mentor Panel", "AIML Department"),
+        ("LAB-419", "Friday", "P1-P2", "09:05", "10:55", "Database Optimization & Analytics Lab", "Ms. Pooja Sharma", "AIML Batches"),
     ]
 
     for item in schedule_data:

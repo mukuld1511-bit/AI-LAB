@@ -44,13 +44,13 @@ def init_db():
         )
     """)
 
-    # Seed Default 5 AIML Labs (35 PCs each)
+    # Seed 5 Official Department Labs (24 PCs each = 120 Workstations)
     default_labs = [
-        ("LAB-414", "AI & Deep Learning Lab 414", 35, "Primary Windows Lab — High Performance AI Workstations"),
-        ("LAB-415", "Machine Learning & Vision Lab 415", 35, "Windows Workstations — Computer Vision & NLP"),
-        ("LAB-416", "Data Science & Analytics Lab 416", 35, "Windows Workstations — Big Data & Analytics"),
-        ("LAB-417", "Python & Core AI Lab 417", 35, "Windows Workstations — Algorithm & ML Labs"),
-        ("LAB-418", "Project & Research Lab 418", 35, "Windows Workstations — Capstone Projects & DGX Terminal")
+        ("LAB-413", "Advanced Computing Lab 413", 24, "Windows Workstations — Distributed Computing & AI"),
+        ("LAB-414", "Deep Learning Lab 414", 24, "Primary Windows Lab — Deep Learning & Neural Networks"),
+        ("LAB-415", "Machine Learning Lab 415", 24, "Windows Workstations — Computer Vision & NLP"),
+        ("LAB-418", "Project & Research Lab 418", 24, "Windows Workstations — Capstone Projects & R&D"),
+        ("LAB-419", "Intelligent Systems Lab 419", 24, "Windows Workstations — Autonomous Systems & Robotics")
     ]
     for lab in default_labs:
         c.execute("""
@@ -92,10 +92,10 @@ def init_db():
         )
     """)
 
-    # Seed 35 PC slots for each lab (PC-414-01 to PC-414-35, etc.)
-    for lab_num in [414, 415, 416, 417, 418]:
+    # Seed 24 PC slots for each of the 5 labs (PC-413-01 to PC-413-24, PC-414-01 to PC-414-24, etc.)
+    for lab_num in [413, 414, 415, 418, 419]:
         lab_code = f"LAB-{lab_num}"
-        for i in range(1, 36):
+        for i in range(1, 25):
             p_id = f"PC-{lab_num}-{i:02d}"
             c.execute("""
                 INSERT OR IGNORE INTO workstations (pc_id, lab_id, is_online, activity_type, active_window, active_app)
@@ -135,65 +135,60 @@ def init_db():
         )
     """)
 
-    # Seed or refresh official PIET 55-minute timetable (09:05 to 16:25) across all 5 labs
-    c.execute("SELECT count(*) as cnt FROM timetable")
-    if c.fetchone()["cnt"] < 15:
-        c.execute("DELETE FROM timetable")
-        piet_55min_slots = [
-            # LAB-414 (AI & Deep Learning)
-            ("LAB-414", "Monday", "09:05", "10:55", "Deep Learning Lab (AIML-301, P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A1"),
-            ("LAB-414", "Monday", "10:55", "12:45", "Neural Networks & PyTorch Lab (P3-P4)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
-            ("LAB-414", "Monday", "13:40", "15:30", "Capstone Project Lab (P5-P6)", "Faculty Mentor Panel", "4th Year AIML"),
-            ("LAB-414", "Monday", "15:30", "16:25", "Research Seminar & AI Ethics (P7)", "Dr. Richa Choudhary, Assistant Professor", "4th Year AIML"),
+    # Seed Official PIET Department of CSE (AI&ML) Timetable (Odd Sem 2026-27)
+    # Labs: 413, 414, 415, 418, 419 (24 PCs each)
+    c.execute("DELETE FROM timetable")
+    official_piet_slots = [
+        # ─────────────────────────────────────────────────────────────────
+        # LAB-413 (Advanced Computing Lab 413)
+        # ─────────────────────────────────────────────────────────────────
+        ("LAB-413", "Tuesday", "10:55", "12:45", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A3"),
+        ("LAB-413", "Thursday", "09:05", "10:55", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A1"),
+        ("LAB-413", "Wednesday", "12:45", "14:35", "Advanced Computing & AI Lab Practice", "Ms. Neha Sharma", "5th Sem AI&ML - All Batches"),
+        ("LAB-413", "Friday", "12:45", "14:35", "Distributed AI Systems & Practical Studio", "Faculty Mentor Panel", "AIML Department"),
 
-            ("LAB-414", "Tuesday", "09:05", "10:55", "Computer Vision Lab (AIML-302, P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A2"),
-            ("LAB-414", "Tuesday", "10:55", "12:45", "Deep Learning Studio (P3-P4)", "Er. Gaurav Sharma", "3rd Year AIML - Batch A3"),
-            ("LAB-414", "Tuesday", "13:40", "15:30", "Generative AI & LLM Studio (P5-P6)", "Dr. Amit Verma", "4th Year AIML"),
-            ("LAB-414", "Tuesday", "15:30", "16:25", "Guided Practical Mentoring (P7)", "Dr. Richa Choudhary, Assistant Professor", "2nd Year AIML"),
+        # ─────────────────────────────────────────────────────────────────
+        # LAB-414 (Deep Learning Lab 414 — Primary Lab)
+        # ─────────────────────────────────────────────────────────────────
+        ("LAB-414", "Thursday", "09:05", "10:55", "Database Management Systems Lab (DBMS Lab)", "Ms. Pooja Sharma", "5th Sem AI&ML - Batch A2"),
+        ("LAB-414", "Thursday", "12:45", "14:35", "Database Management Systems Lab (DBMS Lab)", "Ms. Pooja Sharma", "5th Sem AI&ML - Batch A3"),
+        ("LAB-414", "Monday", "09:05", "10:55", "Deep Learning & Neural Networks Studio", "Dr. Richa Choudhary, Assistant Professor", "3rd/4th Year AIML"),
+        ("LAB-414", "Tuesday", "10:55", "12:45", "Computer Vision & PyTorch Practice", "Dr. Richa Choudhary, Assistant Professor", "AIML Batches"),
+        ("LAB-414", "Wednesday", "09:05", "10:55", "Deep Learning Lab Mentoring", "Dr. Richa Choudhary, Assistant Professor", "AIML Batches"),
+        ("LAB-414", "Friday", "13:40", "15:30", "Capstone AI Research Sprint", "Faculty Mentor Panel", "AIML Department"),
 
-            ("LAB-414", "Wednesday", "09:05", "10:55", "Deep Learning Lab (AIML-301, P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A3"),
-            ("LAB-414", "Wednesday", "10:55", "12:45", "Machine Learning Lab (AIML-201, P3-P4)", "Er. Gaurav Sharma", "2nd Year AIML - Batch B1"),
-            ("LAB-414", "Wednesday", "13:40", "15:30", "Autonomous Systems Lab (P5-P6)", "Er. Vikas Malik", "4th Year AIML"),
-            ("LAB-414", "Wednesday", "15:30", "16:25", "Project Code Review & Sync (P7)", "Faculty Mentor Panel", "3rd Year AIML"),
+        # ─────────────────────────────────────────────────────────────────
+        # LAB-415 (Machine Learning Lab 415)
+        # ─────────────────────────────────────────────────────────────────
+        ("LAB-415", "Monday", "12:45", "14:35", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A2"),
+        ("LAB-415", "Monday", "15:30", "16:25", "Minor Project Lab", "Ms. Jyoti Sharma", "5th Sem AI&ML - Batch A1"),
+        ("LAB-415", "Wednesday", "12:45", "14:35", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A3"),
+        ("LAB-415", "Thursday", "12:45", "14:35", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A2"),
+        ("LAB-415", "Friday", "10:55", "12:45", "Artificial Neural Networks Lab (ANN Lab)", "Ms. Neha Sharma", "5th Sem AI&ML - Batch A1"),
+        ("LAB-415", "Tuesday", "09:05", "10:55", "Machine Learning & Vision Practice", "Ms. Neha Sharma", "AIML Batches"),
 
-            ("LAB-414", "Thursday", "09:05", "10:55", "Data Structures with Python (P1-P2)", "Er. Priya Gupta", "2nd Year AIML - Batch B2"),
-            ("LAB-414", "Thursday", "10:55", "12:45", "Deep Learning Lab (AIML-301, P3-P4)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - Batch A1"),
-            ("LAB-414", "Thursday", "13:40", "15:30", "Capstone AI Studio (P5-P6)", "Dr. Richa Choudhary, Assistant Professor", "4th Year AIML"),
-            ("LAB-414", "Thursday", "15:30", "16:25", "Technical Doubt & Skill Clinic (P7)", "Er. Gaurav Sharma", "2nd Year AIML"),
+        # ─────────────────────────────────────────────────────────────────
+        # LAB-418 (Project & Research Lab 418)
+        # ─────────────────────────────────────────────────────────────────
+        ("LAB-418", "Tuesday", "15:30", "16:25", "Coding Class (Competitive Programming)", "Mr. Dinesh Kumar", "5th Sem AI&ML - Batch A1"),
+        ("LAB-418", "Friday", "15:30", "16:25", "Minor Project Lab", "Ms. Lalita", "5th Sem AI&ML - Batch A1"),
+        ("LAB-418", "Monday", "10:55", "12:45", "AI Research Project Studio", "Dr. Richa Choudhary, Assistant Professor", "4th Year Research Batch"),
+        ("LAB-418", "Wednesday", "13:40", "15:30", "Hardware-AI Integration Lab", "Faculty Mentor Panel", "AIML Department"),
+        ("LAB-418", "Thursday", "10:55", "12:45", "Competitive Coding & Algorithms Lab", "Mr. Dinesh Kumar", "AIML Department"),
 
-            ("LAB-414", "Friday", "09:05", "10:55", "Advanced AI & GPU Computing (P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "3rd Year AIML - All Batches"),
-            ("LAB-414", "Friday", "10:55", "12:45", "Model Deployment & MLOps (P3-P4)", "Er. Gaurav Sharma", "4th Year AIML"),
-            ("LAB-414", "Friday", "13:40", "15:30", "Hackathon & Research Sprint (P5-P6)", "Faculty Mentor Panel", "3rd & 4th Year AIML"),
-            ("LAB-414", "Friday", "15:30", "16:25", "Weekly Lab Audit & Handoff (P7)", "Dr. Richa Choudhary, Assistant Professor", "All Batches"),
-
-            # LAB-415 (Machine Learning & Vision)
-            ("LAB-415", "Monday", "09:05", "10:55", "Computer Vision & Edge AI (P1-P2)", "Dr. Amit Verma", "3rd Year AIML - Batch B1"),
-            ("LAB-415", "Monday", "10:55", "12:45", "Machine Learning Foundation (P3-P4)", "Er. Gaurav Sharma", "2nd Year AIML - Batch A1"),
-            ("LAB-415", "Monday", "13:40", "15:30", "Robotics Vision Studio (P5-P6)", "Er. Vikas Malik", "4th Year AIML"),
-            ("LAB-415", "Monday", "15:30", "16:25", "Open Source AI Contributions (P7)", "Dr. Amit Verma", "3rd Year AIML"),
-
-            # LAB-416 (Data Science & Analytics)
-            ("LAB-416", "Monday", "09:05", "10:55", "Big Data Analytics Lab (P1-P2)", "Er. Priya Gupta", "3rd Year AIML"),
-            ("LAB-416", "Monday", "10:55", "12:45", "Data Visualization & BI (P3-P4)", "Dr. Amit Verma", "2nd Year AIML"),
-            ("LAB-416", "Monday", "13:40", "15:30", "Statistical Computing Lab (P5-P6)", "Er. Priya Gupta", "3rd Year AIML"),
-            ("LAB-416", "Monday", "15:30", "16:25", "Data Science Case Studies (P7)", "Dr. Amit Verma", "4th Year AIML"),
-
-            # LAB-417 (Python & Core AI)
-            ("LAB-417", "Monday", "09:05", "10:55", "Python Core Programming (P1-P2)", "Er. Priya Gupta", "1st/2nd Year AIML"),
-            ("LAB-417", "Monday", "10:55", "12:45", "Object Oriented AI Programming (P3-P4)", "Er. Gaurav Sharma", "2nd Year AIML"),
-            ("LAB-417", "Monday", "13:40", "15:30", "Algorithms & Problem Solving (P5-P6)", "Er. Priya Gupta", "2nd Year AIML"),
-            ("LAB-417", "Monday", "15:30", "16:25", "Competitive Coding Mentoring (P7)", "Er. Gaurav Sharma", "All Batches"),
-
-            # LAB-418 (Project & Research Lab)
-            ("LAB-418", "Monday", "09:05", "10:55", "AI Research Project Studio (P1-P2)", "Dr. Richa Choudhary, Assistant Professor", "4th Year Research Batch"),
-            ("LAB-418", "Monday", "10:55", "12:45", "DGX Server Deep Learning Sprint (P3-P4)", "Dr. Richa Choudhary, Assistant Professor", "M.Tech / Capstone AI"),
-            ("LAB-418", "Monday", "13:40", "15:30", "Hardware-AI Integration Lab (P5-P6)", "Er. Vikas Malik", "4th Year AIML"),
-            ("LAB-418", "Monday", "15:30", "16:25", "Patent & Research Paper Writing (P7)", "Dr. Richa Choudhary, Assistant Professor", "4th Year Research Batch")
-        ]
-        c.executemany("""
-            INSERT INTO timetable (lab_id, day_of_week, start_time, end_time, subject, faculty, batch)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, piet_55min_slots)
+        # ─────────────────────────────────────────────────────────────────
+        # LAB-419 (Intelligent Systems Lab 419)
+        # ─────────────────────────────────────────────────────────────────
+        ("LAB-419", "Monday", "12:45", "14:35", "Database Management Systems Lab (DBMS Lab)", "Ms. Pooja Sharma", "5th Sem AI&ML - Batch A1"),
+        ("LAB-419", "Tuesday", "12:45", "14:35", "Database Systems & SQL Studio", "Ms. Pooja Sharma", "AIML Batches"),
+        ("LAB-419", "Wednesday", "10:55", "12:45", "Intelligent Systems & Data Engineering", "Faculty Mentor Panel", "AIML Department"),
+        ("LAB-419", "Thursday", "13:40", "15:30", "Autonomous Systems & Robotics Practical", "Faculty Mentor Panel", "AIML Department"),
+        ("LAB-419", "Friday", "09:05", "10:55", "Database Optimization & Analytics Lab", "Ms. Pooja Sharma", "AIML Batches"),
+    ]
+    c.executemany("""
+        INSERT INTO timetable (lab_id, day_of_week, start_time, end_time, subject, faculty, batch)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, official_piet_slots)
 
     conn.commit()
     conn.close()
@@ -402,6 +397,28 @@ def get_full_timetable(lab_id: str = "LAB-414") -> List[Dict[str, Any]]:
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
+
+
+def add_timetable_entry(lab_id: str, day_of_week: str, start_time: str, end_time: str, subject: str, faculty: str, batch: str) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO timetable (lab_id, day_of_week, start_time, end_time, subject, faculty, batch)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (lab_id.upper(), day_of_week, start_time, end_time, subject, faculty, batch))
+    new_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return new_id
+
+
+def delete_timetable_entry(entry_id: int) -> bool:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM timetable WHERE id = ?", (entry_id,))
+    conn.commit()
+    conn.close()
+    return True
 
 
 def archive_slot_session_logs(lab_id: Optional[str] = None, slot_name: Optional[str] = None) -> int:

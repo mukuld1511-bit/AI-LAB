@@ -251,6 +251,35 @@ def get_lab_timetable(lab_id: str):
     }
 
 
+@app.post("/api/timetable")
+def add_timetable_slot_endpoint(payload: TimetableEntryPayload):
+    """Adds a new lecture or lab session to the timetable."""
+    new_id = database.add_timetable_entry(
+        lab_id=payload.lab_id,
+        day_of_week=payload.day_of_week,
+        start_time=payload.start_time,
+        end_time=payload.end_time,
+        subject=payload.subject,
+        faculty=payload.faculty,
+        batch=payload.batch
+    )
+    return {"status": "ok", "id": new_id, "message": "Timetable slot added successfully."}
+
+
+@app.delete("/api/timetable/{entry_id}")
+def delete_timetable_slot_endpoint(entry_id: int):
+    """Deletes a timetable slot by ID."""
+    database.delete_timetable_entry(entry_id)
+    return {"status": "ok", "message": f"Slot {entry_id} deleted."}
+
+
+@app.post("/api/timetable/reset")
+def reset_timetable_endpoint():
+    """Resets timetable to official PIET Odd Sem 2026-27 schedule across all 5 labs."""
+    database.init_db()
+    return {"status": "ok", "message": "Timetable reset to official PIET schedule."}
+
+
 @app.post("/api/logs/archive_slot")
 def archive_slot_log(lab_id: Optional[str] = None, slot_name: Optional[str] = None):
     """Archives 55-minute lecture session logs into daily_session_logs."""
