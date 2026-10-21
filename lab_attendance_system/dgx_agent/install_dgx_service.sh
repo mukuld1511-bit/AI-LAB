@@ -1,9 +1,18 @@
 #!/bin/bash
 # ==============================================================================
-# install_dgx_service.sh — Universal 1-Click Systemd Service for AI Lab DGX Stations
+# setup.sh / install_dgx_service.sh — Universal 1-Click DGX Telemetry Service
+# Designed for AI Lab DGX Stations & Linux Workstations (PC-1 to PC-8)
 # ==============================================================================
 
 set -e
+
+# 0. Immediate DNS Auto-Heal (Fixes: "Could not resolve host" on college network)
+if [ -f /etc/resolv.conf ]; then
+    if ! grep -q -E "(8\.8\.8\.8|1\.1\.1\.1)" /etc/resolv.conf 2>/dev/null; then
+        echo "🔧 Auto-injecting reliable DNS (8.8.8.8 & 1.1.1.1) into /etc/resolv.conf..."
+        echo -e "\nnameserver 8.8.8.8\nnameserver 1.1.1.1" >> /etc/resolv.conf 2>/dev/null || true
+    fi
+fi
 
 RAW_ID="$1"
 if [ -z "$RAW_ID" ]; then
@@ -25,16 +34,34 @@ else
     PC_ID="$RAW_CLEAN"
 fi
 
-BACKEND_URL="${2:-https://labg418pc12.tailc8c1f6.ts.net}"
+LAN_BACKEND="http://10.9.6.255:8000"
+TS_BACKEND="https://labg418pc12.tailc8c1f6.ts.net"
+
+# If user provided a specific backend as 2nd param, use it. Otherwise test LAN first.
+if [ -n "$2" ]; then
+    PRIMARY_BACKEND="$2"
+    FALLBACK_BACKEND="$LAN_BACKEND"
+else
+    # Check if local LAN 10.9.6.255:8000 is directly reachable on Ethernet switch
+    if curl -s --connect-timeout 2 "$LAN_BACKEND/api/pc/heartbeat" >/dev/null 2>&1 || curl -s --connect-timeout 2 "$LAN_BACKEND" >/dev/null 2>&1; then
+        PRIMARY_BACKEND="$LAN_BACKEND"
+        FALLBACK_BACKEND="$TS_BACKEND"
+    else
+        PRIMARY_BACKEND="$TS_BACKEND"
+        FALLBACK_BACKEND="$LAN_BACKEND"
+    fi
+fi
+
 INSTALL_DIR="/opt/ai_lab_agent"
 SERVICE_NAME="ailab-telemetry.service"
 
 echo "================================================================="
 echo "  AI LAB DGX TELEMETRY AUTO-STARTUP & SELF-UPDATE SERVICE"
 echo "================================================================="
-echo "Target PC ID : $PC_ID"
-echo "Backend URL  : $BACKEND_URL"
-echo "Install Dir  : $INSTALL_DIR"
+echo "Target PC ID     : $PC_ID"
+echo "Primary Backend  : $PRIMARY_BACKEND"
+echo "Fallback Backend : $FALLBACK_BACKEND"
+echo "Install Dir      : $INSTALL_DIR"
 echo "================================================================="
 
 if [ "$EUID" -ne 0 ]; then
@@ -63,14 +90,37 @@ apt-get update -qq && apt-get install -y -qq \
 $PYTHON_BIN -m pip install --break-system-packages --quiet mss pillow psutil 2>/dev/null || \
 $PYTHON_BIN -m pip install --quiet mss pillow psutil 2>/dev/null || true
 
-# 2. Create Destination Directory and Fetch Python Agent (Server + GitHub Raw Fallback)
+# 2. Multi-Source Resilient Download of Python Telemetry Agent
 mkdir -p "$INSTALL_DIR"
 echo "📥 Fetching latest telemetry agent for $PC_ID..."
-curl -sSL "$BACKEND_URL/dgx_agent/dgx_telemetry_agent.py" -o "$INSTALL_DIR/dgx_telemetry_agent.py" 2>/dev/null || \
-curl -sSL "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/dgx_telemetry_agent.py" -o "$INSTALL_DIR/dgx_telemetry_agent.py"
+
+DOWNLOAD_SUCCESS=0
+DOWNLOAD_SOURCES=(
+    "$PRIMARY_BACKEND/dgx_agent/dgx_telemetry_agent.py"
+    "$FALLBACK_BACKEND/dgx_agent/dgx_telemetry_agent.py"
+    "http://10.9.6.255:8000/dgx_agent/dgx_telemetry_agent.py"
+    "https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/dgx_telemetry_agent.py"
+    "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/dgx_telemetry_agent.py"
+)
+
+for SRC_URL in "${DOWNLOAD_SOURCES[@]}"; do
+    if curl -sSL --connect-timeout 6 "$SRC_URL" -o "$INSTALL_DIR/dgx_telemetry_agent.py" 2>/dev/null && [ -s "$INSTALL_DIR/dgx_telemetry_agent.py" ]; then
+        if grep -q "dgx_telemetry_agent.py" "$INSTALL_DIR/dgx_telemetry_agent.py"; then
+            echo "✅ Successfully fetched agent code from: $SRC_URL"
+            DOWNLOAD_SUCCESS=1
+            break
+        fi
+    fi
+done
+
+if [ "$DOWNLOAD_SUCCESS" -eq 0 ]; then
+    echo "❌ Failed to fetch telemetry agent from all sources. Please check network connectivity."
+    exit 1
+fi
+
 chmod +x "$INSTALL_DIR/dgx_telemetry_agent.py"
 
-# 3. Generate Systemd Service
+# 3. Generate Systemd Service (Dual-URL Auto-Failover Enabled)
 cat <<EOF > /etc/systemd/system/$SERVICE_NAME
 [Unit]
 Description=AI ML Lab DGX Telemetry & Heartbeat Daemon
@@ -80,7 +130,7 @@ After=network.target graphical.target
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$PYTHON_BIN $INSTALL_DIR/dgx_telemetry_agent.py --pc-id $PC_ID --url $BACKEND_URL
+ExecStart=$PYTHON_BIN $INSTALL_DIR/dgx_telemetry_agent.py --pc-id $PC_ID --url $PRIMARY_BACKEND --fallback-url $FALLBACK_BACKEND
 Restart=always
 RestartSec=5
 TimeoutStopSec=10

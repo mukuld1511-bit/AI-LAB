@@ -22,22 +22,35 @@
 AI Lab me **sirf 8 DGX machines** hain (`PC-1` se `PC-8`). 
 Inhe setup karne ke liye har DGX par sirf **EK BAAR** ye command chalani hai. Uske baad ye boot par apne aap start hoga aur auto-update rahega!
 
-### 🌟 Universal 1-Time Setup Command (Permanent Auto-Start + Auto-Update)
-Jis bhi DGX par aap khade hain, bas aakhri me uska number daal kar run karein (jaise `5` ya `1` se `8`):
+### 🌟 Universal 1-Time Setup Commands (Permanent Auto-Start + Auto-Update)
 
+#### Option 1: Direct Local LAN (Recommended — 100% Reliable, Zero DNS Needed!)
+DGX machines aur Backend PC ek hi physical lab switch par hain (`10.9.6.255`). Isme internet ya DNS ki koi jarurat nahi padti:
 ```bash
-curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 5
+curl -sSL http://10.9.6.255:8000/dgx_agent/setup.sh | sudo bash -s 5
 ```
-*(GitHub Raw Backup: `curl -sSL https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/setup.sh | sudo bash -s 5`)*
+*(DGX-5 ke liye `5`, DGX-1 ke liye `1`, DGX-2 ke liye `2`...)*
 
-> **Note:** Agar aap number pass nahi karenge, to script aapse poochhegi: `Enter DGX Station / PC Number in AI Lab (1 to 8):`
+#### Option 2: Internet / Tailscale Funnel (With Automatic DNS Fix)
+Agar college gateway DNS `Could not resolve host` de raha ho, to ye command automatically Google Public DNS (8.8.8.8) inject karke run karegi:
+```bash
+echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf && curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 5
+```
+
+#### Option 3: GitHub Raw Fallback
+```bash
+echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf && curl -sSL https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/setup.sh | sudo bash -s 5
+```
+
+> **Note:** Agar aap aakhri me number pass nahi karenge, to script aapse terminal par poochhegi: `Enter DGX Station / PC Number in AI Lab (1 to 8):`
 
 **Is command se kya hota hai:**
-1. Ye system packages (`scrot`, `imagemagick`, `mss`, `psutil`) auto-install karta hai.
-2. Latest `dgx_telemetry_agent.py` `/opt/ai_lab_agent` me setup karta hai.
-3. Permanent Linux Systemd Service (`ailab-telemetry.service`) banakar **Enable** kar deta hai (`Restart=always`).
-4. **Auto-Update Active:** Har 15 minute me silent background hash check karta hai aur Central Dashboard ke 1-Click Update command se instantly update ho jata hai.
-5. **Iske baad is DGX par kabhi dobara command nahi chalani padegi!**
+1. College DNS block auto-fix ho jata hai (8.8.8.8 / 1.1.1.1).
+2. Screen grab aur telemetry packages (`scrot`, `imagemagick`, `mss`, `psutil`) auto-install hote hain.
+3. Dual-path telemetry agent (`http://10.9.6.255:8000` + Tailscale) `/opt/ai_lab_agent` me setup hota hai.
+4. Permanent Linux Systemd Service (`ailab-telemetry.service`) banakar **Enable** ho jati hai (`Restart=always`).
+5. **Auto-Update Active:** Har 15 minute me silent background hash check karta hai aur Central Dashboard se instant remote updates leta hai.
+6. **Iske baad is DGX par kabhi dobara command nahi chalani padegi!**
 
 ---
 

@@ -33,7 +33,23 @@ import urllib.error
 
 # DEFAULT CENTRAL BACKEND URL
 DEFAULT_BACKEND_URL = "https://labg418pc12.tailc8c1f6.ts.net"
+FALLBACK_BACKEND_URL = "http://10.9.6.255:8000"
 DEFAULT_INTERVAL = 4  # Seconds between heartbeats (fast responsive capture)
+
+
+def ensure_healthy_dns():
+    """On Linux, checks if public DNS (8.8.8.8) is configured. If missing and running as root, appends it."""
+    if platform.system() == "Linux" and os.path.exists("/etc/resolv.conf"):
+        try:
+            with open("/etc/resolv.conf", "r") as rf:
+                resolv = rf.read()
+            if "8.8.8.8" not in resolv and "1.1.1.1" not in resolv:
+                if hasattr(os, "geteuid") and os.geteuid() == 0:
+                    with open("/etc/resolv.conf", "a") as af:
+                        af.write("\nnameserver 8.8.8.8\nnameserver 1.1.1.1\n")
+                    print("[NET] 🌐 Auto-injected public DNS (8.8.8.8) into /etc/resolv.conf")
+        except Exception:
+            pass
 
 IGNORED_PROCESS_NAMES = {
     "ps", "top", "htop", "grep", "awk", "sed", "sh", "bash", "zsh", "dash",
@@ -981,36 +997,41 @@ def resolve_pc_id(arg_id=None):
 
 
 def main():
+    ensure_healthy_dns()
+
     parser = argparse.ArgumentParser(description="AI/ML LAB Workstation & DGX Telemetry Daemon")
     parser.add_argument("--pc-id", "-i", default="", help="PC Identifier (e.g. PC-1, PC-2, DGX-1)")
     parser.add_argument("--url", "-u", default=DEFAULT_BACKEND_URL, help="Backend Server URL")
+    parser.add_argument("--fallback-url", "-f", default=FALLBACK_BACKEND_URL, help="Fallback Backend URL (LAN/Direct)")
     parser.add_argument("--interval", "-t", type=int, default=DEFAULT_INTERVAL, help="Heartbeat interval in seconds")
     args = parser.parse_args()
 
     pc_id = resolve_pc_id(args.pc_id)
-    backend_url = args.url.rstrip("/")
+    primary_url = args.url.rstrip("/")
+    fallback_url = args.fallback_url.rstrip("/") if args.fallback_url else ""
+    active_url = primary_url
     interval = max(3, args.interval)
 
-    heartbeat_url = f"{backend_url}/api/pc/heartbeat"
-    offline_url = f"{backend_url}/api/pc/offline"
-
     print("=" * 68)
-    print(f"🚀 AI/ML LAB DGX & WORKSTATION TELEMETRY AGENT v2.1")
-    print(f"🖥️ Target PC ID : {pc_id}")
-    print(f"🌐 Backend URL  : {backend_url}")
-    print(f"⏱️ Interval     : {interval} seconds")
-    print(f"💻 System       : {platform.system()} {platform.release()} ({platform.machine()})")
+    print(f"🚀 AI/ML LAB DGX & WORKSTATION TELEMETRY AGENT v2.2 (Multi-Path)")
+    print(f"🖥️ Target PC ID   : {pc_id}")
+    print(f"🌐 Primary URL    : {primary_url}")
+    print(f"🔗 Fallback URL   : {fallback_url or 'None'}")
+    print(f"⏱️ Interval       : {interval} seconds")
+    print(f"💻 System         : {platform.system()} {platform.release()} ({platform.machine()})")
     print("=" * 68)
 
     def on_exit():
         print(f"\n[OFFLINE] Sending shutdown broadcast for {pc_id}...")
-        send_post(offline_url, {"pc_id": pc_id}, timeout=3)
+        for u in [active_url, fallback_url]:
+            if u:
+                if send_post(f"{u}/api/pc/offline", {"pc_id": pc_id}, timeout=3):
+                    break
         print("[OFFLINE] Notification delivered. Goodbye.")
 
     atexit.register(on_exit)
     signal.signal(signal.SIGTERM, lambda s, f: sys.exit(0))
     signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
-
 
     last_update_check = time.time()
     UPDATE_CHECK_INTERVAL = 900  # 15 minutes
@@ -1043,7 +1064,18 @@ def main():
                 "logged_user": user_str
             }
 
-            success, resp_data = send_post_json(heartbeat_url, payload)
+            heartbeat_url = f"{active_url}/api/pc/heartbeat"
+            success, resp_data = send_post_json(heartbeat_url, payload, timeout=5)
+
+            # Auto-failover to LAN / alternate backend if primary fails
+            if not success and fallback_url and active_url != fallback_url:
+                alt_heartbeat_url = f"{fallback_url}/api/pc/heartbeat"
+                success, resp_data = send_post_json(alt_heartbeat_url, payload, timeout=5)
+                if success:
+                    t_switch = datetime.now().strftime("%H:%M:%S")
+                    print(f"[{t_switch}] 🔄 Primary unreachable ({active_url}). Switched dynamically to Fallback URL ({fallback_url})!")
+                    active_url, fallback_url = fallback_url, active_url
+
             t_now = datetime.now().strftime("%H:%M:%S")
 
             if success:
@@ -1052,9 +1084,9 @@ def main():
 
                 cmd = resp_data.get("command") if isinstance(resp_data, dict) else None
                 if cmd:
-                    execute_remote_command(cmd, pc_id, backend_url)
+                    execute_remote_command(cmd, pc_id, active_url)
             else:
-                print(f"[{t_now}] ⚠️ [{pc_id}] Backend unreachable ({backend_url}). Retrying in {interval}s...")
+                print(f"[{t_now}] ⚠️ [{pc_id}] Backend unreachable (Tried: {active_url}{' & ' + fallback_url if fallback_url else ''}). Retrying in {interval}s...")
 
         except Exception as e:
             print(f"[ERR] Telemetry loop exception: {e}")
@@ -1065,7 +1097,7 @@ def main():
         try:
             if time.time() - last_update_check > UPDATE_CHECK_INTERVAL:
                 last_update_check = time.time()
-                check_and_apply_auto_update(backend_url, pc_id)
+                check_and_apply_auto_update(active_url, pc_id)
         except Exception:
             pass
 
