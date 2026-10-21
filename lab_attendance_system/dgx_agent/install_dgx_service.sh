@@ -6,11 +6,16 @@
 
 set -e
 
-# 0. Immediate DNS Auto-Heal (Fixes: "Could not resolve host" on college network)
+# 0. Immediate DNS Auto-Heal & Static Host Mapping (Bypasses college DNS failure)
 if [ -f /etc/resolv.conf ]; then
-    if ! grep -q -E "(8\.8\.8\.8|1\.1\.1\.1)" /etc/resolv.conf 2>/dev/null; then
-        echo "🔧 Auto-injecting reliable DNS (8.8.8.8 & 1.1.1.1) into /etc/resolv.conf..."
-        echo -e "\nnameserver 8.8.8.8\nnameserver 1.1.1.1" >> /etc/resolv.conf 2>/dev/null || true
+    if ! grep -q "^nameserver 8.8.8.8" /etc/resolv.conf 2>/dev/null; then
+        echo "🔧 Fixing DNS: setting Google DNS (8.8.8.8) at top of /etc/resolv.conf..."
+        sed -i '1i nameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1" > /etc/resolv.conf 2>/dev/null || true
+    fi
+fi
+if [ -f /etc/hosts ]; then
+    if ! grep -q "labg418pc12.tailc8c1f6.ts.net" /etc/hosts 2>/dev/null; then
+        echo "103.84.155.153 labg418pc12.tailc8c1f6.ts.net" >> /etc/hosts 2>/dev/null || true
     fi
 fi
 
