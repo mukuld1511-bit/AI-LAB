@@ -1,6 +1,6 @@
-# 🏛️ PIET DEPARTMENT 5-LAB SUPERVISION SYSTEM COMMANDS GUIDE
+# 🏛️ PIET DEPARTMENT MULTI-LAB SUPERVISION SYSTEM COMMANDS GUIDE
 ### Panipat Institute of Engineering & Technology • Department-Wide Multi-Lab Architecture
-> **Boundary Note:** This documentation belongs **strictly to the PIET 5-Lab System** (Lab 414, 415, 416, 417, 418 — 20 PCs per lab, 100 PCs total).  
+> **Boundary Note:** This documentation belongs **strictly to the PIET Multi-Lab System** (Labs 413, 414, 415, 416, 418, 419 — 24 PCs per lab, 144 PCs total).  
 > It is **completely isolated** from the AI Lab Attendance System (`lab_attendance_system/`). Do not mix configs or endpoints!
 
 ---
@@ -11,131 +11,106 @@
                   ┌────────────────────────────────────────┐
                   │      PIET CENTRAL MASTER SERVER        │
                   │   Master PC • Port 8088 (or 8080)      │
-                  │  Aggregates all 5 Labs & 100 PC Slots  │
+                  │  Tailscale: labg418pc12.tailc8c1f6.ts  │
+                  │  Aggregates all 6 Labs & 144 PC Slots  │
                   └───────────────────▲────────────────────┘
-                                      │ (LAN / Tailscale Relay)
-       ┌──────────────────────────────┼──────────────────────────────┐
-       │                              │                              │
-┌──────┴──────┐                ┌──────┴──────┐                ┌──────┴──────┐
-│  PI-414 HUB │                │  PI-415 HUB │                │  PI-418 HUB │
-│(Raspberry 5)│                │(Raspberry 5)│                │(Raspberry 5)│
-└──────▲──────┘                └──────▲──────┘                └──────▲──────┘
-       │                              │                              │
-┌──────┴──────────────┐        ┌──────┴──────────────┐        ┌──────┴──────────────┐
-│  Lab 414 Workstations│        │  Lab 415 Workstations│        │  Lab 418 Workstations│
-│(PC-414-01 to 20)    │        │(PC-415-01 to 20)    │        │(PC-418-01 to 20)    │
-└─────────────────────┘        └─────────────────────┘        └─────────────────────┘
+                                      │ (LAN / Tailscale Secure Relay)
+       ┌──────────────┬───────────────┼───────────────┬──────────────┬──────────────┐
+       │              │               │               │              │              │
+┌──────┴──────┐┌──────┴──────┐ ┌──────┴──────┐ ┌──────┴──────┐┌──────┴──────┐┌──────┴──────┐
+│   LAB 413   ││   LAB 414   │ │   LAB 415   │ │   LAB 416   ││   LAB 418   ││   LAB 419   │
+│  (24 PCs)   ││  (24 PCs)   │ │  (24 PCs)   │ │  (24 PCs)   ││  (24 PCs)   ││  (24 PCs)   │
+└─────────────┘└─────────────┘ └─────────────┘ └─────────────┘└─────────────┘└─────────────┘
 ```
 
-* **Lab Edge Gateways:** 5x Raspberry Pi 5 hubs (1 per lab).
-  * **Lab 414 Pi 5 Hub URL:** `https://raspberrypi.tailc8c1f6.ts.net` (or local LAN `http://<PI_LOCAL_IP>:8000`)
-* **Workstation Allocation:** Exactly 20 PCs per lab (e.g., `PC-414-01` to `PC-414-20`).
-* **NBA Criterion 4 & Timetable Engine:** 55-minute lecture slots auto-archived into SQLite DB & CSV audit reports.
+* **Supervised Labs:** Lab 413, Lab 414, Lab 415, Lab 416, Lab 418, Lab 419.
+* **Workstations per Lab:** Exactly 24 PCs per lab (e.g., `PC-414-01` to `PC-414-24`, `PC-413-01` to `PC-413-24`, etc.).
+* **Active Central Host:** `https://labg418pc12.tailc8c1f6.ts.net` (Server Room Master Host).
+* **Supervision Engine:** Win32 physical keyboard/mouse idle detection, active window & process tracking, productive vs distracted classification, on-demand high-res desktop captures, 55-minute NBA lecture slots.
 
 ---
 
-## 🖥️ Section 1: Lab 414 Workstation Setup (Windows PCs 01 to 20)
+## 🖥️ Section 1: Universal 1-Time Workstation Setup (Any PC in Any Lab)
 
-### Method 1: Ultra-Fast One-Liner (Zero Prompts)
-Open **PowerShell** on any Lab 414 PC (`Win + R` -> `powershell` -> Enter) and run the command matching the PC number:
+Har PC par sirf **EK BAAR** ye command chalani hai. Uske baad ye boot par apne aap start hoga aur auto-update rahega!
+
+### Method 1: Ultra-Fast One-Liner (Pass Lab & PC Number)
+Workstation par **PowerShell** kholein (`Win + R` -> `powershell` -> Enter) aur command run karein:
 
 ```powershell
-# On PC 01:
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/setup_pc.ps1))) 1
+# Format: setup.ps1 [LAB_NUMBER] [PC_NUMBER]
 
-# On PC 02:
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/setup_pc.ps1))) 2
+# Example: Lab 414, PC 05:
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/setup.ps1))) 414 5
 
-# On PC 20:
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/setup_pc.ps1))) 20
+# Example: Lab 413, PC 12:
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/setup.ps1))) 413 12
+
+# Example: Lab 415, PC 24:
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/setup.ps1))) 415 24
+
+# Example: Lab 418, PC 01:
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/setup.ps1))) 418 1
+
+# Example: Lab 419, PC 18:
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/setup.ps1))) 419 18
 ```
 
 ---
 
-### Method 2: Universal Copy-Paste (Prompt Mode)
-If you prefer pasting the exact same command on all 20 PCs:
+### Method 2: Universal Copy-Paste (Interactive Prompt Mode)
+Agar aap har PC par exact same command paste karna chahte hain aur number type karna chahte hain:
 
 ```powershell
-irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/setup_pc.ps1 | iex
+irm https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/setup.ps1 | iex
 ```
-*Prompt:* `Enter PC Number in Lab 414 (e.g. 01, 02, 15): ` -> Type `01`, `02`, etc., and hit Enter!
+*Screen par prompt aayega:*
+```text
+Enter Lab Number (e.g. 413, 414, 415, 416, 418, 419): 414
+Enter PC Number in Lab 414 (1 to 24): 5
+```
+Type karke Enter dabayein, aur setup automatic complete ho jayega!
 
 ---
 
-### Method 3: Live Console Test Mode (Interactive Output)
-To test connectivity and observe real-time heartbeats:
-
-```powershell
-cd c:\Users\serverroom\AI-LAB\piet_system\lab_414_windows_agent
-python lab_414_agent.py 1
-```
-
----
-
-## 🍓 Section 2: Raspberry Pi 5 Edge Hub Setup (Lab 414)
-
-### 1. 1-Click Initial Pi 5 Setup
-On the Raspberry Pi 5 terminal (running Raspberry Pi OS 64-bit):
-
-```bash
-git clone https://github.com/mukuld1511-bit/AI-LAB.git
-cd AI-LAB/piet_system
-sudo bash setup_raspberry_1_lab414.sh
-```
-
-### 2. Updating Pi 5 Hub Code
-To pull updates and refresh the hub without re-installing dependencies:
-
-```bash
-cd ~/AI-LAB/piet_system
-sudo bash update_raspberry_pi.sh
-```
-
-### 3. Pi Hub Service Management
-```bash
-# Check Pi 5 Hub status
-sudo systemctl status piet-hub.service
-
-# Restart Pi 5 Hub
-sudo systemctl restart piet-hub.service
-
-# View live incoming heartbeats
-sudo journalctl -u piet-hub.service -f
-```
+### ⚙️ Is 1-Time Command Se Kya Hota Hai:
+1. Python 3 runtime verify karta hai (agar PC par Python nahi hai, to official Python 3.10 silently background me auto-install kar deta hai).
+2. `C:\PIET_Agent` folder me latest `piet_agent.py` aur alert HUD module download karta hai.
+3. Dependencies (`psutil`, `pillow`) auto-install karta hai.
+4. Windows **Task Scheduler** me permanent task `PIET_Workstation_Agent` create karta hai jo `onlogon` par highest privileges ke sath silent `pythonw.exe` me start ho jata hai.
+5. Startup folder me fallback `.bat` register karta hai.
+6. **Auto-Update Engine:** Har 15 minute me silent background hash check karta hai aur Central Dashboard se remote update accept karta hai.
+7. **Iske baad is PC ko kabhi dobara touch nahi karna padega!**
 
 ---
 
-## 🏢 Section 3: Central Department Master PC Server
+## 🎛️ Section 2: Central Master Server Management (Server Room Master PC)
 
-Runs on the Server Room Master PC to aggregate all 5 labs into a single central dashboard.
+### 1. Master Server Start
+Double-click `run_master_server.bat` ya terminal me:
 
-### 1. Start Master Server
-```powershell
+```cmd
 cd c:\Users\serverroom\AI-LAB\piet_system\central_master_pc
 python server.py
 ```
-*Default URL: `http://localhost:8088/` (or `http://0.0.0.0:8080` if port 8080 is available)*
 
-### 2. Core Central Endpoints
-* **Central 5-Lab Dashboard:** `http://localhost:8088/`
-* **Department Overview API:** `http://localhost:8088/api/overview`
-* **NBA Criterion 4 Audit CSV Export:** `http://localhost:8088/api/export/csv`
+### 2. Live Health & Multi-Lab Status Verification
+Browser ya curl me check karein:
+* **Health Check:** `http://localhost:8080/health` (ya Funnel `https://labg418pc12.tailc8c1f6.ts.net/health`)
+* **Department Grid Status:** `http://localhost:8080/api/department/status`
+* **Download All Screenshots:** `http://localhost:8080/api/department/download_all_screenshots`
+* **Trigger Department-Wide Auto-Update:** `curl -X POST http://localhost:8080/api/department/update_all`
 
 ---
 
-## ⚠️ Section 4: Remote Control & Emergency Protocol
+## ⚠️ Section 3: Remote Supervised Commands
 
-From the supervision portal (`https://raspberrypi.tailc8c1f6.ts.net/` or `http://localhost:8088/`):
-
-1. **⚠️ Send Alert (`warn:<message>`):**  
-   Instantly pops up the unmissable dark glass HUD on the target workstation:  
-   **Designation:** `Dr. Richa Choudhary, Assistant Professor`  
-   Includes alert audio chime (`MB_ICONEXCLAMATION`) and stays on top.
-2. **🛑 Bulk Lab Power (`/api/lab/{lab_id}/power`):**  
-   Allows one-click **Shutdown**, **Restart**, or **Lock** for all 20 PCs in a lab simultaneously (excluding protected host machine).
-3. **📸 Live On-Demand Desktop Screen Capture:**  
-   Captures active desktop session and updates the teacher briefing modal in seconds.
-4. **⚡ Zero-Touch Auto-Update (`update` / `/api/lab/{lab_id}/update_all`):**  
-   **No need to physically visit the lab PCs!**  
-   Dispatches remote self-update command to all 20 workstations in the lab. Each agent pulls the latest code from GitHub / Hub server, verifies it, and silently hot-reloads within 5 seconds.  
-   *(Additionally, every running agent silently checks GitHub for updates every 15 minutes automatically).*
+Central Master Dashboard se kisi bhi workstation par remote actions bheje ja sakte hain:
+* `capture_screen`: Instantly grabs screen and uploads JPEG to Master SSD.
+* `warn:<message>`: Displays high-priority modern Dark Glass HUD with audio tone:  
+  **Designation:** `Dr. Richa Choudhary, Assistant Professor`
+* `lock`: Locks the Windows workstation session immediately.
+* `shutdown`: Graceful 5-second shutdown.
+* `restart`: Graceful 5-second reboot.
+* `kill:<PID>`: Terminates rogue games or unauthorized processes.
+* `update`: Triggers instant hot-update of the client script via GitHub raw.

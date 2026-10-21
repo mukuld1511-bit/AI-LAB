@@ -49,13 +49,14 @@ def init_db():
         )
     """)
 
-    # Seed 5 Department Labs (20 PCs each)
+    # Seed Department Labs (24 PCs each)
     default_labs = [
-        ("LAB-414", "AI & Deep Learning Lab 414", 20, "PI-414", "Primary High-Performance AI & Deep Learning Workstations"),
-        ("LAB-415", "Machine Learning & Vision Lab 415", 20, "PI-415", "Computer Vision & Advanced Machine Learning Lab"),
-        ("LAB-416", "Data Science & Analytics Lab 416", 20, "PI-416", "Big Data, Natural Language Processing & Analytics"),
-        ("LAB-417", "Python & Core AI Lab 417", 20, "PI-417", "Foundational Python, DSA & Core AI Algorithms Lab"),
-        ("LAB-418", "Project & Research Lab 418", 20, "PI-418", "Capstone AI Projects, Research Sprint & DGX Terminal")
+        ("LAB-413", "Core AI & Programming Lab 413", 24, "PI-413", "Foundational Python, DSA & Core AI Programming Lab"),
+        ("LAB-414", "AI & Deep Learning Lab 414", 24, "PI-414", "Primary High-Performance AI & Deep Learning Workstations"),
+        ("LAB-415", "Machine Learning & Vision Lab 415", 24, "PI-415", "Computer Vision & Advanced Machine Learning Lab"),
+        ("LAB-416", "Data Science & Analytics Lab 416", 24, "PI-416", "Big Data, Natural Language Processing & Analytics"),
+        ("LAB-418", "Project & Research Lab 418", 24, "PI-418", "Capstone AI Projects, Research Sprint & Advanced Computing"),
+        ("LAB-419", "Emerging Technologies & IoT Lab 419", 24, "PI-419", "Generative AI, Robotics & Edge Computing Lab")
     ]
     for lab in default_labs:
         c.execute("""
@@ -81,11 +82,12 @@ def init_db():
     """)
 
     default_gateways = [
+        ("PI-413", "LAB-413", "192.168.1.13", 0, "Lab 413 Edge Hub"),
         ("PI-414", "LAB-414", "100.126.217.27", 1, "Lab 414 Edge Hub (Pi 5)"),
         ("PI-415", "LAB-415", "192.168.1.15", 0, "Lab 415 Edge Hub (Pi 4/5)"),
         ("PI-416", "LAB-416", "192.168.1.16", 0, "Lab 416 Edge Hub (Pi 4/5)"),
-        ("PI-417", "LAB-417", "192.168.1.17", 0, "Lab 417 Edge Hub (Pi 4/5)"),
-        ("PI-418", "LAB-418", "192.168.1.18", 0, "Lab 418 Edge Hub (Pi 4/5)")
+        ("PI-418", "LAB-418", "192.168.1.18", 0, "Lab 418 Edge Hub (Pi 4/5)"),
+        ("PI-419", "LAB-419", "192.168.1.19", 0, "Lab 419 Edge Hub (Pi 4/5)")
     ]
     for gw in default_gateways:
         c.execute("""
@@ -93,7 +95,7 @@ def init_db():
             VALUES (?, ?, ?, ?, ?)
         """, gw)
 
-    # 3. Workstations Table (Exactly 20 PCs per lab, Total 100 PCs)
+    # 3. Workstations Table (24 PCs per lab, Total 144 PCs)
     c.execute("""
         CREATE TABLE IF NOT EXISTS workstations (
             pc_id TEXT PRIMARY KEY,
@@ -128,10 +130,10 @@ def init_db():
         )
     """)
 
-    # Seed 20 PC slots per lab (100 total)
-    for lab_num in [414, 415, 416, 417, 418]:
+    # Seed 24 PC slots per lab (144 total)
+    for lab_num in [413, 414, 415, 416, 418, 419]:
         lab_code = f"LAB-{lab_num}"
-        for i in range(1, 21):
+        for i in range(1, 25):
             p_id = f"PC-{lab_num}-{i:02d}"
             c.execute("""
                 INSERT OR IGNORE INTO workstations (pc_id, lab_id, is_online, activity_type)

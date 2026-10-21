@@ -17,34 +17,35 @@
 
 ---
 
-## 🖥️ Section 1: DGX Station & Linux Workstations (PC-5 / DGX)
+## 🖥️ Section 1: AI Lab 8 DGX Machines (Linux / GPU Stations PC-1 to PC-8)
 
-### 🌟 Primary Standard Command (Run Anytime to Update & Start)
-Ye aapki **fixed, permanent standard command** hai. Jab bhi koi update ho, DGX / Linux PC par bas yahi ek command chalani hai:
+AI Lab me **sirf 8 DGX machines** hain (`PC-1` se `PC-8`). 
+Inhe setup karne ke liye har DGX par sirf **EK BAAR** ye command chalani hai. Uske baad ye boot par apne aap start hoga aur auto-update rahega!
+
+### 🌟 Universal 1-Time Setup Command (Permanent Auto-Start + Auto-Update)
+Jis bhi DGX par aap khade hain, bas aakhri me uska number daal kar run karein (jaise `5` ya `1` se `8`):
 
 ```bash
-curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/dgx_telemetry_agent.py -o dgx_telemetry_agent.py && python3 dgx_telemetry_agent.py --pc-id PC-5
+curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 5
 ```
-*(Agar kisi aur PC par chalana ho, to bas aakhri me `--pc-id PC-6` ya `--pc-id DGX-1` kar sakte hain).*
+*(GitHub Raw Backup: `curl -sSL https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/setup.sh | sudo bash -s 5`)*
 
-**Expected Terminal Output:**
-```text
-=================================================================
-🚀 AI/ML LAB DGX & WORKSTATION TELEMETRY AGENT v2.1
-🖥️ Target PC ID : PC-5
-🌐 Backend URL  : https://labg418pc12.tailc8c1f6.ts.net
-⏱️ Interval     : 4 seconds
-=================================================================
-[12:30:00] 🟢 [PC-5] OK | User: piet | CPU: 12% | RAM: 24% | GPU: NVIDIA A100 (15%)
-```
+> **Note:** Agar aap number pass nahi karenge, to script aapse poochhegi: `Enter DGX Station / PC Number in AI Lab (1 to 8):`
+
+**Is command se kya hota hai:**
+1. Ye system packages (`scrot`, `imagemagick`, `mss`, `psutil`) auto-install karta hai.
+2. Latest `dgx_telemetry_agent.py` `/opt/ai_lab_agent` me setup karta hai.
+3. Permanent Linux Systemd Service (`ailab-telemetry.service`) banakar **Enable** kar deta hai (`Restart=always`).
+4. **Auto-Update Active:** Har 15 minute me silent background hash check karta hai aur Central Dashboard ke 1-Click Update command se instantly update ho jata hai.
+5. **Iske baad is DGX par kabhi dobara command nahi chalani padegi!**
 
 ---
 
-### 2. Optional: 1-Click Background Service (Permanent Auto-Startup on Boot)
-Agar aap terminal khula nahi rakhna chahte aur chahte hain ki PC start hote hi background me chalu ho jaye:
+### 💻 Manual Console Mode (Sirf Live Screen Testing ke liye)
+Agar kabhi debugging ke liye terminal me bina service ke chalana ho:
 
 ```bash
-curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/install_dgx_service.sh | sudo bash -s PC-5
+curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/dgx_telemetry_agent.py -o dgx_telemetry_agent.py && python3 dgx_telemetry_agent.py --pc-id 5
 ```
 
 ---

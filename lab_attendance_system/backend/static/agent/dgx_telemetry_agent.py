@@ -860,12 +860,22 @@ def perform_self_update(backend_url: str, pc_id: str) -> bool:
     print(f"\n[AUTO-UPDATE] 🔄 Auto-update sequence triggered for {pc_id} from {backend_url}...")
     try:
         update_url = f"{backend_url}/dgx_agent/dgx_telemetry_agent.py"
-        req = urllib.request.Request(
-            update_url,
-            headers={"User-Agent": f"DGX-Agent/{pc_id}-AutoUpdate"}
-        )
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            new_code = resp.read().decode("utf-8")
+        new_code = ""
+        try:
+            req = urllib.request.Request(
+                update_url,
+                headers={"User-Agent": f"DGX-Agent/{pc_id}-AutoUpdate"}
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                new_code = resp.read().decode("utf-8")
+        except Exception as local_err:
+            gh_url = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/dgx_telemetry_agent.py"
+            req = urllib.request.Request(
+                gh_url,
+                headers={"User-Agent": f"DGX-Agent/{pc_id}-GitHubFallback"}
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                new_code = resp.read().decode("utf-8")
 
         # Sanity check: must be valid Python and have substantial content
         if len(new_code) < 1500 or "dgx_telemetry_agent.py" not in new_code:
@@ -913,40 +923,61 @@ def perform_self_update(backend_url: str, pc_id: str) -> bool:
 
 
 def check_and_apply_auto_update(backend_url: str, pc_id: str):
-    """Silent periodic check for updates against remote server MD5 hash."""
+    """Silent periodic check for updates against remote server / GitHub MD5 hash."""
     try:
         import hashlib
-        req = urllib.request.Request(
-            f"{backend_url}/dgx_agent/dgx_telemetry_agent.py",
-            headers={"User-Agent": f"DGX-Agent/{pc_id}-HashCheck"}
-        )
-        with urllib.request.urlopen(req, timeout=8) as r:
-            remote_bytes = r.read()
+        remote_bytes = None
+        try:
+            req = urllib.request.Request(
+                f"{backend_url}/dgx_agent/dgx_telemetry_agent.py",
+                headers={"User-Agent": f"DGX-Agent/{pc_id}-HashCheck"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as r:
+                remote_bytes = r.read()
+        except Exception:
+            gh_url = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/dgx_telemetry_agent.py"
+            req = urllib.request.Request(
+                gh_url,
+                headers={"User-Agent": f"DGX-Agent/{pc_id}-GHHashCheck"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as r:
+                remote_bytes = r.read()
 
-        remote_md5 = hashlib.md5(remote_bytes).hexdigest()
-        local_md5 = hashlib.md5(open(os.path.abspath(__file__), "rb").read()).hexdigest()
-        if remote_md5 != local_md5:
-            print(f"\n[AUTO-UPDATE] 🔔 New server version detected (MD5 mismatch). Updating silently...")
-            perform_self_update(backend_url, pc_id)
+        if remote_bytes:
+            remote_md5 = hashlib.md5(remote_bytes).hexdigest()
+            local_md5 = hashlib.md5(open(os.path.abspath(__file__), "rb").read()).hexdigest()
+            if remote_md5 != local_md5:
+                print(f"\n[AUTO-UPDATE] 🔔 New server version detected (MD5 mismatch). Updating silently...")
+                perform_self_update(backend_url, pc_id)
     except Exception:
         pass
 
 
 def resolve_pc_id(arg_id=None):
     """Determines PC ID from CLI argument, environment variable, or hostname."""
-    if arg_id and arg_id.strip():
-        return arg_id.strip().upper()
+    raw = (arg_id or "").strip()
+    if not raw:
+        raw = os.environ.get("AI_LAB_PC_ID", "").strip()
+    if not raw:
+        raw = socket.gethostname()
 
-    env_id = os.environ.get("AI_LAB_PC_ID", "").strip()
-    if env_id:
-        return env_id.upper()
+    raw_clean = raw.upper()
 
-    hostname = socket.gethostname().upper()
+    # If user passed just a single digit like '5' -> 'PC-5'
+    if raw_clean.isdigit():
+        return f"PC-{int(raw_clean)}"
+
+    # If 'DGX-5' or 'DGX5' or 'PC5' -> 'PC-5'
+    import re
+    m = re.match(r'^(?:PC|DGX)[-_]?([0-9]+)$', raw_clean)
+    if m:
+        return f"PC-{m.group(1)}"
+
     for i in range(1, 9):
-        if f"PC-{i}" in hostname or f"PC{i}" in hostname or f"DGX-{i}" in hostname or f"DGX{i}" in hostname:
+        if f"PC-{i}" in raw_clean or f"PC{i}" in raw_clean or f"DGX-{i}" in raw_clean or f"DGX{i}" in raw_clean:
             return f"PC-{i}"
 
-    return hostname
+    return raw_clean
 
 
 def main():
