@@ -294,21 +294,75 @@ def get_daily_logs(lab_id: Optional[str] = "ALL", date: Optional[str] = None):
     }
 
 
-@app.get("/api/export/nba_csv")
-def export_nba_csv(lab_id: Optional[str] = "ALL", date: Optional[str] = None):
-    """Exports daily session utilization logs as a CSV file for NBA accreditation records."""
-    logs = database.get_daily_session_logs(lab_id=lab_id, date_str=date)
-    lines = ["Log Date,Lab ID,Period / Slot,Workstation ID,Uptime (Sec),Fruitful (Sec),Fruitful (%),Top Apps,Warnings,Recorded At"]
-    for row in logs:
-        line = f"{row['log_date']},{row['lab_id']},{row['slot_name']},{row['pc_id']},{row['uptime_seconds']},{row['fruitful_seconds']},{row['fruitful_percent']}%,\"{row['top_apps_used']}\",{row['warning_count']},{row['logged_at']}"
-        lines.append(line)
-    csv_content = "\n".join(lines)
-    return Response(content=csv_content, media_type="text/csv", headers={
-        "Content-Disposition": f"attachment; filename=PIET_AIML_Lab_Audit_{date or datetime.now().strftime('%Y%m%d')}.csv"
+# ── Organized Lecture / Daily / Monthly Log Endpoints ──
+
+@app.get("/api/logs/lecture")
+def get_lecture_logs_endpoint(lab_id: Optional[str] = "ALL", date: Optional[str] = None):
+    """Lecture-wise session records with subject, faculty, active PCs, attendance count, and fruitful %."""
+    records = database.get_lecture_session_logs(lab_id=lab_id, date_str=date)
+    return {
+        "status": "ok",
+        "lab_id": lab_id or "ALL",
+        "date": date or datetime.now().strftime("%Y-%m-%d"),
+        "total_records": len(records),
+        "data": records
+    }
+
+
+@app.get("/api/logs/daily")
+def get_daily_logs_endpoint(lab_id: Optional[str] = "ALL", start_date: Optional[str] = None, end_date: Optional[str] = None):
+    """Daily consolidated lab summaries across all periods."""
+    records = database.get_daily_lab_logs(lab_id=lab_id)
+    return {
+        "status": "ok",
+        "lab_id": lab_id or "ALL",
+        "total_records": len(records),
+        "data": records
+    }
+
+
+@app.get("/api/logs/monthly")
+def get_monthly_logs_endpoint(lab_id: Optional[str] = "ALL", month: Optional[str] = None):
+    """Monthly lab audit records for NBA Criterion 4."""
+    records = database.get_monthly_lab_logs(lab_id=lab_id, month_str=month)
+    return {
+        "status": "ok",
+        "lab_id": lab_id or "ALL",
+        "month": month or datetime.now().strftime("%Y-%m"),
+        "total_records": len(records),
+        "data": records
+    }
+
+
+@app.get("/api/logs/students_monthly")
+def get_students_monthly_endpoint(month: Optional[str] = None):
+    """Student-wise monthly dossier tracking >=75% NBA eligibility threshold."""
+    records = database.get_student_monthly_dossier(month_str=month)
+    return {
+        "status": "ok",
+        "month": month or datetime.now().strftime("%Y-%m"),
+        "total_students": len(records),
+        "data": records
+    }
+
+
+@app.get("/api/logs/export_csv")
+def export_organized_csv_endpoint(
+    log_type: str = Query("lecture", description="lecture | daily | monthly | students"),
+    lab_id: str = Query("ALL", description="ALL, LAB-413, LAB-414, LAB-415, LAB-416, LAB-418, LAB-419"),
+    date_or_month: Optional[str] = None
+):
+    """Exports structured Lecture, Daily, Monthly, or Student records as an official CSV file."""
+    csv_text = database.export_organized_logs_csv(log_type=log_type, lab_id=lab_id, date_or_month=date_or_month)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"PIET_Lab_{log_type.capitalize()}_Logs_{lab_id}_{ts}.csv"
+    return Response(content=csv_text, media_type="text/csv", headers={
+        "Content-Disposition": f"attachment; filename={filename}"
     })
 
 
 # ── Mount Supervision Portal Static Files ──
+
 
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

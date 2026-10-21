@@ -1394,6 +1394,12 @@ function onCanvasClick(event) {
     if (!targetData) return;
 
     if (targetData.pcId) {
+        if (targetData.pcId === "BACKEND") {
+            if (typeof showToast === "function") {
+                showToast("🔒 AI Lab Core Backend Host: Read-Only System Node (Access Restricted).", "info");
+            }
+            return;
+        }
         const item = pcWorkstations[targetData.pcId];
         const isFree = item ? item.status === "free" : true;
         if (typeof handlePCClick === "function") {
@@ -1415,6 +1421,12 @@ function onTouchStart(event) {
         if (!targetData) return;
 
         if (targetData.pcId) {
+            if (targetData.pcId === "BACKEND") {
+                if (typeof showToast === "function") {
+                    showToast("🔒 AI Lab Core Backend Host: Read-Only System Node (Access Restricted).", "info");
+                }
+                return;
+            }
             const item = pcWorkstations[targetData.pcId];
             const isFree = item ? item.status === "free" : true;
             if (typeof handlePCClick === "function") {

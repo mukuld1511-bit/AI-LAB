@@ -27,8 +27,21 @@
                     📥 Export / DB
                 </button>
                 <div class="dropdown-menu" id="export-menu">
+                    <a href="javascript:void(0)" onclick="downloadOrganizedLogsDirect('lecture')" class="dropdown-item">
+                        📖 Lecture-Wise Logs (CSV)
+                    </a>
+                    <a href="javascript:void(0)" onclick="downloadOrganizedLogsDirect('daily')" class="dropdown-item">
+                        📅 Daily Lab Summaries (CSV)
+                    </a>
+                    <a href="javascript:void(0)" onclick="downloadOrganizedLogsDirect('monthly')" class="dropdown-item">
+                        🗓️ Monthly NBA Audit (CSV)
+                    </a>
+                    <a href="javascript:void(0)" onclick="downloadOrganizedLogsDirect('students')" class="dropdown-item">
+                        🎓 Student 75% Dossier (CSV)
+                    </a>
+                    <div style="border-top: 1px solid #e2e8f0; margin: 4px 0;"></div>
                     <a href="javascript:void(0)" onclick="downloadAttendanceCSV()" class="dropdown-item">
-                        📊 Attendance Logs (CSV)
+                        📊 Biometric Gate Logs (CSV)
                     </a>
                     <a href="javascript:void(0)" onclick="downloadAllotmentsCSV()" class="dropdown-item">
                         🖥️ PC Allotment History (CSV)
@@ -248,40 +261,77 @@
     </main>
 
     <!-- ═══════════════════════════════════════════════════ -->
-    <!-- TAB 3: ATTENDANCE LOGS                             -->
+    <!-- TAB 3: ORGANIZED ATTENDANCE & LAB LOGS             -->
     <!-- ═══════════════════════════════════════════════════ -->
     <main id="tab-attendance" class="tab-content">
         <div class="page-title-row">
             <div>
-                <h2>📋 AI LAB Attendance Logs</h2>
-                <p>Complete history of student entries & exits</p>
+                <h2>📋 AI LAB Organized Attendance & Session Logs</h2>
+                <p>Lecture-wise (Periods P1–P7) • Daily lab summaries • Monthly NBA Criterion 4 dossiers • Student 75% rule audit</p>
             </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn btn-primary" onclick="downloadAttendanceCSV()">📥 Download CSV</button>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="triggerManualSummaryAggregation()" title="Consolidate recent session telemetry into daily and monthly records">
+                    ⚡ Auto-Aggregate Now
+                </button>
+                <button class="btn btn-primary" onclick="downloadOrganizedLogsCSV()">
+                    📥 Download CSV
+                </button>
             </div>
         </div>
 
-        <div class="filter-bar">
-            <input type="date" id="filter-date" class="form-input">
-            <input type="text" id="filter-name" class="form-input" placeholder="Search student name...">
-            <button id="apply-filter-btn" class="btn btn-primary">🔍 Search</button>
-            <button class="btn btn-secondary" onclick="document.getElementById('filter-date').value=''; document.getElementById('filter-name').value=''; loadAttendance();">Reset</button>
+        <!-- Category View Switcher Chips -->
+        <div class="category-filter-chips" style="margin-bottom: 16px;">
+            <button class="cat-chip-btn active" id="chip-log-lecture" onclick="switchLogsView('lecture')">
+                📖 Lecture-Wise Logs <span id="chip-count-lecture" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" id="chip-log-daily" onclick="switchLogsView('daily')">
+                📅 Daily Summaries <span id="chip-count-daily" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" id="chip-log-monthly" onclick="switchLogsView('monthly')">
+                🗓️ Monthly NBA Audit <span id="chip-count-monthly" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" id="chip-log-student" onclick="switchLogsView('student')">
+                🎓 Student NBA 75% Dossier <span id="chip-count-student" class="cat-pill">0</span>
+            </button>
+            <button class="cat-chip-btn" id="chip-log-raw" onclick="switchLogsView('raw')">
+                🚪 Gate Biometric Entries
+            </button>
         </div>
 
-        <div id="attendance-table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th>User Type</th>
-                        <th>Project / Domain</th>
-                        <th>IN Time</th>
-                        <th>OUT Time</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody id="attendance-tbody"></tbody>
-            </table>
+        <!-- Dynamic Context Filter Bar -->
+        <div class="filter-bar" style="margin-bottom: 16px;">
+            <div id="filter-date-container" style="display: inline-block;">
+                <input type="date" id="filter-log-date" class="form-input" title="Filter by specific date">
+            </div>
+            <div id="filter-month-container" style="display: none;">
+                <input type="month" id="filter-log-month" class="form-input" title="Select Audit Month">
+            </div>
+            <input type="text" id="filter-log-search" class="form-input" placeholder="Search subject / student / faculty..." style="min-width: 220px;">
+            <button id="apply-log-filter-btn" class="btn btn-primary" onclick="applyLogsFilter()">🔍 Filter</button>
+            <button class="btn btn-secondary" onclick="resetLogsFilter()">Reset</button>
+        </div>
+
+        <!-- Quick Summary Metrics Bar -->
+        <div class="metrics-row" id="logs-summary-metrics" style="margin-bottom: 20px;">
+            <div class="metric-card metric-green">
+                <div class="metric-value" id="stat-log-metric-1">0</div>
+                <div class="metric-label" id="stat-log-label-1">TOTAL SESSIONS</div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #6366f1;">
+                <div class="metric-value" id="stat-log-metric-2" style="color: #6366f1;">0</div>
+                <div class="metric-label" id="stat-log-label-2">ACTIVE WORKSTATIONS</div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #10b981;">
+                <div class="metric-value" id="stat-log-metric-3" style="color: #10b981;">0%</div>
+                <div class="metric-label" id="stat-log-label-3">AVG PRODUCTIVITY</div>
+            </div>
+        </div>
+
+        <!-- Main Dynamic Table Display -->
+        <div id="organized-logs-table-wrap" style="overflow-x: auto; background: var(--surface); border: 2px solid #000; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+            <div id="organized-logs-container">
+                <!-- Injected dynamically by switchLogsView() in script.js -->
+            </div>
         </div>
     </main>
 
@@ -1049,7 +1099,6 @@
                             <option value="PC-6">PC-6 (Front Left)</option>
                             <option value="PC-7">PC-7</option>
                             <option value="PC-8">PC-8</option>
-                            <option value="BACKEND">BACKEND (Gate Desk)</option>
                         </select>
                     </div>
                 </div>

@@ -501,8 +501,8 @@ function render2DGrid() {
         return `
             <div class="pc-card ${cardClass}" 
                  id="grid-pc-${pc.pc_id}"
-                 style="${isBackend ? 'border: 2px solid #60a5fa; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);' : ''} cursor: pointer;"
-                 onclick="handlePCClick('${pc.pc_id}')"
+                 style="${isBackend ? 'border: 2px solid #60a5fa; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15); cursor: default;' : 'cursor: pointer;'}"
+                 onclick="${isBackend ? `showToast('🔒 AI Lab Core Backend Host: Read-Only System Node (Access Restricted).', 'info')` : `handlePCClick('${pc.pc_id}')`}"
                  onmouseenter="if (typeof highlightPC === 'function') highlightPC('${pc.pc_id}', true)"
                  onmouseleave="if (typeof highlightPC === 'function') highlightPC('${pc.pc_id}', false)">
                 
@@ -557,9 +557,15 @@ function render2DGrid() {
                 ${countdownHtml}
 
                 <div class="pc-actions" onclick="event.stopPropagation()">
-                    <button class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 6px 10px;" onclick="handlePCClick('${pc.pc_id}')">
-                        🔍 View Workstation Details
-                    </button>
+                    ${isBackend ? `
+                        <div style="width: 100%; text-align: center; font-size: 11px; padding: 7px 10px; background: #eff6ff; color: #1e40af; border-radius: 6px; font-weight: 700; border: 1px dashed #bfdbfe;">
+                            🔒 Core Server Host • Read-Only
+                        </div>
+                    ` : `
+                        <button class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 6px 10px;" onclick="handlePCClick('${pc.pc_id}')">
+                            🔍 View Workstation Details
+                        </button>
+                    `}
                 </div>
             </div>
         `;
@@ -627,6 +633,11 @@ function startCountdownLoop() {
 
 // ── Workstation Read-Only Inspection Modal ──
 function handlePCClick(pcId) {
+    if ((pcId || "").toUpperCase().trim() === "BACKEND") {
+        showToast("🔒 AI Lab Core Backend Host: Read-Only System Node (Access Restricted).", "info");
+        return;
+    }
+
     const pc = allPCsState.find(p => p.pc_id.toUpperCase() === pcId.toUpperCase());
     if (!pc) return;
 

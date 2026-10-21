@@ -536,8 +536,87 @@ def archive_slot_log(lab_id: Optional[str] = None, slot_name: Optional[str] = No
     }
 
 
+@app.get("/api/logs/lecture")
+def get_lecture_logs_endpoint(lab_id: Optional[str] = None, date: Optional[str] = None, slot_id: Optional[str] = None):
+    """Returns official lecture-wise logs (55-minute slot metrics, students present, fruitful %)."""
+    logs = database.get_lecture_session_logs(lab_id=lab_id, date_str=date, slot_id=slot_id)
+    return {
+        "status": "ok",
+        "total": len(logs),
+        "lab_id": lab_id or "ALL",
+        "date": date or "ALL",
+        "logs": logs
+    }
+
+
+@app.get("/api/logs/daily")
+def get_daily_logs_endpoint(lab_id: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None):
+    """Returns daily consolidated laboratory utilization and attendance logs."""
+    logs = database.get_daily_lab_logs(lab_id=lab_id, start_date=start_date, end_date=end_date)
+    return {
+        "status": "ok",
+        "total": len(logs),
+        "lab_id": lab_id or "ALL",
+        "logs": logs
+    }
+
+
+@app.get("/api/logs/monthly")
+def get_monthly_logs_endpoint(lab_id: Optional[str] = None, month: Optional[str] = None):
+    """Returns monthly consolidated laboratory utilization, software metrics, and attendance dossier."""
+    logs = database.get_monthly_lab_logs(lab_id=lab_id, month_str=month)
+    return {
+        "status": "ok",
+        "total": len(logs),
+        "lab_id": lab_id or "ALL",
+        "month": month or datetime.now().strftime("%Y-%m"),
+        "logs": logs
+    }
+
+
+@app.get("/api/logs/students_monthly")
+def get_students_monthly_dossier_endpoint(month: Optional[str] = None):
+    """Returns student-wise monthly attendance dossier with NBA 75% eligibility check."""
+    dossier = database.get_student_monthly_dossier(month_str=month)
+    return {
+        "status": "ok",
+        "total_students": len(dossier),
+        "month": month or datetime.now().strftime("%Y-%m"),
+        "dossier": dossier
+    }
+
+
+@app.post("/api/logs/generate_summary")
+def trigger_generate_summary_endpoint(log_type: str = "all", lab_id: Optional[str] = None, date: Optional[str] = None):
+    """Manually triggers instant aggregation of lecture, daily, or monthly summary logs."""
+    res = {}
+    clean_lab = lab_id or "AI-LAB"
+    target_d = date or datetime.now().strftime("%Y-%m-%d")
+
+    if log_type in ("all", "lecture"):
+        res["lecture"] = database.aggregate_lecture_session(lab_id=clean_lab, target_date=target_d)
+    if log_type in ("all", "daily"):
+        res["daily"] = database.aggregate_daily_summary(log_date=target_d, lab_id=clean_lab)
+    if log_type in ("all", "monthly"):
+        res["monthly"] = database.aggregate_monthly_summary(log_month=target_d[:7], lab_id=clean_lab)
+
+    return {"status": "ok", "message": "Aggregation completed successfully", "results": res}
+
+
+@app.get("/api/logs/export_csv")
+def export_organized_logs_csv_endpoint(log_type: str = "lecture", lab_id: str = "AI-LAB", date: Optional[str] = None):
+    """Exports organized Lecture, Daily, Monthly, or Student logs as downloadable CSV."""
+    csv_data = database.export_organized_logs_csv(log_type=log_type, lab_id=lab_id, date_or_month=date)
+    filename = f"PIET_{lab_id}_{log_type}_logs.csv"
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @app.get("/api/logs/daily_sessions")
-def get_daily_logs_endpoint(lab_id: str = "LAB-414", date: Optional[str] = None):
+def get_daily_sessions_endpoint(lab_id: str = "LAB-414", date: Optional[str] = None):
     """Returns stored 55-minute slot session logs for NBA Criterion 4 audit."""
     logs = database.get_daily_session_logs(lab_id=lab_id, date_str=date)
     return {
@@ -575,6 +654,9 @@ def export_report_csv_endpoint(timeframe: str = "daily", lab_id: str = "LAB-414"
 def kill_pc_task(pc_id: str, payload: KillTaskRequest):
     """Sends command to terminate a rogue/unauthorized process on the target workstation."""
     clean_pc = pc_id.strip().upper()
+    if clean_pc == "BACKEND":
+        raise HTTPException(status_code=403, detail="Process termination on BACKEND host server is strictly disabled.")
+
     target = str(payload.pid) if payload.pid else (payload.name or "").strip()
     if not target:
         raise HTTPException(status_code=400, detail="PID or process name required")
@@ -633,6 +715,8 @@ def occupy_pc_endpoint(payload: OccupyRequest, background_tasks: BackgroundTasks
 
     if not pc_id:
         raise HTTPException(status_code=400, detail="pc_id is required.")
+    if pc_id.upper() == "BACKEND":
+        raise HTTPException(status_code=403, detail="The BACKEND server is a permanent system infrastructure host and cannot be allocated to users.")
     if not name:
         raise HTTPException(status_code=400, detail="Name is required to occupy a PC.")
 
@@ -733,6 +817,8 @@ def free_pc_endpoint(payload: FreeRequest):
     pc_id = payload.pc_id.strip()
     if not pc_id:
         raise HTTPException(status_code=400, detail="pc_id is required.")
+    if pc_id.upper() == "BACKEND":
+        raise HTTPException(status_code=403, detail="The BACKEND server is a permanent infrastructure node and cannot be freed.")
 
     success = database.free_pc(pc_id=pc_id)
     if not success:
@@ -750,6 +836,8 @@ def free_pc_endpoint(payload: FreeRequest):
 def add_occupant_endpoint(payload: AddOccupantRequest, pc_id: Optional[str] = None):
     """Allows multiple students/teammates on a single PC by adding a group partner."""
     target_pc = (pc_id or payload.pc_id or "").strip()
+    if target_pc.upper() == "BACKEND":
+        raise HTTPException(status_code=403, detail="Group partners cannot be added to the BACKEND server host.")
     target_name = (payload.student_name or "").strip()
     if not target_pc:
         raise HTTPException(status_code=400, detail="pc_id is required.")
@@ -1583,6 +1671,60 @@ if os.path.exists(UNKNOWN_FACES_DIR):
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static_frontend")
 
 
+# ── Autonomous Academic Session Archiver Thread ──
+
+def run_autonomous_academic_archiver():
+    """
+    Autonomous academic session archiver.
+    Runs in background and at the conclusion of every official college 55-minute period:
+    - Period 1: 10:00
+    - Period 2: 10:55
+    - Period 3: 11:50
+    - Period 4: 12:45
+    - Period 5: 14:35
+    - Period 6: 15:30
+    - Period 7: 16:25
+    Snapshots lecture session metrics, calculates student attendance & fruitful %,
+    and rolls up daily and monthly logs automatically!
+    """
+    checkpoints = [
+        ("10:00", "P1 (09:05 - 10:00)"),
+        ("10:55", "P2 (10:00 - 10:55)"),
+        ("11:50", "P3 (10:55 - 11:50)"),
+        ("12:45", "P4 (11:50 - 12:45)"),
+        ("14:35", "P5 (13:40 - 14:35)"),
+        ("15:30", "P6 (14:35 - 15:30)"),
+        ("16:25", "P7 (15:30 - 16:25)")
+    ]
+    archived_today = set()
+    current_day = datetime.now().strftime("%Y-%m-%d")
+
+    while True:
+        try:
+            now = datetime.now()
+            today_str = now.strftime("%Y-%m-%d")
+            if today_str != current_day:
+                current_day = today_str
+                archived_today.clear()
+
+            cur_hm = now.strftime("%H:%M")
+            for cp_time, s_name in checkpoints:
+                cp_key = f"{today_str}_{cp_time}"
+                if cur_hm == cp_time and cp_key not in archived_today:
+                    print(f"[ACADEMIC-ARCHIVER] Period conclusion at {cur_hm}. Archiving session logs for '{s_name}'...")
+                    database.aggregate_lecture_session(lab_id="AI-LAB", slot_name=s_name, target_date=today_str)
+                    archived_today.add(cp_key)
+        except Exception:
+            pass
+        time.sleep(30)
+
+
+import threading
+_archiver_thread = threading.Thread(target=run_autonomous_academic_archiver, daemon=True, name="AcademicArchiverThread")
+_archiver_thread.start()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

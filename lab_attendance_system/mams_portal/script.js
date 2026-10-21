@@ -541,8 +541,8 @@ function render2DGrid() {
         return `
             <div class="pc-card ${cardClass}" 
                  id="grid-pc-${pc.pc_id}"
-                 style="${isBackend ? 'border: 2px solid #60a5fa; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);' : ''}"
-                 onclick="handlePCClick('${pc.pc_id}', ${isFree})"
+                 style="${isBackend ? 'border: 2px solid #60a5fa; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15); cursor: default;' : 'cursor: pointer;'}"
+                 onclick="${isBackend ? `showToast('🔒 AI Lab Core Backend Host: Read-Only System Node (Access Restricted).', 'info')` : `handlePCClick('${pc.pc_id}', ${isFree})`}"
                  onmouseenter="if (typeof highlightPC === 'function') highlightPC('${pc.pc_id}', true)"
                  onmouseleave="if (typeof highlightPC === 'function') highlightPC('${pc.pc_id}', false)">
                 
@@ -598,9 +598,9 @@ function render2DGrid() {
 
                 <div class="pc-actions" onclick="event.stopPropagation()">
                     ${isBackend ? `
-                        <button class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 6px 10px; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;" onclick="handlePCClick('${pc.pc_id}', false)">
-                            ⚙️ Server Host Details
-                        </button>
+                        <div style="width: 100%; text-align: center; font-size: 11px; padding: 7px 10px; background: #eff6ff; color: #1e40af; border-radius: 6px; font-weight: 700; border: 1px dashed #bfdbfe;">
+                            🔒 Core Server Host • Read-Only
+                        </div>
                     ` : isFree ? `
                         <button class="btn btn-primary" style="width: 100%; font-size: 12px; padding: 6px 10px;" onclick="handlePCClick('${pc.pc_id}', true)">
                             ⚡ Assign PC
@@ -841,6 +841,10 @@ function handlePCClick(pcId, isFree) {
     }
 
     currentPCId = (pcId || "").toUpperCase().trim();
+    if (currentPCId === "BACKEND") {
+        showToast("🔒 AI Lab Core Backend Host: Read-Only System Node (Access Restricted).", "info");
+        return;
+    }
     const pcData = allPCsState.find(p => p.pc_id.toUpperCase() === currentPCId);
     const modal = document.getElementById("pc-modal");
     const title = document.getElementById("modal-title");
@@ -1373,6 +1377,10 @@ async function handleModalActionSubmit() {
 }
 
 async function quickFreePC(pcId) {
+    if (pcId && pcId.toUpperCase() === "BACKEND") {
+        showToast("🔒 BACKEND server is a protected core node and cannot be freed.", "warning");
+        return;
+    }
     if (!confirm(`Are you sure you want to deselect and free ${pcId}?`)) return;
     try {
         await apiFetch("/pc/free", {
@@ -1386,41 +1394,485 @@ async function quickFreePC(pcId) {
     }
 }
 
-// ── Attendance Logs Tab ──
+// ── Organized Logs State & Subsystem (Lecture, Daily, Monthly, Student Dossier) ──
+let currentLogsView = "lecture"; // "lecture" | "daily" | "monthly" | "student" | "raw"
+
+function switchLogsView(view) {
+    currentLogsView = view;
+    const chipIds = {
+        lecture: "chip-log-lecture",
+        daily: "chip-log-daily",
+        monthly: "chip-log-monthly",
+        student: "chip-log-student",
+        raw: "chip-log-raw"
+    };
+    Object.keys(chipIds).forEach(k => {
+        const el = document.getElementById(chipIds[k]);
+        if (el) {
+            if (k === view) el.classList.add("active");
+            else el.classList.remove("active");
+        }
+    });
+
+    // Toggle Date vs Month inputs
+    const dateCont = document.getElementById("filter-date-container");
+    const monthCont = document.getElementById("filter-month-container");
+    if (view === "monthly" || view === "student") {
+        if (dateCont) dateCont.style.display = "none";
+        if (monthCont) monthCont.style.display = "inline-block";
+    } else {
+        if (dateCont) dateCont.style.display = "inline-block";
+        if (monthCont) monthCont.style.display = "none";
+    }
+
+    loadAttendance();
+}
+
+function applyLogsFilter() {
+    loadAttendance();
+}
+
+function resetLogsFilter() {
+    const d = document.getElementById("filter-log-date");
+    const m = document.getElementById("filter-log-month");
+    const s = document.getElementById("filter-log-search");
+    if (d) d.value = "";
+    if (m) m.value = "";
+    if (s) s.value = "";
+    loadAttendance();
+}
+
+async function triggerManualSummaryAggregation() {
+    if (!BASE_URL) return showToast("Not connected to backend", "error");
+    showToast("Running autonomous aggregation across all periods...", "info");
+    try {
+        const res = await apiFetch("/api/logs/generate_summary", { method: "POST" });
+        showToast(`✅ Aggregation Complete! Today: ${res.daily_summary?.total_lectures_held || 0} lectures, Month: ${res.monthly_summary?.total_lectures || 0} lectures`, "success");
+        await loadAttendance();
+    } catch (e) {
+        showToast("Aggregation failed: " + e.message, "error");
+    }
+}
+
+function downloadOrganizedLogsDirect(type) {
+    if (!BASE_URL) return showToast("Not connected to backend", "error");
+    window.open(`${BASE_URL}/api/logs/export_csv?log_type=${type}&lab_id=AI-LAB`, "_blank");
+    showToast(`Downloading Official ${type.toUpperCase()} CSV Report...`, "success");
+}
+
+function downloadOrganizedLogsCSV() {
+    let t = currentLogsView;
+    if (t === "raw") {
+        downloadAttendanceCSV();
+        return;
+    }
+    const dateVal = document.getElementById("filter-log-date")?.value || "";
+    const monthVal = document.getElementById("filter-log-month")?.value || "";
+    let param = "";
+    if ((t === "monthly" || t === "student") && monthVal) {
+        param = `&date_or_month=${monthVal}`;
+    } else if (dateVal) {
+        param = `&date_or_month=${dateVal}`;
+    }
+    window.open(`${BASE_URL}/api/logs/export_csv?log_type=${t}&lab_id=AI-LAB${param}`, "_blank");
+    showToast(`Downloading ${t.toUpperCase()} CSV export...`, "success");
+}
 
 async function loadAttendance() {
     if (!BASE_URL) return;
-    const tbody = document.getElementById("attendance-tbody");
-    if (!tbody) return;
-    
-    const date = document.getElementById("filter-date")?.value || "";
-    const name = document.getElementById("filter-name")?.value.trim() || "";
-    
-    let params = new URLSearchParams();
-    if (date) params.set("date", date);
-    if (name) params.set("name", name);
+    const container = document.getElementById("organized-logs-container");
+    if (!container) return;
+
+    const dateVal = document.getElementById("filter-log-date")?.value || "";
+    const monthVal = document.getElementById("filter-log-month")?.value || "";
+    const searchVal = document.getElementById("filter-log-search")?.value.trim().toLowerCase() || "";
+
+    const m1Val = document.getElementById("stat-log-metric-1");
+    const m1Lbl = document.getElementById("stat-log-label-1");
+    const m2Val = document.getElementById("stat-log-metric-2");
+    const m2Lbl = document.getElementById("stat-log-label-2");
+    const m3Val = document.getElementById("stat-log-metric-3");
+    const m3Lbl = document.getElementById("stat-log-label-3");
+
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: #64748b; font-weight: 600;">⏳ Loading organized logs...</div>`;
 
     try {
-        const logs = await apiFetch("/attendance/logs?" + params.toString());
-        if (logs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--on-surface-variant); padding: 30px;">No attendance logs found.</td></tr>`;
-            return;
-        }
+        if (currentLogsView === "lecture") {
+            let url = `/api/logs/lecture?lab_id=AI-LAB`;
+            if (dateVal) url += `&date=${dateVal}`;
+            const res = await apiFetch(url);
+            let logs = res.data || [];
 
-        tbody.innerHTML = logs.map(row => `
-            <tr>
-                <td><strong>${row.name || "-"}</strong></td>
-                <td>${row.is_known ? '<span class="badge badge-connected">✅ Registered</span>' : '<span class="badge badge-disconnected">❓ Unknown</span>'}</td>
-                <td>${row.current_project ? `<span class="project-tag" style="background:#eef2ff; color:#4338ca; padding:3px 8px; border-radius:4px; font-weight:600; font-size:12px; display:inline-block; border:1px solid #c7d2fe;">🚀 ${row.current_project}</span>` : '<span style="color:#94a3b8; font-size:12px;">General AI/ML Research</span>'}</td>
-                <td>${row.in_time || "-"}</td>
-                <td>${row.out_time || "<span style='color: #15803d; font-weight: bold;'>🟢 Inside Lab</span>"}</td>
-                <td>${row.date || "-"}</td>
-            </tr>
-        `).join("");
+            if (searchVal) {
+                logs = logs.filter(r => 
+                    (r.subject || "").toLowerCase().includes(searchVal) ||
+                    (r.faculty || "").toLowerCase().includes(searchVal) ||
+                    (r.slot_name || "").toLowerCase().includes(searchVal) ||
+                    (r.batch || "").toLowerCase().includes(searchVal)
+                );
+            }
+
+            const countChip = document.getElementById("chip-count-lecture");
+            if (countChip) countChip.innerText = logs.length;
+
+            if (m1Val) m1Val.innerText = logs.length;
+            if (m1Lbl) m1Lbl.innerText = "LECTURE SESSIONS";
+            const avgPCs = logs.length ? Math.round(logs.reduce((acc, r) => acc + (r.active_pcs_count || 0), 0) / logs.length) : 0;
+            if (m2Val) m2Val.innerText = avgPCs;
+            if (m2Lbl) m2Lbl.innerText = "AVG ACTIVE PCs";
+            const avgFruit = logs.length ? Math.round(logs.reduce((acc, r) => acc + (r.avg_fruitful_percent || 0), 0) / logs.length) : 0;
+            if (m3Val) m3Val.innerText = `${avgFruit}%`;
+            if (m3Lbl) m3Lbl.innerText = "AVG PRODUCTIVITY";
+
+            if (logs.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--on-surface-variant); padding: 40px;">No lecture session records found for the selected filter.</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Period / Time Slot</th>
+                            <th>Subject & Batch</th>
+                            <th>Faculty In-Charge</th>
+                            <th>Date</th>
+                            <th>Active PCs</th>
+                            <th>Students Present</th>
+                            <th>Fruitful %</th>
+                            <th>Telemetry</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.map(r => {
+                            let pcsList = [];
+                            try { pcsList = typeof r.active_pcs_list === 'string' ? JSON.parse(r.active_pcs_list) : (r.active_pcs_list || []); } catch(e){}
+                            let fruitful = Math.round(r.avg_fruitful_percent || 0);
+                            let color = fruitful >= 75 ? "#16a34a" : (fruitful >= 50 ? "#d97706" : "#dc2626");
+                            return `
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 800; color: #1e293b;">${r.slot_id}</div>
+                                        <div style="font-size: 11px; color: #64748b;">${r.slot_name || `${r.start_time} - ${r.end_time}`}</div>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight: 700; color: #4338ca;">${escapeHtml(r.subject || 'AI Project Lab')}</div>
+                                        <span class="project-tag" style="font-size: 10px; padding: 2px 6px;">Batch: ${escapeHtml(r.batch || 'AIML')}</span>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight: 600; color: #0f172a;">${escapeHtml(r.faculty || 'Dr. Richa Choudhary')}</div>
+                                    </td>
+                                    <td style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">${r.log_date}</td>
+                                    <td>
+                                        <div style="font-weight: 800; font-size: 14px; color: #0284c7;">${r.active_pcs_count} PCs</div>
+                                        <div style="font-size: 10px; color: #64748b; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${pcsList.join(', ')}">
+                                            ${pcsList.slice(0, 4).join(', ')}${pcsList.length > 4 ? ` +${pcsList.length - 4}` : ''}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 12px;">
+                                            👥 ${r.students_present_count}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; min-width: 60px;">
+                                                <div style="width: ${Math.min(100, fruitful)}%; height: 100%; background: ${color}; border-radius: 3px;"></div>
+                                            </div>
+                                            <span style="font-weight: 800; color: ${color}; font-size: 12px; font-family: 'JetBrains Mono', monospace;">${fruitful}%</span>
+                                        </div>
+                                    </td>
+                                    <td style="font-size: 11px; color: #475569;">
+                                        <div>CPU: <strong>${Math.round(r.avg_cpu_percent || 0)}%</strong> • RAM: <strong>${Math.round(r.avg_ram_percent || 0)}%</strong></div>
+                                        ${r.total_distractions > 0 ? `<div style="color: #dc2626; font-size: 10px; font-weight: 700;">⚠️ ${r.total_distractions} distractions</div>` : `<div style="color: #16a34a; font-size: 10px;">✅ Zero distractions</div>`}
+                                    </td>
+                                </tr>
+                            `;
+                        }).join("")}
+                    </tbody>
+                </table>
+            `;
+
+        } else if (currentLogsView === "daily") {
+            const res = await apiFetch(`/api/logs/daily?lab_id=AI-LAB`);
+            let logs = res.data || [];
+
+            if (searchVal) {
+                logs = logs.filter(r => (r.log_date || "").includes(searchVal) || (r.day_of_week || "").toLowerCase().includes(searchVal));
+            }
+
+            const countChip = document.getElementById("chip-count-daily");
+            if (countChip) countChip.innerText = logs.length;
+
+            if (m1Val) m1Val.innerText = logs.length;
+            if (m1Lbl) m1Lbl.innerText = "DAYS LOGGED";
+            const peakPcs = logs.reduce((acc, r) => Math.max(acc, r.peak_active_pcs || 0), 0);
+            if (m2Val) m2Val.innerText = peakPcs;
+            if (m2Lbl) m2Lbl.innerText = "PEAK WORKSTATIONS";
+            const avgAtt = logs.length ? Math.round(logs.reduce((acc, r) => acc + (r.attendance_rate_percent || 0), 0) / logs.length) : 0;
+            if (m3Val) m3Val.innerText = `${avgAtt}%`;
+            if (m3Lbl) m3Lbl.innerText = "ATTENDANCE RATE";
+
+            if (logs.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--on-surface-variant); padding: 40px;">No daily consolidated records found.</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Day</th>
+                            <th>Lectures Conducted</th>
+                            <th>Total Students</th>
+                            <th>Peak Active PCs</th>
+                            <th>Total Active Lab Hours</th>
+                            <th>Avg Fruitful %</th>
+                            <th>Attendance Rate %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.map(r => `
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 800; color: #0f172a; font-family: 'JetBrains Mono', monospace;">${r.log_date}</div>
+                                    <div style="font-size: 11px; color: #6366f1; font-weight: 700;">${r.day_of_week}</div>
+                                </td>
+                                <td>
+                                    <span class="badge" style="background: #eef2ff; color: #4338ca; font-size: 13px; font-weight: 800;">
+                                        📖 ${r.total_lectures_held} Lectures
+                                    </span>
+                                </td>
+                                <td><strong>👥 ${r.total_students_attended}</strong> Students</td>
+                                <td style="color: #0284c7; font-weight: 800; font-size: 14px;">💻 ${r.peak_active_pcs} PCs</td>
+                                <td style="font-family: 'JetBrains Mono', monospace; font-weight: 600;">⏱️ ${r.total_active_hours} hrs</td>
+                                <td>
+                                    <span style="font-weight: 800; color: ${r.avg_fruitful_percent >= 75 ? '#16a34a' : '#d97706'}; font-size: 13px;">
+                                        ${r.avg_fruitful_percent}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge ${r.attendance_rate_percent >= 75 ? 'badge-connected' : 'badge-disconnected'}" style="font-weight: 800;">
+                                        ${r.attendance_rate_percent}%
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `;
+
+        } else if (currentLogsView === "monthly") {
+            let url = `/api/logs/monthly?lab_id=AI-LAB`;
+            if (monthVal) url += `&month=${monthVal}`;
+            const res = await apiFetch(url);
+            let logs = res.data || [];
+
+            const countChip = document.getElementById("chip-count-monthly");
+            if (countChip) countChip.innerText = logs.length;
+
+            const workDays = logs.reduce((acc, r) => acc + (r.working_days || 0), 0);
+            if (m1Val) m1Val.innerText = workDays;
+            if (m1Lbl) m1Lbl.innerText = "WORKING DAYS";
+            const avgUtil = logs.length ? Math.round(logs.reduce((acc, r) => acc + (r.lab_utilization_percent || 0), 0) / logs.length) : 0;
+            if (m2Val) m2Val.innerText = `${avgUtil}%`;
+            if (m2Lbl) m2Lbl.innerText = "LAB UTILIZATION";
+            const avgFruit = logs.length ? Math.round(logs.reduce((acc, r) => acc + (r.avg_fruitful_percent || 0), 0) / logs.length) : 0;
+            if (m3Val) m3Val.innerText = `${avgFruit}%`;
+            if (m3Lbl) m3Lbl.innerText = "AVG PRODUCTIVITY";
+
+            if (logs.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--on-surface-variant); padding: 40px;">No monthly audit records found.</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Working Days</th>
+                            <th>Total Lectures</th>
+                            <th>Student Sessions</th>
+                            <th>Avg Daily Attendance</th>
+                            <th>Lab Utilization %</th>
+                            <th>Avg Fruitful %</th>
+                            <th>Top Software Used</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.map(r => {
+                            let topApps = [];
+                            try { topApps = typeof r.top_software_used === 'string' ? JSON.parse(r.top_software_used) : (r.top_software_used || []); } catch(e){}
+                            return `
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 900; color: #4338ca; font-size: 15px; font-family: 'JetBrains Mono', monospace;">
+                                            🗓️ ${r.log_month}
+                                        </div>
+                                    </td>
+                                    <td><strong>${r.working_days}</strong> Days</td>
+                                    <td><span class="badge badge-connected">📖 ${r.total_lectures}</span></td>
+                                    <td>👥 <strong>${r.total_student_attendances}</strong></td>
+                                    <td>${r.avg_daily_attendance} / day</td>
+                                    <td>
+                                        <div style="font-weight: 800; color: #0284c7; font-size: 13px;">${r.lab_utilization_percent}%</div>
+                                    </td>
+                                    <td>
+                                        <span style="font-weight: 800; color: #16a34a; font-size: 13px;">${r.avg_fruitful_percent}%</span>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px;">
+                                            ${topApps.map(a => `
+                                                <span style="background: #f1f5f9; color: #334155; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                                                    ⚙️ ${escapeHtml(a.app || a)}
+                                                </span>
+                                            `).join("")}
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join("")}
+                    </tbody>
+                </table>
+            `;
+
+        } else if (currentLogsView === "student") {
+            let url = `/api/logs/students_monthly`;
+            if (monthVal) url += `?month=${monthVal}`;
+            const res = await apiFetch(url);
+            let students = res.data || [];
+
+            if (searchVal) {
+                students = students.filter(s => (s.student_name || "").toLowerCase().includes(searchVal));
+            }
+
+            const countChip = document.getElementById("chip-count-student");
+            if (countChip) countChip.innerText = students.length;
+
+            const eligibleCount = students.filter(s => s.status === "ELIGIBLE").length;
+            const shortCount = students.length - eligibleCount;
+            if (m1Val) m1Val.innerText = students.length;
+            if (m1Lbl) m1Lbl.innerText = "TOTAL STUDENTS";
+            if (m2Val) m2Val.innerText = eligibleCount;
+            if (m2Lbl) m2Lbl.innerText = "ELIGIBLE (>=75%)";
+            if (m3Val) m3Val.innerText = shortCount;
+            if (m3Lbl) m3Lbl.innerText = "SHORT ATTENDANCE";
+
+            if (students.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--on-surface-variant); padding: 40px;">No student monthly records found.</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Student Full Name</th>
+                            <th>Month</th>
+                            <th>Classes (Attended / Total)</th>
+                            <th>Attendance %</th>
+                            <th>NBA Criteria Status</th>
+                            <th>Total Lab Hours</th>
+                            <th>Fruitful Hours</th>
+                            <th>Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${students.map(s => {
+                            const isEligible = s.status === "ELIGIBLE";
+                            return `
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 800; color: #0f172a; font-size: 13px;">👤 ${escapeHtml(s.student_name)}</div>
+                                    </td>
+                                    <td style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b;">${s.log_month}</td>
+                                    <td>
+                                        <strong>${s.total_classes_attended}</strong> / ${s.total_classes_scheduled}
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; min-width: 50px;">
+                                                <div style="width: ${Math.min(100, s.attendance_percent)}%; height: 100%; background: ${isEligible ? '#16a34a' : '#dc2626'}; border-radius: 3px;"></div>
+                                            </div>
+                                            <strong style="color: ${isEligible ? '#16a34a' : '#dc2626'}; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+                                                ${s.attendance_percent}%
+                                            </strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        ${isEligible ? `
+                                            <span style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                                                🛡️ ELIGIBLE (&ge;75%)
+                                            </span>
+                                        ` : `
+                                            <span style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 20px; font-weight: 800; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                                                ⚠️ SHORT ATTENDANCE (&lt;75%)
+                                            </span>
+                                        `}
+                                    </td>
+                                    <td style="font-family: 'JetBrains Mono', monospace;">⏱️ ${s.total_lab_hours} hrs</td>
+                                    <td style="font-family: 'JetBrains Mono', monospace; color: #16a34a; font-weight: 700;">🎯 ${s.fruitful_lab_hours} hrs</td>
+                                    <td style="font-size: 11px; color: #64748b;">${s.last_seen || '-'}</td>
+                                </tr>
+                            `;
+                        }).join("")}
+                    </tbody>
+                </table>
+            `;
+
+        } else if (currentLogsView === "raw") {
+            let params = new URLSearchParams();
+            if (dateVal) params.set("date", dateVal);
+            if (searchVal) params.set("name", searchVal);
+
+            const logs = await apiFetch("/attendance/logs?" + params.toString());
+
+            if (m1Val) m1Val.innerText = logs.length;
+            if (m1Lbl) m1Lbl.innerText = "BIOMETRIC ENTRIES";
+            const known = logs.filter(r => r.is_known).length;
+            if (m2Val) m2Val.innerText = known;
+            if (m2Lbl) m2Lbl.innerText = "REGISTERED";
+            if (m3Val) m3Val.innerText = logs.length - known;
+            if (m3Lbl) m3Lbl.innerText = "UNKNOWN GUESTS";
+
+            if (logs.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--on-surface-variant); padding: 40px;">No biometric entry logs found.</div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>User Type</th>
+                            <th>Project / Domain</th>
+                            <th>IN Time</th>
+                            <th>OUT Time</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.map(row => `
+                            <tr>
+                                <td><strong>${escapeHtml(row.name || "-")}</strong></td>
+                                <td>${row.is_known ? '<span class="badge badge-connected">✅ Registered</span>' : '<span class="badge badge-disconnected">❓ Unknown</span>'}</td>
+                                <td>${row.current_project ? `<span class="project-tag" style="background:#eef2ff; color:#4338ca; padding:3px 8px; border-radius:4px; font-weight:600; font-size:12px; display:inline-block; border:1px solid #c7d2fe;">🚀 ${escapeHtml(row.current_project)}</span>` : '<span style="color:#94a3b8; font-size:12px;">General AI/ML Research</span>'}</td>
+                                <td style="font-family: 'JetBrains Mono', monospace;">${row.in_time || "-"}</td>
+                                <td style="font-family: 'JetBrains Mono', monospace;">${row.out_time || "<span style='color: #15803d; font-weight: bold;'>🟢 Inside Lab</span>"}</td>
+                                <td style="font-family: 'JetBrains Mono', monospace;">${row.date || "-"}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `;
+        }
     } catch(e) {
-        tbody.innerHTML = `<tr><td colspan="6" style="color:red">Error: ${e.message}</td></tr>`;
+        container.innerHTML = `<div style="color: #dc2626; padding: 30px; text-align: center; font-weight: 700;">⚠️ Error fetching logs: ${escapeHtml(e.message)}</div>`;
     }
 }
+
 
 // ── Registered Users Directory & Categorized Filtering ──
 
@@ -3353,15 +3805,22 @@ function openScreenLightbox(pcId, imgUrl, activeWin) {
     if (!modal) return;
 
     const cleanId = (pcId || "").toUpperCase();
+    const isBackendNode = cleanId === "BACKEND";
     const pc = (typeof lastMonitoringPCs !== 'undefined' && lastMonitoringPCs.find(p => p.pc_id === cleanId)) || 
                (allPCsState || []).find(p => p.pc_id === cleanId) || 
                { pc_id: cleanId };
 
     modal.dataset.currentPc = cleanId;
 
+    // Hide power buttons for BACKEND
+    const powerButtons = modal.querySelectorAll("button[onclick^='triggerAILabPower']");
+    powerButtons.forEach(b => {
+        b.style.display = isBackendNode ? "none" : "inline-block";
+    });
+
     // Title & Header Badges
     const title = document.getElementById("screen-lightbox-title");
-    if (title) title.innerText = `Workstation ${cleanId} — Complete Briefing`;
+    if (title) title.innerText = isBackendNode ? "🖥️ BACKEND SERVER — Read-Only Briefing" : `Workstation ${cleanId} — Complete Briefing`;
 
     const onlineBadge = document.getElementById("brief-online-badge");
     const isOnline = pc.is_online === 1 || pc.is_online === true;
@@ -3655,6 +4114,10 @@ function requestModalScreenGrab() {
 }
 
 async function killWorkstationTask(pcId, pid, procName) {
+    if (pcId && pcId.toUpperCase() === "BACKEND") {
+        alert("🔒 Protected System Node: Cannot terminate processes on the BACKEND core server.");
+        return;
+    }
     if (!confirm(`⚠️ Terminate Process: Are you sure you want to kill '${procName}' (PID ${pid}) on ${pcId}?`)) {
         return;
     }
@@ -3682,8 +4145,8 @@ async function triggerAILabPower(action) {
         return;
     }
 
-    if (pcId.toUpperCase() === "BACKEND" && (action === "shutdown" || action === "restart")) {
-        alert("⚠️ Protected Host: The BACKEND master server cannot be powered off remotely to protect ongoing lab databases and background services.");
+    if (pcId.toUpperCase() === "BACKEND") {
+        alert("⚠️ Protected Host: All remote power and control commands are disabled for the BACKEND master server to protect ongoing lab databases and background services.");
         return;
     }
 
