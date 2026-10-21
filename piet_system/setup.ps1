@@ -35,7 +35,7 @@ if ($Pc -match "^\d+$") {
 Write-Host ""
 Write-Host "🖥️ [Target PC Identifier]: $targetPc" -ForegroundColor Green
 Write-Host "🏢 [Assigned Lab        ]: $labId" -ForegroundColor Green
-Write-Host "🌐 [Central Server Host ]: https://labg418pc12.tailc8c1f6.ts.net" -ForegroundColor Green
+Write-Host "🌐 [Central Pi 5 Hub    ]: https://raspberrypi.tailc8c1f6.ts.net" -ForegroundColor Green
 Write-Host ""
 
 # 3. Prepare Working Directory
@@ -132,17 +132,24 @@ Write-Host "      Using Python: $pythonExe" -ForegroundColor Green
 
 # 5. Download Universal Telemetry Agent & HUD Module
 Write-Host "[2/5] Downloading universal piet_agent.py & alert HUD module..." -ForegroundColor Yellow
-$agentUrl = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/piet_agent.py"
-Invoke-WebRequest -Uri $agentUrl -OutFile "$agentDir\piet_agent.py" -UseBasicParsing
-$alertUrl = "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/show_alert.py"
-Invoke-WebRequest -Uri $alertUrl -OutFile "$agentDir\show_alert.py" -UseBasicParsing
+try {
+    Invoke-WebRequest -Uri "https://raspberrypi.tailc8c1f6.ts.net/static/piet_agent.py" -OutFile "$agentDir\piet_agent.py" -UseBasicParsing -TimeoutSec 8
+} catch {
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/piet_agent.py" -OutFile "$agentDir\piet_agent.py" -UseBasicParsing
+}
+
+try {
+    Invoke-WebRequest -Uri "https://raspberrypi.tailc8c1f6.ts.net/static/show_alert.py" -OutFile "$agentDir\show_alert.py" -UseBasicParsing -TimeoutSec 8
+} catch {
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/show_alert.py" -OutFile "$agentDir\show_alert.py" -UseBasicParsing
+}
 
 # 6. Save Configuration
 Write-Host "[3/5] Saving configuration for $targetPc..." -ForegroundColor Yellow
 $cfg = @{
     pc_id = $targetPc
     lab_id = $labId
-    hub_url = "https://labg418pc12.tailc8c1f6.ts.net"
+    hub_url = "https://raspberrypi.tailc8c1f6.ts.net"
     heartbeat_interval = 6
     idle_threshold_seconds = 180
 } | ConvertTo-Json
@@ -178,7 +185,7 @@ Write-Host "==================================================================="
 Write-Host "  • Running silently in background via: $pythonwExe" -ForegroundColor White
 Write-Host "  • Auto-starts automatically on every system boot / restart" -ForegroundColor White
 Write-Host "  • Auto-updates silently every 15 minutes & accepts remote updates" -ForegroundColor White
-Write-Host "  • Streaming telemetry to Master Server: https://labg418pc12.tailc8c1f6.ts.net" -ForegroundColor White
+Write-Host "  • Streaming telemetry to Raspberry Pi Hub: https://raspberrypi.tailc8c1f6.ts.net" -ForegroundColor White
 Write-Host ""
 Write-Host "  Aap is PowerShell window ko safely BAND kar sakte hain!" -ForegroundColor Cyan
 Write-Host "===================================================================" -ForegroundColor Green

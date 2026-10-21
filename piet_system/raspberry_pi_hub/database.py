@@ -44,13 +44,13 @@ def init_db():
         )
     """)
 
-    # Seed Default 5 AIML Labs (35 PCs each)
+    # Seed 5 Official Department Labs (24 PCs each = 120 Workstations)
     default_labs = [
-        ("LAB-414", "AI & Deep Learning Lab 414", 35, "Primary Windows Lab — High Performance AI Workstations"),
-        ("LAB-415", "Machine Learning & Vision Lab 415", 35, "Windows Workstations — Computer Vision & NLP"),
-        ("LAB-416", "Data Science & Analytics Lab 416", 35, "Windows Workstations — Big Data & Analytics"),
-        ("LAB-417", "Python & Core AI Lab 417", 35, "Windows Workstations — Algorithm & ML Labs"),
-        ("LAB-418", "Project & Research Lab 418", 35, "Windows Workstations — Capstone Projects & DGX Terminal")
+        ("LAB-413", "Advanced Computing Lab 413", 24, "Windows Workstations — Distributed Computing & AI"),
+        ("LAB-414", "Deep Learning Lab 414", 24, "Primary Windows Lab — Deep Learning & Neural Networks"),
+        ("LAB-415", "Machine Learning Lab 415", 24, "Windows Workstations — Computer Vision & NLP"),
+        ("LAB-418", "Project & Research Lab 418", 24, "Windows Workstations — Capstone Projects & R&D"),
+        ("LAB-419", "Intelligent Systems Lab 419", 24, "Windows Workstations — Autonomous Systems & Robotics")
     ]
     for lab in default_labs:
         c.execute("""
@@ -92,10 +92,10 @@ def init_db():
         )
     """)
 
-    # Seed 35 PC slots for each lab (PC-414-01 to PC-414-35, etc.)
-    for lab_num in [414, 415, 416, 417, 418]:
+    # Seed 24 PC slots for each of the 5 labs (PC-413-01 to PC-413-24, PC-414-01 to PC-414-24, etc.)
+    for lab_num in [413, 414, 415, 418, 419]:
         lab_code = f"LAB-{lab_num}"
-        for i in range(1, 36):
+        for i in range(1, 25):
             p_id = f"PC-{lab_num}-{i:02d}"
             c.execute("""
                 INSERT OR IGNORE INTO workstations (pc_id, lab_id, is_online, activity_type, active_window, active_app)

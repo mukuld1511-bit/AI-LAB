@@ -293,6 +293,16 @@ def export_report_csv_endpoint(timeframe: str = "daily", lab_id: str = "LAB-414"
     )
 
 
+@app.get("/setup.ps1")
+def serve_setup_ps1():
+    """Serves the universal 1-click Windows client setup script for all 5 labs."""
+    from fastapi.responses import FileResponse
+    ps1_path = os.path.join(STATIC_DIR, "setup.ps1")
+    if not os.path.exists(ps1_path):
+        ps1_path = os.path.join(os.path.dirname(BASE_DIR), "setup_pc.ps1")
+    return FileResponse(ps1_path, media_type="text/plain")
+
+
 # ── Static Web App & Asset Mounting ──
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static_assets")

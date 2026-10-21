@@ -66,8 +66,8 @@ fi
 # Ensure permissions
 chmod -R 755 "$INSTALL_DIR"
 
-echo "[2/5] Initializing Database & 20 Workstation Inventory for Lab 414..."
-"$INSTALL_DIR/venv/bin/python3" -c "import sys; sys.path.append('$INSTALL_DIR'); import database; database.init_db(); print('✅ Database updated with 20 PC inventory.')"
+echo "[2/5] Initializing Database & 120 Workstation Inventory (Labs 413, 414, 415, 418, 419)..."
+"$INSTALL_DIR/venv/bin/python3" -c "import sys; sys.path.append('$INSTALL_DIR'); import database; database.init_db(); print('✅ Database updated with 5 Labs (120 PCs) inventory.')"
 
 echo "[3/5] Setting up Hub Auto-Start Service on Boot..."
 cat << 'EOF' > /etc/systemd/system/piet-lab-hub.service
@@ -125,7 +125,7 @@ echo "  ✅ SUCCESS! Raspberry Pi Hub & Funnel are now PERMANENTLY AUTOMATED"
 echo "========================================================================"
 echo "  1. Piet Lab Hub Service  : ACTIVE & ENABLED (Auto-starts on boot)"
 echo "  2. Tailscale Funnel      : ACTIVE & ENABLED (Auto-starts on boot)"
-echo "  3. Workstations          : 20 PC slots configured (Clean Light Theme)"
+echo "  3. Workstations          : 5 Labs (120 PCs: 413, 414, 415, 418, 419 - 24 PCs each)"
 echo ""
 echo "  🌐 Public Internet URL   : https://raspberrypi.tailc8c1f6.ts.net/"
 echo "  🏢 Local Lab LAN URL     : http://${LOCAL_IP}:8000/"
