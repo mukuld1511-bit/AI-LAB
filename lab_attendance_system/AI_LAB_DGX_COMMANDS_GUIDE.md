@@ -22,27 +22,23 @@
 AI Lab me **sirf 8 DGX machines** hain (`PC-1` se `PC-8`). 
 Inhe setup karne ke liye har DGX par sirf **EK BAAR** ye command chalani hai. Uske baad ye boot par apne aap start hoga aur auto-update rahega!
 
-### 🌟 Universal 1-Time Setup Commands (Permanent Auto-Start + Auto-Update)
+### 🌟 Universal 1-Time Setup Command (Permanent Auto-Start + Auto-Update)
 
-#### Option 1: Direct Local LAN (Recommended — 100% Reliable, Zero DNS Needed!)
-DGX machines aur Backend PC ek hi physical lab switch par hain (`10.9.6.255`). Isme internet ya DNS ki koi jarurat nahi padti:
-```bash
-curl -sSL http://10.9.6.255:8000/dgx_agent/setup.sh | sudo bash -s 5
-```
-*(DGX-5 ke liye `5`, DGX-1 ke liye `1`, DGX-2 ke liye `2`...)*
+Har DGX station par sirf **EK BAAR** ye clean 1-line command chalani hai (aakhri me bas station number daalna hai, jaise `5` ya `1` se `8`):
 
-#### Option 2: Internet / Tailscale Funnel (With Automatic DNS Fix)
-Agar college gateway DNS `Could not resolve host` de raha ho, to ye command automatically Google Public DNS (8.8.8.8) inject karke run karegi:
 ```bash
-echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf && curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 5
+curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 5
 ```
 
-#### Option 3: GitHub Raw Fallback
-```bash
-echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf && curl -sSL https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/lab_attendance_system/dgx_agent/setup.sh | sudo bash -s 5
-```
+> **Universal Pattern:**
+> - DGX-1 ke liye: `curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 1`
+> - DGX-2 ke liye: `curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 2`
+> - DGX-3 ke liye: `curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 3`
+> - DGX-4 ke liye: `curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 4`
+> - DGX-5 ke liye: `curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 5`
+> - DGX-8 ke liye: `curl -sSL https://labg418pc12.tailc8c1f6.ts.net/dgx_agent/setup.sh | sudo bash -s 8`
 
-> **Note:** Agar aap aakhri me number pass nahi karenge, to script aapse terminal par poochhegi: `Enter DGX Station / PC Number in AI Lab (1 to 8):`
+*(Agar number pass nahi karenge, to script terminal par aapse poochh legi: `Enter DGX Station / PC Number in AI Lab (1 to 8):`)*
 
 **Is command se kya hota hai:**
 1. College DNS block auto-fix ho jata hai (8.8.8.8 / 1.1.1.1).
