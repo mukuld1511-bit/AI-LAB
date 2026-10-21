@@ -16,19 +16,34 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-set TARGET_PC=%1
-if "%TARGET_PC%"=="" set TARGET_PC=PC-2
+set RAW_PC=%1
+if "%RAW_PC%"=="" set RAW_PC=PC-2
+
+:: Normalize PC ID (e.g. 2 -> PC-2, pc2 -> PC-2)
+set TARGET_PC=%RAW_PC%
+if "%RAW_PC:~0,3%"=="PC-" (
+    set TARGET_PC=%RAW_PC%
+) else if "%RAW_PC:~0,2%"=="PC" (
+    set TARGET_PC=PC-%RAW_PC:~2%
+) else (
+    set TARGET_PC=PC-%RAW_PC%
+)
 
 echo [Target PC ID: %TARGET_PC%]
-echo { "pc_id": "%TARGET_PC%", "backend_url": "https://labg418pc12.tailc8c1f6.ts.net", "heartbeat_interval": 10 } > "%~dp0agent_config.json"
+echo { "pc_id": "%TARGET_PC%", "backend_url": "https://labg418pc12.tailc8c1f6.ts.net", "heartbeat_interval": 6 } > "%~dp0agent_config.json"
 
-echo [2/3] Installing lightweight dependencies (psutil, pynvml)...
-python -m pip install --quiet psutil pynvml >nul 2>&1
+echo [2/4] Downloading latest agent scripts from Central Server...
+curl -sSL "https://labg418pc12.tailc8c1f6.ts.net/static/agent/pc_telemetry_agent.py" -o "%~dp0pc_telemetry_agent.py"
+curl -sSL "https://labg418pc12.tailc8c1f6.ts.net/static/agent/show_alert.py" -o "%~dp0show_alert.py"
 
-echo [3/3] Setting up Windows Auto-Startup Task...
+echo [3/4] Installing lightweight dependencies (psutil, pillow, mss, pynvml)...
+python -m pip install --quiet psutil pillow mss pynvml >nul 2>&1
+
+echo [4/4] Setting up Windows Auto-Startup Task...
 set SCRIPT_PATH=%~dp0pc_telemetry_agent.py
 
-:: Register Windows Task Scheduler task that runs silently in background at system startup
+:: Remove old task if exists and register high-priority onlogon task
+schtasks /delete /tn "AILab_PC_TelemetryAgent" /f >nul 2>&1
 schtasks /create /tn "AILab_PC_TelemetryAgent" /tr "pythonw.exe \"%SCRIPT_PATH%\" %TARGET_PC%" /sc onlogon /rl highest /f >nul 2>&1
 
 if %errorlevel% equ 0 (
@@ -41,14 +56,14 @@ if %errorlevel% equ 0 (
     :: Fallback: Add to Current User Startup folder
     echo [INFO] Adding shortcut to User Startup Folder as fallback...
     set STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
-    echo @start pythonw.exe "%SCRIPT_PATH%" > "%STARTUP_FOLDER%\run_ai_lab_agent.bat"
+    echo @start pythonw.exe "%SCRIPT_PATH%" %TARGET_PC% > "%STARTUP_FOLDER%\run_ai_lab_agent.bat"
     echo.
     echo [SUCCESS] Added to Startup Folder: %STARTUP_FOLDER%\run_ai_lab_agent.bat
 )
 
 echo.
 echo Launching agent now for immediate connection...
-start pythonw.exe "%SCRIPT_PATH%"
-echo Agent is now running in the background!
+start pythonw.exe "%SCRIPT_PATH%" %TARGET_PC%
+echo 🟢 %TARGET_PC% is now LIVE and streaming telemetry in background!
 timeout /t 3 >nul
 exit /b 0

@@ -53,7 +53,13 @@ echo [1/3] Configured %TARGET_PC% successfully.
 echo [2/3] Installing lightweight dependencies (psutil, pillow)...
 python -m pip install --quiet psutil pillow >nul 2>&1
 
-:: 5. Register Task Scheduler for Silent Auto-Startup
+:: 5. Download Agent Script if not present
+if not exist "%~dp0lab_414_agent.py" (
+    echo [Fetching lab_414_agent.py...]
+    curl -sSL "https://raspberrypi.tailc8c1f6.ts.net/static/agent/lab_414_agent.py" -o "%~dp0lab_414_agent.py" 2>nul || curl -sSL "https://raw.githubusercontent.com/mukuld1511-bit/AI-LAB/main/piet_system/lab_414_windows_agent/lab_414_agent.py" -o "%~dp0lab_414_agent.py"
+)
+
+:: 6. Register Task Scheduler for Silent Auto-Startup
 echo [3/3] Registering Windows Auto-Startup Task...
 set SCRIPT_PATH=%~dp0lab_414_agent.py
 
