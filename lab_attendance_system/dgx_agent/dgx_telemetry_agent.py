@@ -804,13 +804,49 @@ def execute_remote_command(cmd, pc_id, backend_url):
 
     elif cmd_lower in ("lock", "lockscreen"):
         print(f"[LOCK] 🔒 Locking Linux desktop session on {pc_id}...")
+        session = get_desktop_session_info()
+
+        # 1. loginctl lock-sessions (Locks all active user sessions system-wide)
         try:
-            subprocess.Popen(["loginctl", "lock-session"])
+            subprocess.run(["loginctl", "lock-sessions"], timeout=3)
         except Exception:
-            try:
-                subprocess.Popen(["xdg-screensaver", "lock"])
-            except Exception as le:
-                print(f"[LOCK-ERR] {le}")
+            pass
+
+        # 2. GNOME ScreenSaver Lock via gdbus in user desktop context
+        try:
+            gdbus_cmd = [
+                "gdbus", "call", "--session",
+                "--dest", "org.gnome.ScreenSaver",
+                "--object-path", "/org/gnome/ScreenSaver",
+                "--method", "org.gnome.ScreenSaver.Lock"
+            ]
+            run_in_desktop_context(gdbus_cmd, session, timeout=3)
+        except Exception:
+            pass
+
+        # 3. dbus-send Screensaver Lock
+        try:
+            dbus_cmd = [
+                "dbus-send", "--session", "--type=method_call",
+                "--dest=org.gnome.ScreenSaver",
+                "/org/gnome/ScreenSaver",
+                "org.gnome.ScreenSaver.Lock"
+            ]
+            run_in_desktop_context(dbus_cmd, session, timeout=3)
+        except Exception:
+            pass
+
+        # 4. xdg-screensaver lock inside user desktop session
+        try:
+            run_in_desktop_context(["xdg-screensaver", "lock"], session, timeout=3)
+        except Exception:
+            pass
+
+        # 5. gnome-screensaver-command -l
+        try:
+            run_in_desktop_context(["gnome-screensaver-command", "-l"], session, timeout=3)
+        except Exception:
+            pass
 
     elif cmd.startswith("warn:"):
         msg = cmd.split(":", 1)[1].strip()
