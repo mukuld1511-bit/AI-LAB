@@ -18,15 +18,37 @@ echo "========================================================================"
 echo "  🚀 PIET AIML DEPT — RASPBERRY PI 1 (LAB 414) AUTO-UPDATE & BOOT SETUP"
 echo "========================================================================"
 
-INSTALL_DIR="/opt/piet_system/raspberry_pi_hub"
-REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# Auto-heal DNS immediately
+if [ -f /etc/resolv.conf ]; then
+    if ! grep -q "^nameserver 8.8.8.8" /etc/resolv.conf 2>/dev/null; then
+        sed -i '1i nameserver 8.8.8.8' /etc/resolv.conf 2>/dev/null || echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1" > /etc/resolv.conf 2>/dev/null || true
+    fi
+fi
 
-if [ -d "$REPO_DIR/piet_system/raspberry_pi_hub" ]; then
+INSTALL_DIR="/opt/piet_system/raspberry_pi_hub"
+REPO_DIR="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd || echo "")"
+
+if [ -n "$REPO_DIR" ] && [ -d "$REPO_DIR/piet_system/raspberry_pi_hub" ]; then
     HUB_SRC="$REPO_DIR/piet_system/raspberry_pi_hub"
-elif [ -d "$REPO_DIR/raspberry_pi_hub" ]; then
+    # Pull latest if inside git repo
+    (cd "$REPO_DIR" && git pull origin main 2>/dev/null || true)
+elif [ -n "$REPO_DIR" ] && [ -d "$REPO_DIR/raspberry_pi_hub" ]; then
     HUB_SRC="$REPO_DIR/raspberry_pi_hub"
+elif [ -d "/home/$SUDO_USER/AI-LAB/piet_system/raspberry_pi_hub" ]; then
+    HUB_SRC="/home/$SUDO_USER/AI-LAB/piet_system/raspberry_pi_hub"
+    (cd "/home/$SUDO_USER/AI-LAB" && git pull origin main 2>/dev/null || true)
+elif [ -d "/home/pi/AI-LAB/piet_system/raspberry_pi_hub" ]; then
+    HUB_SRC="/home/pi/AI-LAB/piet_system/raspberry_pi_hub"
+    (cd "/home/pi/AI-LAB" && git pull origin main 2>/dev/null || true)
+elif [ -d "/home/piet/AI-LAB/piet_system/raspberry_pi_hub" ]; then
+    HUB_SRC="/home/piet/AI-LAB/piet_system/raspberry_pi_hub"
+    (cd "/home/piet/AI-LAB" && git pull origin main 2>/dev/null || true)
 else
-    HUB_SRC="$(cd "$(dirname "$0")" && pwd)/raspberry_pi_hub"
+    echo "📥 Cloning latest repository directly from GitHub..."
+    TMP_SRC="/tmp/ai_lab_git_pi"
+    rm -rf "$TMP_SRC"
+    git clone --depth 1 https://github.com/mukuld1511-bit/AI-LAB.git "$TMP_SRC"
+    HUB_SRC="$TMP_SRC/piet_system/raspberry_pi_hub"
 fi
 
 echo "[1/5] Updating files in $INSTALL_DIR from $HUB_SRC..."
