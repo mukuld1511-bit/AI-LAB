@@ -87,6 +87,8 @@ apt-get update -qq && apt-get install -y -qq \
     grim \
     slurp \
     gnome-screenshot \
+    zenity \
+    libnotify-bin \
     python3-pil \
     python3-pip \
     python3-psutil 2>/dev/null || true

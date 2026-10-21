@@ -814,10 +814,28 @@ def execute_remote_command(cmd, pc_id, backend_url):
 
     elif cmd.startswith("warn:"):
         msg = cmd.split(":", 1)[1].strip()
-        print(f"[WARN] ⚠️ Broadcast notice: '{msg}'")
+        print(f"[WARN] ⚠️ Broadcast notice for {pc_id}: '{msg}'")
         try:
-            subprocess.Popen(["wall", f"AI Lab Administrator Notice: {msg}"])
-            subprocess.Popen(["notify-send", "AI Lab Administrator Notice", msg])
+            # 1. Terminal broadcast (all open terminals & SSH sessions)
+            subprocess.Popen(["wall", f"\n=======================================================\n  AI LAB ADMINISTRATOR NOTICE: {msg}\n=======================================================\n"])
+        except Exception:
+            pass
+
+        try:
+            # 2. Desktop notification + GUI modal popup in active user session
+            session = get_desktop_session_info()
+            
+            # GNOME notification banner
+            run_in_desktop_context(["notify-send", "-u", "critical", "-t", "25000", "⚠️ AI LAB ADMINISTRATOR NOTICE", msg], session)
+            
+            # Modal Dialog Box (zenity) - Pops up in center of screen with sound
+            zenity_cmd = [
+                "zenity", "--warning",
+                "--title=AI LAB ADMINISTRATOR NOTICE",
+                f"--text=⚠️ NOTICE FROM FACULTY / LAB ADMIN:\n\n{msg}",
+                "--width=480"
+            ]
+            run_in_desktop_context(zenity_cmd, session)
         except Exception as we:
             print(f"[WARN-ERR] {we}")
 
