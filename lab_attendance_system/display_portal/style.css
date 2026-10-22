@@ -1149,6 +1149,34 @@ body {
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
 }
 
+.dept-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9999px;
+    background: #ffffff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.dept-chip-btn:hover {
+    background: #f1f5f9;
+    border-color: #0284c7;
+    color: #0284c7;
+}
+
+.dept-chip-btn.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+}
+
 .cat-pill {
     display: inline-block;
     padding: 2px 7px;

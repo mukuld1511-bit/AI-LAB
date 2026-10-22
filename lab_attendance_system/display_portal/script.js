@@ -1052,10 +1052,24 @@ async function loadRegisteredFaces() {
     }
 }
 
+let currentDeptFilter = "all";
+
 function selectUserCategory(cat) {
     currentCategoryFilter = cat;
     document.querySelectorAll(".cat-chip-btn").forEach(btn => {
         if (btn.dataset.cat === cat) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+    filterRegisteredUsers();
+}
+
+function selectUserDept(dept) {
+    currentDeptFilter = dept;
+    document.querySelectorAll(".dept-chip-btn").forEach(btn => {
+        if (btn.dataset.dept.toLowerCase() === dept.toLowerCase()) {
             btn.classList.add("active");
         } else {
             btn.classList.remove("active");
@@ -1070,11 +1084,19 @@ function renderRegisteredUsersGrid(users) {
 
     let filtered = users;
     if (currentCategoryFilter !== "all") {
-        filtered = users.filter(u => (u.role || "Student").toLowerCase() === currentCategoryFilter.toLowerCase());
+        filtered = filtered.filter(u => (u.role || "Student").toLowerCase() === currentCategoryFilter.toLowerCase());
+    }
+
+    if (currentDeptFilter !== "all") {
+        const selDept = currentDeptFilter.toLowerCase();
+        filtered = filtered.filter(u => {
+            const uDept = (u.department || "").toLowerCase();
+            return uDept === selDept || uDept.includes(selDept.replace("b.tech ", "").trim());
+        });
     }
 
     if (filtered.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No ${currentCategoryFilter === 'all' ? 'members' : currentCategoryFilter + 's'} enrolled in directory.</div>`;
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No members found matching selected filters.</div>`;
         return;
     }
 
@@ -1094,6 +1116,7 @@ function renderRegisteredUsersGrid(users) {
                             <h4 style="margin: 0; font-size: 15px;">${escapeHtml(user.name)}</h4>
                             <span class="role-badge ${roleBadgeClass}">${roleIcon} ${escapeHtml(role)}</span>
                         </div>
+                        ${user.department ? `<p style="font-weight: 700; color: #0284c7; font-size: 11px; margin-top: 2px;">🏢 ${escapeHtml(user.department)}</p>` : ''}
                         ${user.roll_no ? `<p style="font-weight: 600; color: #475569; font-size: 11px; margin-top: 2px;">🆔 ${escapeHtml(user.roll_no)}</p>` : ''}
                         <p style="margin-top: 2px;">${user.email ? `✉️ ${escapeHtml(user.email)}` : '<span style="color: #94a3b8;">No email saved</span>'}</p>
                         <small style="color: #94a3b8; font-size: 11px;">Enrolled: ${user.created_at ? user.created_at.split(" ")[0] : 'Active'}</small>
@@ -1110,6 +1133,7 @@ function filterRegisteredUsers() {
         const matchesQuery = u.name.toLowerCase().includes(q) || 
                              (u.email && u.email.toLowerCase().includes(q)) ||
                              (u.roll_no && u.roll_no.toLowerCase().includes(q)) ||
+                             (u.department && u.department.toLowerCase().includes(q)) ||
                              (u.role && u.role.toLowerCase().includes(q));
         return matchesQuery;
     });

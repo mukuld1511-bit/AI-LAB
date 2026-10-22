@@ -462,7 +462,7 @@ We will notify as soon as a slot frees up.
                 <input type="text" id="enroll-name" class="form-input" placeholder="e.g. Ayush Sharma">
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
                 <!-- Email -->
                 <div class="form-group">
                     <label class="form-label">Email Address:</label>
@@ -470,8 +470,22 @@ We will notify as soon as a slot frees up.
                 </div>
                 <!-- Roll No / ID -->
                 <div class="form-group">
-                    <label class="form-label" id="reg-id-label">Roll Number / Batch:</label>
+                    <label class="form-label" id="reg-id-label">Roll Number / ID:</label>
                     <input type="text" id="enroll-roll-dept" class="form-input" placeholder="e.g. 21BCSE101">
+                </div>
+                <!-- Department / Branch -->
+                <div class="form-group">
+                    <label class="form-label" id="reg-dept-label">Department / Branch:</label>
+                    <select id="enroll-department" class="form-select" style="width: 100%; height: 38px;">
+                        <option value="">-- Choose Department --</option>
+                        <option value="B.Tech AI-ML">B.Tech AI-ML</option>
+                        <option value="B.Tech AI-DS">B.Tech AI-DS</option>
+                        <option value="B.Tech CSE CORE">B.Tech CSE CORE</option>
+                        <option value="B.Tech CYBERSECURITY">B.Tech CYBERSECURITY</option>
+                        <option value="B.Tech IT">B.Tech IT</option>
+                        <option value="BCA">BCA</option>
+                        <option value="MCA">MCA</option>
+                    </select>
                 </div>
             </div>
 
@@ -530,6 +544,19 @@ We will notify as soon as a slot frees up.
             <button class="cat-chip-btn" data-cat="Guest" onclick="filterDirectoryCategory('Guest')">
                 👤 Guests <span id="dir-count-guests" class="cat-pill">0</span>
             </button>
+        </div>
+
+        <!-- Department Filter Bar (for Students & All) -->
+        <div class="dept-filter-bar" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid #e2e8f0;">
+            <span style="font-size: 12px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 4px;">🏢 Dept Filter:</span>
+            <button type="button" class="dept-chip-btn active" data-dept="all" onclick="filterDirectoryDept('all')">All Depts</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech AI-ML" onclick="filterDirectoryDept('B.Tech AI-ML')">B.Tech AI-ML</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech AI-DS" onclick="filterDirectoryDept('B.Tech AI-DS')">B.Tech AI-DS</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech CSE CORE" onclick="filterDirectoryDept('B.Tech CSE CORE')">CSE CORE</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech CYBERSECURITY" onclick="filterDirectoryDept('B.Tech CYBERSECURITY')">Cybersecurity</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech IT" onclick="filterDirectoryDept('B.Tech IT')">IT</button>
+            <button type="button" class="dept-chip-btn" data-dept="BCA" onclick="filterDirectoryDept('BCA')">BCA</button>
+            <button type="button" class="dept-chip-btn" data-dept="MCA" onclick="filterDirectoryDept('MCA')">MCA</button>
         </div>
 
         <div id="registered-faces-list" class="faces-grid" style="margin-top: 20px;">

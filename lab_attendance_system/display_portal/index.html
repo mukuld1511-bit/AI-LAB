@@ -254,7 +254,20 @@
             </button>
         </div>
 
-        <div id="registered-grid" class="registered-grid">
+        <!-- Department Filters Bar -->
+        <div class="dept-filter-bar" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid #e2e8f0;">
+            <span style="font-size: 12px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 4px;">🏢 Dept Filter:</span>
+            <button type="button" class="dept-chip-btn active" data-dept="all" onclick="selectUserDept('all')">All Depts</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech AI-ML" onclick="selectUserDept('B.Tech AI-ML')">B.Tech AI-ML</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech AI-DS" onclick="selectUserDept('B.Tech AI-DS')">B.Tech AI-DS</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech CSE CORE" onclick="selectUserDept('B.Tech CSE CORE')">CSE CORE</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech CYBERSECURITY" onclick="selectUserDept('B.Tech CYBERSECURITY')">Cybersecurity</button>
+            <button type="button" class="dept-chip-btn" data-dept="B.Tech IT" onclick="selectUserDept('B.Tech IT')">IT</button>
+            <button type="button" class="dept-chip-btn" data-dept="BCA" onclick="selectUserDept('BCA')">BCA</button>
+            <button type="button" class="dept-chip-btn" data-dept="MCA" onclick="selectUserDept('MCA')">MCA</button>
+        </div>
+
+        <div id="registered-grid" class="registered-grid" style="margin-top: 15px;">
             <!-- Rendered by script.js -->
         </div>
     </main>

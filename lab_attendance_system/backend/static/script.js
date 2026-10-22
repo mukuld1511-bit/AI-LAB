@@ -1826,6 +1826,8 @@ async function submitEnrollment() {
     const name = document.getElementById("enroll-name").value.trim();
     const email = document.getElementById("enroll-email").value.trim();
     const rollNo = document.getElementById("enroll-roll-dept").value.trim();
+    const deptEl = document.getElementById("enroll-department");
+    const department = deptEl ? deptEl.value.trim() : "";
     const msg = document.getElementById("enroll-message");
 
     if (!name) return alert("Please enter the member's full name.");
@@ -1841,11 +1843,11 @@ async function submitEnrollment() {
                     email: email,
                     role: currentRegRole,
                     roll_no: rollNo,
-                    department: rollNo,
+                    department: department,
                     image_base64: capturedBase64ForEnroll
                 })
             });
-            if (msg) msg.innerHTML = `<span style="color: #16a34a; font-weight: 700;">✅ ${currentRegRole} '${name}' registered with facial biometric encoding!</span>`;
+            if (msg) msg.innerHTML = `<span style="color: #16a34a; font-weight: 700;">✅ ${currentRegRole} '${name}' [${department || 'General'}] registered with facial biometric encoding!</span>`;
         } else {
             await apiFetch("/api/registered_users", {
                 method: "POST",
@@ -1854,15 +1856,16 @@ async function submitEnrollment() {
                     email: email,
                     role: currentRegRole,
                     roll_no: rollNo,
-                    department: rollNo
+                    department: department
                 })
             });
-            if (msg) msg.innerHTML = `<span style="color: #16a34a; font-weight: 700;">✅ ${currentRegRole} '${name}' saved in directory.</span>`;
+            if (msg) msg.innerHTML = `<span style="color: #16a34a; font-weight: 700;">✅ ${currentRegRole} '${name}' [${department || 'General'}] saved in directory.</span>`;
         }
 
         document.getElementById("enroll-name").value = "";
         document.getElementById("enroll-email").value = "";
         document.getElementById("enroll-roll-dept").value = "";
+        if (deptEl) deptEl.value = "";
         capturedBase64ForEnroll = null;
         document.getElementById("captured-preview-wrap").style.display = "none";
         await loadRegisteredFaces();
@@ -1909,6 +1912,8 @@ function updateDirectoryCounts(users) {
     if (cGst) cGst.innerText = gsts;
 }
 
+let currentDirDept = "all";
+
 function filterDirectoryCategory(cat) {
     currentDirCategory = cat;
     document.querySelectorAll(".cat-chip-btn").forEach(btn => {
@@ -1921,14 +1926,30 @@ function filterDirectoryCategory(cat) {
     filterRegisteredDirectory();
 }
 
+function filterDirectoryDept(dept) {
+    currentDirDept = dept;
+    document.querySelectorAll(".dept-chip-btn").forEach(btn => {
+        if (btn.dataset.dept.toLowerCase() === dept.toLowerCase()) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+    filterRegisteredDirectory();
+}
+
 function filterRegisteredDirectory() {
     const q = (document.getElementById("search-reg-input")?.value || "").toLowerCase();
     const filtered = registeredUsersList.filter(u => {
         const matchesCat = currentDirCategory === "all" || (u.role || "Student").toLowerCase() === currentDirCategory.toLowerCase();
+        const uDept = (u.department || "").toLowerCase();
+        const selDept = currentDirDept.toLowerCase();
+        const matchesDept = currentDirDept === "all" || uDept === selDept || uDept.includes(selDept.replace("b.tech ", "").trim());
         const matchesQuery = u.name.toLowerCase().includes(q) || 
                              (u.email && u.email.toLowerCase().includes(q)) ||
-                             (u.roll_no && u.roll_no.toLowerCase().includes(q));
-        return matchesCat && matchesQuery;
+                             (u.roll_no && u.roll_no.toLowerCase().includes(q)) ||
+                             (u.department && u.department.toLowerCase().includes(q));
+        return matchesCat && matchesDept && matchesQuery;
     });
     renderRegisteredDirectory(filtered);
 }
@@ -1938,7 +1959,7 @@ function renderRegisteredDirectory(users) {
     if (!container) return;
 
     if (users.length === 0) {
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No members found in this category.</div>';
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No members found matching selected filters.</div>';
         return;
     }
 
@@ -1956,6 +1977,7 @@ function renderRegisteredDirectory(users) {
                         <h4 style="margin: 0; font-size: 14px;">${user.name}</h4>
                         <span class="role-badge ${roleClass}">${role}</span>
                     </div>
+                    ${user.department ? `<div style="font-size: 11px; color: #0284c7; font-weight: 700; margin-top: 2px;">🏢 ${user.department}</div>` : ''}
                     ${user.roll_no ? `<div style="font-size: 11px; color: #475569; font-weight: 600;">🆔 ${user.roll_no}</div>` : ''}
                     <div style="font-size: 11px; color: #64748b;">${user.email ? `✉️ ${user.email}` : 'No email'}</div>
                 </div>
