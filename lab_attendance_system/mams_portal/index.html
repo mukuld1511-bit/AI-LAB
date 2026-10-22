@@ -366,6 +366,19 @@
             </button>
         </div>
 
+        <!-- Department / Branch Filter Chips -->
+        <div class="dept-filter-bar" style="margin-bottom: 20px;">
+            <span style="font-size: 12px; font-weight: 700; color: #475569; margin-right: 4px;">🏢 Branch / Dept:</span>
+            <button class="dept-chip-btn active" data-dept="" onclick="filterDirectoryDept('')">ALL</button>
+            <button class="dept-chip-btn" data-dept="B.Tech AI-ML" onclick="filterDirectoryDept('B.Tech AI-ML')">B.Tech AI-ML</button>
+            <button class="dept-chip-btn" data-dept="B.Tech AI-DS" onclick="filterDirectoryDept('B.Tech AI-DS')">B.Tech AI-DS</button>
+            <button class="dept-chip-btn" data-dept="B.Tech CSE CORE" onclick="filterDirectoryDept('B.Tech CSE CORE')">CSE CORE</button>
+            <button class="dept-chip-btn" data-dept="B.Tech CYBERSECURITY" onclick="filterDirectoryDept('B.Tech CYBERSECURITY')">CYBERSECURITY</button>
+            <button class="dept-chip-btn" data-dept="B.Tech IT" onclick="filterDirectoryDept('B.Tech IT')">IT</button>
+            <button class="dept-chip-btn" data-dept="BCA" onclick="filterDirectoryDept('BCA')">BCA</button>
+            <button class="dept-chip-btn" data-dept="MCA" onclick="filterDirectoryDept('MCA')">MCA</button>
+        </div>
+
         <div id="registered-grid" class="registered-grid">
             <!-- Rendered by script.js -->
         </div>
@@ -890,6 +903,21 @@
                 </div>
             </div>
 
+            <!-- Department / Branch Field -->
+            <div class="form-group">
+                <label class="form-label">Department / Branch:</label>
+                <select id="new-student-dept" class="form-select">
+                    <option value="">-- Choose Department / Branch --</option>
+                    <option value="B.Tech AI-ML">B.Tech AI-ML</option>
+                    <option value="B.Tech AI-DS">B.Tech AI-DS</option>
+                    <option value="B.Tech CSE CORE">B.Tech CSE CORE</option>
+                    <option value="B.Tech CYBERSECURITY">B.Tech CYBERSECURITY</option>
+                    <option value="B.Tech IT">B.Tech IT</option>
+                    <option value="BCA">BCA</option>
+                    <option value="MCA">MCA</option>
+                </select>
+            </div>
+
             <!-- Circular Live Webcam Viewfinder -->
             <div class="camera-register-section">
                 <label class="form-label">Biometric Face Enrollment (Live Camera Access):</label>
@@ -1183,6 +1211,70 @@
                 <button class="btn btn-secondary" onclick="closeProjectModal()">Cancel</button>
                 <button id="save-project-btn" class="btn btn-primary" onclick="saveProjectFromModal()">Save Project</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- MODAL: EDIT MEMBER DETAILS (MAM'S PORTAL)           -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <div id="edit-student-modal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeEditStudentModal()">
+        <div class="modal-content" style="max-width: 480px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h3 style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">✏️ Edit Member Details</h3>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--on-surface-variant);">Update student name, roll number, department, or email</p>
+                </div>
+                <button class="modal-close-btn" onclick="closeEditStudentModal()">✕</button>
+            </div>
+            <form id="edit-student-form" onsubmit="submitEditStudent(event)" style="margin-top: 14px; display: flex; flex-direction: column; gap: 14px;">
+                <input type="hidden" id="edit-orig-name">
+                
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Full Name:</label>
+                    <input type="text" id="edit-student-name" class="form-input" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Member Role:</label>
+                        <select id="edit-student-role" class="form-select">
+                            <option value="Student">🎓 Student</option>
+                            <option value="Faculty">👨‍🏫 Faculty</option>
+                            <option value="Guest">👤 Guest</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Roll Number / ID:</label>
+                        <input type="text" id="edit-student-roll" class="form-input" placeholder="e.g. 21BCSE101">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Department / Branch:</label>
+                    <select id="edit-student-dept" class="form-select">
+                        <option value="">-- Choose Department --</option>
+                        <option value="B.Tech AI-ML">B.Tech AI-ML</option>
+                        <option value="B.Tech AI-DS">B.Tech AI-DS</option>
+                        <option value="B.Tech CSE CORE">B.Tech CSE CORE</option>
+                        <option value="B.Tech CYBERSECURITY">B.Tech CYBERSECURITY</option>
+                        <option value="B.Tech IT">B.Tech IT</option>
+                        <option value="BCA">BCA</option>
+                        <option value="MCA">MCA</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Email Address:</label>
+                    <input type="email" id="edit-student-email" class="form-input" placeholder="student@example.com">
+                </div>
+
+                <div id="edit-student-msg" style="font-size: 13px; font-weight: 600; min-height: 18px;"></div>
+
+                <div class="modal-footer" style="padding-top: 10px; margin-top: 4px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditStudentModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="edit-student-save-btn">💾 Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 

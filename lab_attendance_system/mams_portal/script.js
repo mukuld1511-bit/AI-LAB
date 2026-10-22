@@ -1910,6 +1910,20 @@ function updateCategoryCounts(users) {
     if (countGst) countGst.innerText = guests;
 }
 
+let currentSelectedDept = "";
+
+function filterDirectoryDept(dept) {
+    currentSelectedDept = dept;
+    document.querySelectorAll(".dept-chip-btn").forEach(btn => {
+        if (btn.dataset.dept === dept) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+    filterRegisteredUsers();
+}
+
 function selectUserCategory(cat) {
     currentCategoryFilter = cat;
     document.querySelectorAll(".cat-chip-btn").forEach(btn => {
@@ -1928,11 +1942,14 @@ function renderRegisteredUsersGrid(users) {
 
     let filtered = users;
     if (currentCategoryFilter !== "all") {
-        filtered = users.filter(u => (u.role || "Student").toLowerCase() === currentCategoryFilter.toLowerCase());
+        filtered = filtered.filter(u => (u.role || "Student").toLowerCase() === currentCategoryFilter.toLowerCase());
+    }
+    if (currentSelectedDept) {
+        filtered = filtered.filter(u => u.department && u.department.toLowerCase() === currentSelectedDept.toLowerCase());
     }
 
     if (filtered.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No ${currentCategoryFilter === 'all' ? 'members' : currentCategoryFilter + 's'} enrolled yet. Click "Register Member" to add!</div>`;
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--on-surface-variant);">No ${currentCategoryFilter === 'all' ? 'members' : currentCategoryFilter + 's'} found for selected filter. Click "Register Member" to add!</div>`;
         return;
     }
 
@@ -1949,27 +1966,31 @@ function renderRegisteredUsersGrid(users) {
                     <img src="${avatarUrl}" class="student-avatar" alt="${user.name}" onerror="this.onerror=null; this.src='${fallbackAvatar}';">
                     <div class="student-info">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
-                            <h4 style="margin: 0; font-size: 15px;">${user.name}</h4>
+                            <h4 style="margin: 0; font-size: 15px;">${escapeHtml(user.name)}</h4>
                             <span class="role-badge ${roleBadgeClass}">${roleIcon} ${role}</span>
                         </div>
-                        ${user.roll_no ? `<p style="font-weight: 600; color: #475569; font-size: 11px; margin-top: 2px;">🆔 ${user.roll_no}</p>` : ''}
-                        <p style="margin-top: 2px;">${user.email ? `✉️ ${user.email}` : '<span style="color: #94a3b8;">No email saved</span>'}</p>
+                        ${user.roll_no ? `<p style="font-weight: 600; color: #475569; font-size: 11px; margin-top: 2px;">🆔 ${escapeHtml(user.roll_no)}</p>` : ''}
+                        ${user.department ? `<p style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin: 3px 0 2px 0;">🏢 ${escapeHtml(user.department)}</p>` : ''}
+                        <p style="margin-top: 2px;">${user.email ? `✉️ ${escapeHtml(user.email)}` : '<span style="color: #94a3b8;">No email saved</span>'}</p>
                         <small style="color: #94a3b8; font-size: 11px;">Enrolled: ${user.created_at ? user.created_at.split(" ")[0] : 'Yes'}</small>
                     </div>
                 </div>
                 
                 <div class="student-actions" style="display: flex; gap: 4px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 4px;" onclick="allotPCToStudent('${user.name}', '${user.email || ''}', '${role}')">
+                    <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 4px;" onclick="allotPCToStudent('${escapeHtml(user.name)}', '${escapeHtml(user.email || '')}', '${role}')">
                         💻 Allot PC
                     </button>
                     
+                    <button class="btn btn-secondary" style="font-size: 11px; padding: 5px 8px; color: #0284c7; border-color: #bae6fd;" onclick="openEditStudentModal('${escapeHtml(user.name)}')" title="Edit Member Details">
+                        ✏️ Edit
+                    </button>
                     
                     ${user.email ? `
-                        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="openDirectEmailModal('${user.email}', '${user.name}')" title="Email Member">
+                        <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 10px;" onclick="openDirectEmailModal('${escapeHtml(user.email)}', '${escapeHtml(user.name)}')" title="Email Member">
                             ✉️
                         </button>
                     ` : ''}
-                    <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 8px; color: var(--error);" onclick="deleteStudent('${user.name}')" title="Unregister Member">
+                    <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 8px; color: var(--error);" onclick="deleteStudent('${escapeHtml(user.name)}')" title="Unregister Member">
                         🗑️
                     </button>
                 </div>
@@ -1981,13 +2002,84 @@ function renderRegisteredUsersGrid(users) {
 function filterRegisteredUsers() {
     const q = (document.getElementById("search-reg-input")?.value || "").toLowerCase();
     const filtered = registeredUsersList.filter(u => {
+        if (currentCategoryFilter !== "all" && (u.role || "Student").toLowerCase() !== currentCategoryFilter.toLowerCase()) {
+            return false;
+        }
+        if (currentSelectedDept && (!u.department || u.department.toLowerCase() !== currentSelectedDept.toLowerCase())) {
+            return false;
+        }
+        if (!q) return true;
         const matchesQuery = u.name.toLowerCase().includes(q) || 
                              (u.email && u.email.toLowerCase().includes(q)) ||
                              (u.roll_no && u.roll_no.toLowerCase().includes(q)) ||
+                             (u.department && u.department.toLowerCase().includes(q)) ||
                              (u.role && u.role.toLowerCase().includes(q));
         return matchesQuery;
     });
     renderRegisteredUsersGrid(filtered);
+}
+
+function openEditStudentModal(name) {
+    const user = registeredUsersList.find(u => u.name.toLowerCase() === name.toLowerCase()) || { name: name };
+    document.getElementById("edit-orig-name").value = user.name;
+    document.getElementById("edit-student-name").value = user.name;
+    document.getElementById("edit-student-role").value = user.role || "Student";
+    document.getElementById("edit-student-roll").value = user.roll_no || "";
+    document.getElementById("edit-student-dept").value = user.department || "";
+    document.getElementById("edit-student-email").value = user.email || "";
+    const msg = document.getElementById("edit-student-msg");
+    if (msg) msg.innerHTML = "";
+    const modal = document.getElementById("edit-student-modal");
+    if (modal) modal.style.display = "flex";
+}
+
+function closeEditStudentModal() {
+    const modal = document.getElementById("edit-student-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitEditStudent(e) {
+    e.preventDefault();
+    const origName = document.getElementById("edit-orig-name").value;
+    const newName = document.getElementById("edit-student-name").value.trim();
+    const role = document.getElementById("edit-student-role").value;
+    const rollNo = document.getElementById("edit-student-roll").value.trim();
+    const dept = document.getElementById("edit-student-dept").value;
+    const email = document.getElementById("edit-student-email").value.trim();
+    const msg = document.getElementById("edit-student-msg");
+    const saveBtn = document.getElementById("edit-student-save-btn");
+
+    if (!newName) {
+        if (msg) msg.innerHTML = '<span style="color: #dc2626;">Name cannot be empty.</span>';
+        return;
+    }
+
+    if (saveBtn) saveBtn.disabled = true;
+    if (msg) msg.innerHTML = '<span style="color: #0284c7;">Saving changes...</span>';
+
+    try {
+        await apiFetch(`/api/registered_users/${encodeURIComponent(origName)}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                name: newName,
+                role: role,
+                roll_no: rollNo,
+                department: dept,
+                email: email
+            })
+        });
+
+        if (msg) msg.innerHTML = `<span style="color: #16a34a;">✅ Details updated successfully!</span>`;
+        showToast(`Details updated for ${newName}!`, "success");
+        setTimeout(async () => {
+            closeEditStudentModal();
+            if (saveBtn) saveBtn.disabled = false;
+            await loadRegisteredFaces();
+        }, 800);
+    } catch (err) {
+        if (saveBtn) saveBtn.disabled = false;
+        if (msg) msg.innerHTML = `<span style="color: #dc2626;">❌ Update failed: ${err.message}</span>`;
+    }
 }
 
 function allotPCToStudent(name, email, role = "Student") {
@@ -2183,6 +2275,8 @@ function openAddUserModal(prefillData = {}) {
     document.getElementById("new-student-name").value = prefillData.name || "";
     document.getElementById("new-student-email").value = prefillData.email || "";
     document.getElementById("new-user-roll-dept").value = prefillData.roll_no || "";
+    const deptSelect = document.getElementById("new-student-dept");
+    if (deptSelect) deptSelect.value = prefillData.department || "";
 
     // Reset camera preview & snapshot elements
     const video = document.getElementById("reg-webcam-video");
@@ -2406,6 +2500,7 @@ async function submitNewStudent() {
     const name = document.getElementById("new-student-name").value.trim();
     const email = document.getElementById("new-student-email").value.trim();
     const rollNo = document.getElementById("new-user-roll-dept")?.value.trim() || "";
+    const dept = document.getElementById("new-student-dept")?.value.trim() || "";
     const fileInput = document.getElementById("new-student-photo");
     const btn = document.getElementById("save-student-btn");
 
@@ -2436,7 +2531,7 @@ async function submitNewStudent() {
                     email: email,
                     role: selectedRegRole,
                     roll_no: rollNo,
-                    department: rollNo,
+                    department: dept,
                     image_base64: finalImageBase64
                 })
             });
@@ -2450,7 +2545,7 @@ async function submitNewStudent() {
                     email: email,
                     role: selectedRegRole,
                     roll_no: rollNo,
-                    department: rollNo
+                    department: dept
                 })
             });
             showToast(`✅ ${selectedRegRole} '${name}' registered in directory.`, "success");
