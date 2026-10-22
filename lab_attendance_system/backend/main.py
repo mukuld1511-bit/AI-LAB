@@ -159,6 +159,14 @@ class UpdateEmailRequest(BaseModel):
     email: str
 
 
+class UpdateUserDetailsRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = ""
+    roll_no: Optional[str] = ""
+    role: Optional[str] = "Student"
+    department: Optional[str] = ""
+
+
 class HeartbeatRequest(BaseModel):
     pc_id: str
     lab_id: Optional[str] = "LAB-414"
@@ -1082,6 +1090,65 @@ def update_student_email(name: str, payload: UpdateEmailRequest):
     if not success:
         raise HTTPException(status_code=404, detail=f"Student '{clean_name}' not found.")
     return {"status": "success", "message": f"Email updated for {clean_name}"}
+
+
+@app.put("/api/registered_users/{name}")
+def update_registered_user_endpoint(name: str, payload: UpdateUserDetailsRequest):
+    """Updates full details (name, email, roll_no, role, department) for a registered student/member."""
+    clean_old = name.strip()
+    clean_new = (payload.name or clean_old).strip()
+
+    # 1. Update SQLite database
+    success = database.update_registered_user_full(
+        old_name=clean_old,
+        new_name=clean_new,
+        email=payload.email,
+        roll_no=payload.roll_no,
+        role=payload.role,
+        department=payload.department
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Member '{clean_old}' not found.")
+
+    # 2. If name changed, rename key in known_encodings.pkl & avatar image
+    if clean_new.lower() != clean_old.lower():
+        if os.path.exists(ENCODINGS_FILE):
+            try:
+                with open(ENCODINGS_FILE, "rb") as f:
+                    data = pickle.load(f)
+                if isinstance(data, dict) and clean_old in data:
+                    data[clean_new] = data.pop(clean_old)
+                    with open(ENCODINGS_FILE, "wb") as f:
+                        pickle.dump(data, f)
+            except Exception as e:
+                print(f"[WARN] Failed to rename encoding from {clean_old} to {clean_new}: {e}")
+
+        safe_old = "".join([c for c in clean_old if c.isalnum() or c == " "]).rstrip().replace(" ", "_")
+        safe_new = "".join([c for c in clean_new if c.isalnum() or c == " "]).rstrip().replace(" ", "_")
+        old_avatar = os.path.join(AVATARS_DIR, f"{safe_old}.jpg")
+        new_avatar = os.path.join(AVATARS_DIR, f"{safe_new}.jpg")
+        if os.path.exists(old_avatar):
+            try:
+                os.rename(old_avatar, new_avatar)
+                conn = database.get_db_connection()
+                c = conn.cursor()
+                c.execute("UPDATE registered_users SET avatar_url = ? WHERE UPPER(name) = UPPER(?)", (f"/static/avatars/{safe_new}.jpg", clean_new))
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+
+    return {
+        "status": "success",
+        "message": f"Member details updated successfully for '{clean_new}'.",
+        "user": {
+            "name": clean_new,
+            "email": payload.email,
+            "roll_no": payload.roll_no,
+            "role": payload.role,
+            "department": payload.department
+        }
+    }
 
 
 @app.delete("/api/registered_users/{name}")

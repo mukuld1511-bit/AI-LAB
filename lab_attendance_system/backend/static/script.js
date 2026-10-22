@@ -1981,14 +1981,76 @@ function renderRegisteredDirectory(users) {
                     ${user.roll_no ? `<div style="font-size: 11px; color: #475569; font-weight: 600;">🆔 ${user.roll_no}</div>` : ''}
                     <div style="font-size: 11px; color: #64748b;">${user.email ? `✉️ ${user.email}` : 'No email'}</div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
                     <button class="btn btn-primary" style="font-size: 10px; padding: 4px; background: #16a34a;" onclick="markManualDirect('${user.name}', 'IN')" title="Mark IN">✅ IN</button>
                     <button class="btn btn-secondary" style="font-size: 10px; padding: 4px;" onclick="markManualDirect('${user.name}', 'OUT')" title="Mark OUT">🚪 OUT</button>
+                    <button class="btn btn-secondary" style="font-size: 10px; padding: 4px; color: #0284c7; border-color: #bae6fd;" onclick="openEditStudentModal('${escapeHtml(user.name)}')" title="Edit Details">✏️ Edit</button>
                     <button class="btn btn-secondary" style="font-size: 10px; padding: 4px; color: var(--error);" onclick="deleteRegisteredMember('${user.name}')" title="Unregister Member">🗑️ Del</button>
                 </div>
             </div>
         `;
     }).join("");
+}
+
+function openEditStudentModal(name) {
+    const user = registeredUsersList.find(u => u.name.toLowerCase() === name.toLowerCase()) || { name: name };
+    document.getElementById("edit-orig-name").value = user.name;
+    document.getElementById("edit-student-name").value = user.name;
+    document.getElementById("edit-student-role").value = user.role || "Student";
+    document.getElementById("edit-student-roll").value = user.roll_no || "";
+    document.getElementById("edit-student-dept").value = user.department || "";
+    document.getElementById("edit-student-email").value = user.email || "";
+    const msg = document.getElementById("edit-student-msg");
+    if (msg) msg.innerHTML = "";
+    document.getElementById("edit-student-modal").style.display = "flex";
+}
+
+function closeEditStudentModal() {
+    const modal = document.getElementById("edit-student-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitEditStudent(e) {
+    e.preventDefault();
+    const origName = document.getElementById("edit-orig-name").value;
+    const newName = document.getElementById("edit-student-name").value.trim();
+    const role = document.getElementById("edit-student-role").value;
+    const rollNo = document.getElementById("edit-student-roll").value.trim();
+    const dept = document.getElementById("edit-student-dept").value;
+    const email = document.getElementById("edit-student-email").value.trim();
+    const msg = document.getElementById("edit-student-msg");
+    const saveBtn = document.getElementById("edit-student-save-btn");
+
+    if (!newName) {
+        if (msg) msg.innerHTML = '<span style="color: #dc2626;">Name cannot be empty.</span>';
+        return;
+    }
+
+    if (saveBtn) saveBtn.disabled = true;
+    if (msg) msg.innerHTML = '<span style="color: #0284c7;">Saving changes...</span>';
+
+    try {
+        await apiFetch(`/api/registered_users/${encodeURIComponent(origName)}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                name: newName,
+                role: role,
+                roll_no: rollNo,
+                department: dept,
+                email: email
+            })
+        });
+
+        if (msg) msg.innerHTML = `<span style="color: #16a34a;">✅ Details updated successfully!</span>`;
+        setTimeout(async () => {
+            closeEditStudentModal();
+            if (saveBtn) saveBtn.disabled = false;
+            await loadRegisteredFaces();
+        }, 800);
+    } catch (err) {
+        if (saveBtn) saveBtn.disabled = false;
+        if (msg) msg.innerHTML = `<span style="color: #dc2626;">❌ Update failed: ${err.message}</span>`;
+    }
 }
 
 function populateAllotRegisteredDropdown(users) {

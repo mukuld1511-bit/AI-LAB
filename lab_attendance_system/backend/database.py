@@ -1206,6 +1206,45 @@ def add_or_update_registered_user(
     return affected
 
 
+def update_registered_user_full(
+    old_name: str,
+    new_name: Optional[str] = None,
+    email: Optional[str] = None,
+    roll_no: Optional[str] = None,
+    role: Optional[str] = None,
+    department: Optional[str] = None
+) -> bool:
+    """Updates all details (name, email, roll_no, role, department) for a registered student/member."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    clean_old = old_name.strip()
+    clean_new = (new_name or clean_old).strip()
+    clean_role = (role or "Student").strip().capitalize()
+    if clean_role not in ["Student", "Faculty", "Guest"]:
+        clean_role = "Student"
+        
+    cursor.execute("""
+        UPDATE registered_users 
+        SET name = ?,
+            email = ?,
+            roll_no = ?,
+            role = ?,
+            department = ?
+        WHERE UPPER(name) = UPPER(?)
+    """, (
+        clean_new,
+        (email or "").strip(),
+        (roll_no or "").strip(),
+        clean_role,
+        (department or "").strip(),
+        clean_old
+    ))
+    affected = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return affected
+
+
 def update_user_email(name: str, email: str) -> bool:
     """Updates only the email for a registered student."""
     conn = get_db_connection()
