@@ -1981,7 +1981,7 @@ function renderRegisteredUsersGrid(users) {
                         💻 Allot PC
                     </button>
                     
-                    <button class="btn btn-secondary" style="font-size: 11px; padding: 5px 8px; color: #0284c7; border-color: #bae6fd;" onclick="openEditStudentModal('${escapeHtml(user.name)}')" title="Edit Member Details">
+                    <button type="button" class="btn btn-secondary" style="font-size: 11px; padding: 5px 8px; color: #0284c7; border-color: #bae6fd; cursor: pointer;" data-student-name="${encodeURIComponent(user.name)}" onclick="openEditStudentModalFromBtn(this)" title="Edit Member Details">
                         ✏️ Edit
                     </button>
                     
@@ -2019,24 +2019,49 @@ function filterRegisteredUsers() {
     renderRegisteredUsersGrid(filtered);
 }
 
+function openEditStudentModalFromBtn(btn) {
+    if (!btn) return;
+    const rawName = decodeURIComponent(btn.getAttribute("data-student-name") || "");
+    openEditStudentModal(rawName);
+}
+
 function openEditStudentModal(name) {
+    if (!name) return;
+    console.log("[INFO] Opening edit modal for:", name);
     const user = registeredUsersList.find(u => u.name.toLowerCase() === name.toLowerCase()) || { name: name };
-    document.getElementById("edit-orig-name").value = user.name;
-    document.getElementById("edit-student-name").value = user.name;
-    document.getElementById("edit-student-role").value = user.role || "Student";
-    document.getElementById("edit-student-roll").value = user.roll_no || "";
-    document.getElementById("edit-student-dept").value = user.department || "";
-    document.getElementById("edit-student-email").value = user.email || "";
+    const origInput = document.getElementById("edit-orig-name");
+    const nameInput = document.getElementById("edit-student-name");
+    const roleInput = document.getElementById("edit-student-role");
+    const rollInput = document.getElementById("edit-student-roll");
+    const deptInput = document.getElementById("edit-student-dept");
+    const emailInput = document.getElementById("edit-student-email");
     const msg = document.getElementById("edit-student-msg");
-    if (msg) msg.innerHTML = "";
     const modal = document.getElementById("edit-student-modal");
-    if (modal) modal.style.display = "flex";
+
+    if (origInput) origInput.value = user.name || name;
+    if (nameInput) nameInput.value = user.name || name;
+    if (roleInput) roleInput.value = user.role || "Student";
+    if (rollInput) rollInput.value = user.roll_no || "";
+    if (deptInput) deptInput.value = user.department || "";
+    if (emailInput) emailInput.value = user.email || "";
+    if (msg) msg.innerHTML = "";
+    if (modal) {
+        modal.style.display = "flex";
+        modal.classList.add("open");
+    }
 }
 
 function closeEditStudentModal() {
     const modal = document.getElementById("edit-student-modal");
-    if (modal) modal.style.display = "none";
+    if (modal) {
+        modal.style.display = "none";
+        modal.classList.remove("open");
+    }
 }
+
+window.openEditStudentModalFromBtn = openEditStudentModalFromBtn;
+window.openEditStudentModal = openEditStudentModal;
+window.closeEditStudentModal = closeEditStudentModal;
 
 async function submitEditStudent(e) {
     e.preventDefault();

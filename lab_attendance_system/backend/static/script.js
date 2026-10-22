@@ -15,6 +15,16 @@ let currentPCId = null;
 let currentAction = "occupy";
 let countdownInterval = null;
 
+function escapeHtml(unsafe) {
+    if (!unsafe) return "";
+    return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function resolveImageUrl(url) {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
@@ -1984,7 +1994,7 @@ function renderRegisteredDirectory(users) {
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <button class="btn btn-primary" style="font-size: 10px; padding: 4px; background: #16a34a;" onclick="markManualDirect('${user.name}', 'IN')" title="Mark IN">✅ IN</button>
                     <button class="btn btn-secondary" style="font-size: 10px; padding: 4px;" onclick="markManualDirect('${user.name}', 'OUT')" title="Mark OUT">🚪 OUT</button>
-                    <button class="btn btn-secondary" style="font-size: 10px; padding: 4px; color: #0284c7; border-color: #bae6fd;" onclick="openEditStudentModal('${escapeHtml(user.name)}')" title="Edit Details">✏️ Edit</button>
+                    <button type="button" class="btn btn-secondary" style="font-size: 10px; padding: 4px; color: #0284c7; border-color: #bae6fd; cursor: pointer;" data-student-name="${encodeURIComponent(user.name)}" onclick="openEditStudentModalFromBtn(this)" title="Edit Details">✏️ Edit</button>
                     <button class="btn btn-secondary" style="font-size: 10px; padding: 4px; color: var(--error);" onclick="deleteRegisteredMember('${user.name}')" title="Unregister Member">🗑️ Del</button>
                 </div>
             </div>
@@ -1992,23 +2002,49 @@ function renderRegisteredDirectory(users) {
     }).join("");
 }
 
+function openEditStudentModalFromBtn(btn) {
+    if (!btn) return;
+    const rawName = decodeURIComponent(btn.getAttribute("data-student-name") || "");
+    openEditStudentModal(rawName);
+}
+
 function openEditStudentModal(name) {
+    if (!name) return;
+    console.log("[INFO] Opening edit modal for:", name);
     const user = registeredUsersList.find(u => u.name.toLowerCase() === name.toLowerCase()) || { name: name };
-    document.getElementById("edit-orig-name").value = user.name;
-    document.getElementById("edit-student-name").value = user.name;
-    document.getElementById("edit-student-role").value = user.role || "Student";
-    document.getElementById("edit-student-roll").value = user.roll_no || "";
-    document.getElementById("edit-student-dept").value = user.department || "";
-    document.getElementById("edit-student-email").value = user.email || "";
+    const origInput = document.getElementById("edit-orig-name");
+    const nameInput = document.getElementById("edit-student-name");
+    const roleInput = document.getElementById("edit-student-role");
+    const rollInput = document.getElementById("edit-student-roll");
+    const deptInput = document.getElementById("edit-student-dept");
+    const emailInput = document.getElementById("edit-student-email");
     const msg = document.getElementById("edit-student-msg");
+    const modal = document.getElementById("edit-student-modal");
+
+    if (origInput) origInput.value = user.name || name;
+    if (nameInput) nameInput.value = user.name || name;
+    if (roleInput) roleInput.value = user.role || "Student";
+    if (rollInput) rollInput.value = user.roll_no || "";
+    if (deptInput) deptInput.value = user.department || "";
+    if (emailInput) emailInput.value = user.email || "";
     if (msg) msg.innerHTML = "";
-    document.getElementById("edit-student-modal").style.display = "flex";
+    if (modal) {
+        modal.style.display = "flex";
+        modal.classList.add("open");
+    }
 }
 
 function closeEditStudentModal() {
     const modal = document.getElementById("edit-student-modal");
-    if (modal) modal.style.display = "none";
+    if (modal) {
+        modal.style.display = "none";
+        modal.classList.remove("open");
+    }
 }
+
+window.openEditStudentModalFromBtn = openEditStudentModalFromBtn;
+window.openEditStudentModal = openEditStudentModal;
+window.closeEditStudentModal = closeEditStudentModal;
 
 async function submitEditStudent(e) {
     e.preventDefault();
