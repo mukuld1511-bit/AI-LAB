@@ -16,6 +16,7 @@ import csv
 import io
 import shutil
 import json
+import time
 
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,7 +68,8 @@ app.add_middleware(
 def api_health():
     """Health check endpoint for monitoring."""
     return {
-        "status": "online",
+        "status": "ok",
+        "state": "online",
         "system": "PIET AIML Department Smart Lab Supervision Master Server",
         "version": "3.5.0",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")

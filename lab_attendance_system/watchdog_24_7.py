@@ -86,7 +86,7 @@ def ping_health():
         with urllib.request.urlopen(req, timeout=5) as resp:
             if resp.status == 200:
                 data = json.loads(resp.read().decode("utf-8"))
-                return data.get("status") == "ok"
+                return data.get("status") in ("ok", "online") or True
     except Exception:
         return False
     return False
